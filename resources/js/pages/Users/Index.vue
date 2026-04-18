@@ -847,7 +847,6 @@ const handleFileUpload = (event: Event) => {
                                         >
                                         <select
                                             v-model="userForm.unit_id"
-                                            required
                                             class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
                                         >
                                             <option value="">
@@ -866,7 +865,6 @@ const handleFileUpload = (event: Event) => {
                                             v-if="userForm.unit_id === 'other'"
                                             v-model="userForm.custom_unit"
                                             type="text"
-                                            required
                                             class="mt-2 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                             placeholder="Especifique"
                                         />
@@ -878,7 +876,6 @@ const handleFileUpload = (event: Event) => {
                                         >
                                         <select
                                             v-model="userForm.department_id"
-                                            required
                                             class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
                                         >
                                             <option value="">
