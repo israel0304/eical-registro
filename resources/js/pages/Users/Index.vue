@@ -13,6 +13,11 @@ import {
 import { ref, watch } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
+const getRoleName = (roleId: number | string) => {
+    const role = props.roles?.find((r: any) => r.id == roleId);
+    return role?.name || 'Sin asignar';
+};
+
 interface Unit {
     id: number;
     name: string;
@@ -600,86 +605,144 @@ const handleFileUpload = (event: Event) => {
                 >
 
                 <div
-                    class="relative inline-block transform overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl sm:p-8 sm:align-middle dark:border-zinc-800 dark:bg-zinc-900"
+                    class="relative inline-block transform overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl sm:p-8 sm:align-middle dark:border-zinc-800 dark:bg-zinc-900"
                 >
-                    <div class="mb-8 flex items-center justify-between">
-                        <div class="flex items-center gap-5">
+                    <div
+                        class="mb-6 grid grid-cols-[auto_1fr_auto] items-center gap-4 sm:grid-cols-[auto_1fr_auto] sm:gap-6"
+                    >
+                        <!-- Columna 1: Avatar -->
+                        <div
+                            class="group relative order-1 flex-shrink-0 cursor-pointer"
+                            @click="triggerProfilePhotoUpload"
+                        >
+                            <input
+                                type="file"
+                                ref="profilePhotoInput"
+                                class="hidden"
+                                accept="image/*"
+                                @change="handleProfilePhotoUpload"
+                            />
                             <div
-                                class="group relative cursor-pointer"
-                                @click="triggerProfilePhotoUpload"
+                                class="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-gray-200 bg-gray-50 sm:h-24 sm:w-24 dark:border-zinc-600 dark:bg-zinc-800"
                             >
-                                <input
-                                    type="file"
-                                    ref="profilePhotoInput"
-                                    class="hidden"
-                                    accept="image/*"
-                                    @change="handleProfilePhotoUpload"
-                                />
-                                <div
-                                    class="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-gray-300 bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800"
-                                >
-                                    <img
-                                        v-if="photoPreview"
-                                        :src="photoPreview"
-                                        class="h-full w-full object-cover"
-                                    />
-                                    <svg
-                                        v-else
-                                        class="h-8 w-8 text-gray-400 dark:text-zinc-500"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="1.5"
-                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                        />
-                                    </svg>
-                                </div>
-                                <div
-                                    class="absolute right-0 bottom-0 flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors group-hover:bg-gray-100 dark:border-zinc-600 dark:bg-zinc-700 dark:group-hover:bg-zinc-600"
-                                >
-                                    <svg
-                                        class="h-3 w-3 text-gray-600 dark:text-gray-300"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                                        />
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                                        />
-                                    </svg>
-                                </div>
-                                <button
+                                <img
                                     v-if="photoPreview"
-                                    @click.stop.prevent="removePhoto"
-                                    class="absolute right-0 bottom-0 flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600"
-                                    title="Quitar foto"
+                                    :src="photoPreview"
+                                    class="h-full w-full object-cover"
+                                />
+                                <svg
+                                    v-else
+                                    class="h-8 w-8 text-gray-400 sm:h-12 sm:w-12 dark:text-zinc-500"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
                                 >
-                                    <Trash2 class="h-3 w-3" />
-                                </button>
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="1.5"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                    />
+                                </svg>
                             </div>
-                            <div v-if="isEditing" class="flex flex-col">
-                                <span
-                                    class="text-[10px] font-medium tracking-wider text-gray-500 uppercase dark:text-zinc-400"
-                                    >DNI</span
+                            <div
+                                class="absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors group-hover:bg-gray-100 sm:right-0 sm:bottom-0 sm:h-7 sm:w-7 dark:border-zinc-600 dark:bg-zinc-700 dark:group-hover:bg-zinc-600"
+                            >
+                                <svg
+                                    class="h-2.5 w-2.5 text-gray-600 sm:h-3.5 sm:w-3.5 dark:text-gray-300"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
                                 >
-                                <span
-                                    class="rounded bg-gray-100 px-2 py-0.5 font-mono text-sm text-gray-900 dark:bg-zinc-800 dark:text-gray-200"
-                                    >{{ userForm.dni }}</span
-                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                                    />
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
+                                </svg>
                             </div>
+                            <button
+                                v-if="photoPreview"
+                                @click.stop.prevent="removePhoto"
+                                class="absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 transition-colors hover:bg-gray-100 sm:right-0 sm:bottom-0 sm:h-7 sm:w-7 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600"
+                                title="Quitar foto"
+                            >
+                                <Trash2 class="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+
+                        <!-- Columna 2: Datos centrales -->
+                        <div
+                            class="order-2 flex min-w-0 flex-col justify-center text-left"
+                        >
+                            <div
+                                v-if="userForm.first_name || userForm.last_name"
+                                class="text-base font-semibold text-gray-900 sm:text-lg dark:text-white"
+                            >
+                                {{ userForm.first_name }}
+                                {{ userForm.last_name }}
+                            </div>
+                            <div
+                                v-else
+                                class="text-base font-medium text-gray-400 sm:text-lg dark:text-zinc-500"
+                            >
+                                Nuevo usuario
+                            </div>
+                            <div
+                                v-if="userForm.email"
+                                class="text-xs text-gray-500 sm:text-sm dark:text-zinc-400"
+                            >
+                                {{ userForm.email }}
+                            </div>
+                            <div v-if="userForm.role_id" class="mt-1">
+                                <span
+                                    class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
+                                >
+                                    {{ getRoleName(userForm.role_id) }}
+                                </span>
+                            </div>
+                            <div
+                                v-else
+                                class="text-xs text-gray-400 dark:text-zinc-500"
+                            >
+                                Sin asignar perfil
+                            </div>
+                        </div>
+
+                        <!-- Columna 3: DNI -->
+                        <div class="order-3 flex-shrink-0 text-right">
+                            <span
+                                v-if="userForm.dni"
+                                class="inline-flex items-center gap-1 rounded-lg border-2 border-indigo-200 bg-indigo-50 px-2 py-1 font-mono text-base font-bold text-indigo-700 sm:gap-2 sm:px-4 sm:py-2 sm:text-lg dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
+                            >
+                                <svg
+                                    class="h-4 w-4 sm:h-5 sm:w-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-4 0v5a2 2 0 104 0m4 0V5a2 2 0 114 0v1"
+                                    />
+                                </svg>
+                                {{ userForm.dni }}
+                            </span>
+                            <span
+                                v-else
+                                class="text-sm text-gray-400 dark:text-zinc-500"
+                            >
+                                Sin DNI
+                            </span>
                         </div>
                     </div>
 
@@ -949,22 +1012,22 @@ const handleFileUpload = (event: Event) => {
                             </div>
                         </div>
 
-                        <div
-                            class="mt-8 flex items-center justify-between gap-3 border-t border-gray-100 pt-4 dark:border-zinc-800"
+<div
+                            class="mt-6 sm:mt-8 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-100 pt-4 dark:border-zinc-800"
                         >
                             <button
                                 type="button"
                                 @click="showUserModal = false"
-                                class="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                                class="w-full sm:w-auto order-1 sm:order-none rounded-md border border-red-200 bg-red-50 px-3 py-2 sm:px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
                             >
                                 Cancelar
                             </button>
-                            <div class="flex items-center gap-3">
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 order-2 sm:order-none">
                                 <button
                                     v-if="isEditing"
                                     type="button"
                                     @click.prevent="sendResetPassword"
-                                    class="inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                                    class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30"
                                 >
                                     <svg
                                         class="h-3.5 w-3.5"
@@ -979,12 +1042,13 @@ const handleFileUpload = (event: Event) => {
                                             d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
                                         />
                                     </svg>
-                                    Restablecer
+                                    <span class="hidden sm:inline">Restablecer</span>
+                                    <span class="sm:hidden">🔑</span>
                                 </button>
                                 <button
                                     type="submit"
                                     :disabled="userForm.processing"
-                                    class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
                                 >
                                     <Plus v-if="!isEditing" class="h-4 w-4" />
                                     <svg
@@ -1001,12 +1065,9 @@ const handleFileUpload = (event: Event) => {
                                         <path
                                             d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"
                                         />
-                                        <path d="M7 3v4a1 1 0 0 0 1 1h7" />
-                                    </svg>
-                                    <span v-if="!isEditing"
-                                        >Añadir usuario</span
-                                    >
-                                    <span v-else>Guardar cambios</span>
+                                        <path d="M7 3v4a1 1 0 0 0 1 1h7" /></svg>
+                                    <span v-if="!isEditing">Añadir</span>
+                                    <span v-else">Guardar</span>
                                 </button>
                             </div>
                         </div>
