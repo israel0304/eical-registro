@@ -8,7 +8,7 @@ class StockMovement extends Model
 {
     protected $fillable = [
         'product_sku_id', 'type', 'quantity', 'previous_stock', 'new_stock',
-        'reference_type', 'reference_id', 'notes', 'created_by'
+        'reference_type', 'reference_id', 'notes', 'created_by',
     ];
 
     public function sku()

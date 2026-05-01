@@ -8,7 +8,7 @@ class Attendance extends Model
 {
     protected $fillable = [
         'user_id', 'event_day', 'registered_by',
-        'certificate_generated', 'certificate_generated_at'
+        'certificate_generated', 'certificate_generated_at',
     ];
 
     protected $casts = [

@@ -9,7 +9,7 @@ class ProductRequest extends Model
     protected $fillable = [
         'stand_id', 'sku_id', 'quantity', 'status', 'type',
         'custom_description', 'requested_at', 'delivered_at',
-        'staff_id', 'cancelled_at', 'cancelled_by', 'approved_by'
+        'staff_id', 'cancelled_at', 'cancelled_by', 'approved_by',
     ];
 
     protected $casts = [

@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -19,7 +18,8 @@ class DatabaseSeeder extends Seeder
         $participanteRole = \App\Models\Role::create(['name' => 'Participante']);
 
         \App\Models\User::factory()->create([
-            'name' => 'Test User',
+            'first_name' => 'Test',
+            'last_name' => 'User',
             'email' => 'test@example.com',
             'dni' => 'ADMIN001',
             'role_id' => $adminRole->id,

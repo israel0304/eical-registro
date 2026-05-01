@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Models\Department;
 use App\Models\Role;
 use App\Models\Stand;
 use App\Models\Unit;
-use App\Models\Department;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 class UserController extends Controller
 {
@@ -25,9 +25,9 @@ class UserController extends Controller
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('dni', 'like', "%{$search}%");
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('dni', 'like', "%{$search}%");
             });
         }
 
@@ -90,8 +90,8 @@ class UserController extends Controller
             $validated['profile_photo_path'] = $request->file('photo')->store('profile-photos', 'public');
         }
 
-        $validated['password'] = Hash::make(Str::random(12)); 
-        $validated['dni'] = 'CNV-' . strtoupper(Str::random(7));
+        $validated['password'] = Hash::make(Str::random(12));
+        $validated['dni'] = 'CNV-'.strtoupper(Str::random(7));
 
         User::create($validated);
 
@@ -103,7 +103,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
             'phone' => 'nullable|string|max:20',
             'extension' => 'nullable|string|max:10',
             'tshirt_size' => 'nullable|string|max:5',
@@ -140,19 +140,21 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         $user->update(['is_active' => false]);
+
         return back()->with('success', 'El usuario pasó a estado inactivo.');
     }
 
     public function forceDelete($id)
     {
         $user = User::withTrashed()->findOrFail($id);
-        
+
         // Opcional: Borrar foto física si existe
         if ($user->profile_photo_path) {
             Storage::disk('public')->delete($user->profile_photo_path);
         }
-        
+
         $user->forceDelete();
+
         return back()->with('success', 'Usuario eliminado permanentemente de la base de datos.');
     }
 
@@ -171,14 +173,14 @@ class UserController extends Controller
     {
         $users = User::with(['role', 'stand', 'unit', 'department'])->get();
         $headers = [
-            "Content-type"        => "text/csv",
-            "Content-Disposition" => "attachment; filename=usuarios_cinvesninos.csv",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
+            'Content-type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename=usuarios_cinvesninos.csv',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
         ];
-        
-        $callback = function() use($users) {
+
+        $callback = function () use ($users) {
             $file = fopen('php://output', 'w');
             fwrite($file, "\xEF\xBB\xBF");
             // Headers
@@ -203,13 +205,14 @@ class UserController extends Controller
             }
             fclose($file);
         };
+
         return response()->stream($callback, 200, $headers);
     }
 
     public function importCsv(Request $request)
     {
         $request->validate([
-            'csv_file' => 'required|file|mimes:csv,txt'
+            'csv_file' => 'required|file|mimes:csv,txt',
         ]);
 
         $path = $request->file('csv_file')->getRealPath();
@@ -221,35 +224,41 @@ class UserController extends Controller
 
         $imported = 0;
         foreach ($data as $row) {
-            if(count($row) < 3) continue;
-            
+            if (count($row) < 3) {
+                continue;
+            }
+
             // Mapeo de Perfil (Role) por nombre
             $roleId = 4; // Default Participante
-            if (!empty($row[6])) {
+            if (! empty($row[6])) {
                 $role = Role::where('name', 'like', "%{$row[6]}%")->first();
-                if ($role) $roleId = $role->id;
+                if ($role) {
+                    $roleId = $role->id;
+                }
             }
 
             // Mapeo de Stand por nombre
             $standId = null;
-            if (!empty($row[7])) {
+            if (! empty($row[7])) {
                 $stand = Stand::where('name', 'like', "%{$row[7]}%")->first();
-                if ($stand) $standId = $stand->id;
+                if ($stand) {
+                    $standId = $stand->id;
+                }
             }
 
             User::updateOrCreate(
-                ['email' => $row[2] ?? ''], 
+                ['email' => $row[2] ?? ''],
                 [
-                    'first_name'   => $row[0] ?? 'CSV',
-                    'last_name'    => $row[1] ?? 'User',
-                    'dni'          => 'CNV-' . strtoupper(Str::random(7)),
-                    'phone'        => $row[3] ?? null,
-                    'extension'    => $row[4] ?? null,
-                    'tshirt_size'  => $row[5] ?? null,
-                    'role_id'      => $roleId,
-                    'stand_id'     => $standId,
-                    'is_active'    => true, // Estatus activo por defecto
-                    'password'     => Hash::make(Str::random(12)),
+                    'first_name' => $row[0] ?? 'CSV',
+                    'last_name' => $row[1] ?? 'User',
+                    'dni' => 'CNV-'.strtoupper(Str::random(7)),
+                    'phone' => $row[3] ?? null,
+                    'extension' => $row[4] ?? null,
+                    'tshirt_size' => $row[5] ?? null,
+                    'role_id' => $roleId,
+                    'stand_id' => $standId,
+                    'is_active' => true, // Estatus activo por defecto
+                    'password' => Hash::make(Str::random(12)),
                 ]
             );
             $imported++;

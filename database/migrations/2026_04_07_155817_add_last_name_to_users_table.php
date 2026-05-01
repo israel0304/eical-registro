@@ -15,7 +15,7 @@ return new class extends Migration
             if (Schema::hasColumn('users', 'name')) {
                 $table->renameColumn('name', 'first_name');
             }
-            if (!Schema::hasColumn('users', 'last_name')) {
+            if (! Schema::hasColumn('users', 'last_name')) {
                 $table->string('last_name')->nullable()->after('first_name');
             }
         });

@@ -24,8 +24,17 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'first_name' => fake()->firstName(),
+            'last_name' => fake()->lastName(),
+            'dni' => fake()->unique()->numerify('###########'),
             'email' => fake()->unique()->safeEmail(),
+            'phone' => fake()->phoneNumber(),
+            'extension' => fake()->optional()->numerify('###'),
+            'tshirt_size' => fake()->randomElement(['XS', 'S', 'M', 'L', 'XL', 'XXL']),
+            'role_id' => static function () {
+                $roleName = fake()->randomElement(['Administrator', 'Staff', 'Tallerista', 'Participante']);
+                return \App\Models\Role::firstOrCreate(['name' => $roleName])->id;
+            },
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),

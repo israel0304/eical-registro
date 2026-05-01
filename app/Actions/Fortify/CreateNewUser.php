@@ -24,10 +24,15 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ])->validate();
 
+        $role = \App\Models\Role::firstOrCreate(['name' => 'Participante']);
+
         return User::create([
-            'name' => $input['name'],
+            'first_name' => $input['first_name'],
+            'last_name' => $input['last_name'] ?? '',
+            'dni' => $input['dni'] ?? null,
             'email' => $input['email'],
             'password' => $input['password'],
+            'role_id' => $role->id,
         ]);
     }
 }
