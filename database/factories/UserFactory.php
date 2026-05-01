@@ -33,6 +33,7 @@ class UserFactory extends Factory
             'tshirt_size' => fake()->randomElement(['XS', 'S', 'M', 'L', 'XL', 'XXL']),
             'role_id' => static function () {
                 $roleName = fake()->randomElement(['Administrator', 'Staff', 'Tallerista', 'Participante']);
+
                 return \App\Models\Role::firstOrCreate(['name' => $roleName])->id;
             },
             'email_verified_at' => now(),
