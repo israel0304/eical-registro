@@ -6,25 +6,23 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('dni')->unique();
-            $table->string('name');
+            $table->string('first_name');
+            $table->string('last_name')->nullable();
             $table->string('email')->unique();
+            $table->string('affiliation')->nullable();
+            $table->string('country')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('activation_token')->nullable();
+            $table->timestamp('password_set_at')->nullable();
             $table->rememberToken();
-            $table->string('phone')->nullable();
-            $table->string('extension')->nullable();
-            $table->enum('tshirt_size', ['XS', 'S', 'M', 'L', 'XL', 'XXL'])->nullable();
             $table->string('profile_photo_path', 2048)->nullable();
             $table->foreignId('role_id')->constrained('roles');
-            $table->unsignedBigInteger('stand_id')->nullable();
             $table->boolean('is_active')->default(true);
             $table->softDeletes();
             $table->timestamps();
@@ -46,9 +44,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('users');

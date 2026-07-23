@@ -1,0 +1,45 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Presentation extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $fillable = [
+        'submission_id',
+        'title',
+        'abstract',
+        'discipline',
+        'keywords',
+        'location',
+        'day',
+        'start_time',
+        'end_time',
+    ];
+
+    public function authors(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'presentation_authors')
+            ->withPivot('author_order')
+            ->withTimestamps();
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
+    public function primaryAuthor()
+    {
+        return $this->authors()
+            ->wherePivot('author_order', 1)
+            ->first();
+    }
+}

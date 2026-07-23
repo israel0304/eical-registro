@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -11,95 +13,100 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'first_name',
         'last_name',
         'email',
         'password',
         'dni',
-        'phone',
-        'extension',
-        'tshirt_size',
+        'affiliation',
+        'country',
+        'state',
+
         'profile_photo_path',
         'role_id',
-        'stand_id',
         'is_active',
-        'unit_id',
-        'department_id',
-        'custom_unit',
-        'custom_department',
+        'activation_token',
+        'password_set_at',
     ];
 
-    /**
-     * The attributes that should be appended to the model's array form.
-     *
-     * @var array<int, string>
-     */
     protected $appends = [
         'name',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'two_factor_secret',
         'two_factor_recovery_codes',
         'remember_token',
+        'activation_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'password_set_at' => 'datetime',
         ];
     }
 
-    public function role()
+    public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);
     }
 
-    public function stand()
+    public function presentations(): BelongsToMany
     {
-        return $this->belongsTo(Stand::class);
+        return $this->belongsToMany(Presentation::class, 'presentation_authors')
+            ->withPivot('author_order')
+            ->withTimestamps();
     }
 
-    public function unit()
+    public function enrolledWorkshops(): BelongsToMany
     {
-        return $this->belongsTo(Unit::class);
+        return $this->belongsToMany(Workshop::class, 'workshop_enrollments')
+            ->withPivot('enrolled_at', 'status')
+            ->withTimestamps();
     }
 
-    public function department()
+    public function createdWorkshops(): HasMany
     {
-        return $this->belongsTo(Department::class);
+        return $this->hasMany(Workshop::class, 'created_by');
     }
 
-    /**
-     * Virtual attribute for full name compatibility (e.g. for AppSidebar profile)
-     */
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
     protected function name(): \Illuminate\Database\Eloquent\Casts\Attribute
     {
         return \Illuminate\Database\Eloquent\Casts\Attribute::make(
             get: fn () => trim($this->first_name.' '.$this->last_name),
         );
+    }
+
+    public function isPonente(): bool
+    {
+        return $this->role?->name === 'Ponente';
+    }
+
+    public function isAsistente(): bool
+    {
+        return $this->role?->name === 'Asistente';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role?->name === 'Administrator';
+    }
+
+    public function hasSetPassword(): bool
+    {
+        return $this->password_set_at !== null;
     }
 }

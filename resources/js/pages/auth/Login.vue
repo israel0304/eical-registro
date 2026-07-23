@@ -11,6 +11,7 @@ import AuthBase from '@/layouts/AuthLayout.vue';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
+import { activate } from '@/routes/ponente';
 
 defineProps<{
     status?: string;
@@ -98,12 +99,15 @@ defineProps<{
                 </Button>
             </div>
 
-            <div
-                class="text-center text-sm text-muted-foreground"
-                v-if="canRegister"
-            >
-                Don't have an account?
-                <TextLink :href="register()" :tabindex="5">Sign up</TextLink>
+            <div class="text-center text-sm text-muted-foreground">
+                <div v-if="canRegister">
+                    ¿No tienes cuenta?
+                    <TextLink :href="register()" :tabindex="5">Regístrate</TextLink>
+                </div>
+                <div class="mt-2">
+                    ¿Eres ponente?
+                    <TextLink :href="activate()" :tabindex="6">Activa tu cuenta</TextLink>
+                </div>
             </div>
         </Form>
     </AuthBase>

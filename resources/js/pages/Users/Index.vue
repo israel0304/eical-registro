@@ -94,15 +94,10 @@ const userForm = useForm({
     first_name: '',
     last_name: '',
     email: '',
-    phone: '',
-    extension: '',
-    tshirt_size: '',
+    affiliation: '',
+    country: '',
+    state: '',
     role_id: '',
-    stand_id: '',
-    unit_id: '',
-    department_id: '',
-    custom_unit: '',
-    custom_department: '',
     is_active: true,
     photo: null,
     delete_photo: false,
@@ -132,16 +127,10 @@ const openEditModal = (user: any) => {
     userForm.last_name = user.last_name || '';
 
     userForm.email = user.email || '';
-    userForm.phone = user.phone || '';
-    userForm.extension = user.extension || '';
-    userForm.tshirt_size = user.tshirt_size || '';
+    userForm.affiliation = user.affiliation || '';
+    userForm.country = user.country || '';
+    userForm.state = user.state || '';
     userForm.role_id = user.role_id || '';
-    userForm.stand_id = user.stand_id || '';
-    userForm.unit_id = user.unit_id || (user.custom_unit ? 'other' : '');
-    userForm.department_id =
-        user.department_id || (user.custom_department ? 'other' : '');
-    userForm.custom_unit = user.custom_unit || '';
-    userForm.custom_department = user.custom_department || '';
     userForm.is_active = !!user.is_active;
     userForm.delete_photo = false;
     userForm.dni = user.dni || '';
@@ -154,8 +143,6 @@ const openEditModal = (user: any) => {
 
 const saveUser = () => {
     const data: any = { ...userForm.data() };
-    if (data.unit_id === 'other') data.unit_id = null;
-    if (data.department_id === 'other') data.department_id = null;
 
     if (isEditing.value) {
         data._method = 'put';
@@ -382,24 +369,6 @@ const handleFileUpload = (event: Event) => {
                                     scope="col"
                                     class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
                                 >
-                                    Unidad / Depto
-                                </th>
-                                <th
-                                    scope="col"
-                                    class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
-                                >
-                                    Stand
-                                </th>
-                                <th
-                                    scope="col"
-                                    class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
-                                >
-                                    Playera
-                                </th>
-                                <th
-                                    scope="col"
-                                    class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
-                                >
                                     DNI
                                 </th>
                                 <th
@@ -468,35 +437,6 @@ const handleFileUpload = (event: Event) => {
                                     class="px-6 py-4 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400"
                                 >
                                     {{ user.role?.name || '-' }}
-                                </td>
-                                <td
-                                    class="px-6 py-4 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400"
-                                >
-                                    <div class="flex flex-col">
-                                        <span>{{
-                                            user.unit?.name ||
-                                            user.custom_unit ||
-                                            '-'
-                                        }}</span>
-                                        <span
-                                            class="text-[10px] text-gray-400 dark:text-zinc-600"
-                                            >{{
-                                                user.department?.name ||
-                                                user.custom_department ||
-                                                '-'
-                                            }}</span
-                                        >
-                                    </div>
-                                </td>
-                                <td
-                                    class="px-6 py-4 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400"
-                                >
-                                    {{ user.stand?.name || '-' }}
-                                </td>
-                                <td
-                                    class="px-6 py-4 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400"
-                                >
-                                    {{ user.tshirt_size || '-' }}
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-500 dark:text-gray-400"
@@ -802,32 +742,6 @@ const handleFileUpload = (event: Event) => {
                                             {{ userForm.errors.email }}
                                         </p>
                                     </div>
-                                    <div class="flex gap-3">
-                                        <div class="flex-1">
-                                            <label
-                                                class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                                >Teléfono</label
-                                            >
-                                            <input
-                                                v-model="userForm.phone"
-                                                type="text"
-                                                class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
-                                                placeholder="+52 55..."
-                                            />
-                                        </div>
-                                        <div class="w-16">
-                                            <label
-                                                class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                                >Ext.</label
-                                            >
-                                            <input
-                                                v-model="userForm.extension"
-                                                type="text"
-                                                class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
-                                                placeholder="6062"
-                                            />
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
 
@@ -835,84 +749,45 @@ const handleFileUpload = (event: Event) => {
                                 <h4
                                     class="mb-4 text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-zinc-400"
                                 >
-                                    Área
+                                    Datos adicionales
                                 </h4>
                                 <div
                                     class="grid grid-cols-1 gap-4 sm:grid-cols-2"
                                 >
-                                    <div>
+                                    <div class="sm:col-span-2">
                                         <label
                                             class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                            >Unidad de adscripción</label
+                                            >Institución / Afiliación</label
                                         >
-                                        <select
-                                            v-model="userForm.unit_id"
-                                            class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
-                                        >
-                                            <option value="">
-                                                Seleccionar
-                                            </option>
-                                            <option
-                                                v-for="unit in units"
-                                                :key="unit.id"
-                                                :value="unit.id"
-                                            >
-                                                {{ unit.name }}
-                                            </option>
-                                            <option value="other">Otra</option>
-                                        </select>
                                         <input
-                                            v-if="userForm.unit_id === 'other'"
-                                            v-model="userForm.custom_unit"
+                                            v-model="userForm.affiliation"
                                             type="text"
-                                            class="mt-2 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                                            placeholder="Especifique"
+                                            class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
+                                            placeholder="Universidad, institución o empresa"
                                         />
                                     </div>
                                     <div>
                                         <label
                                             class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                            >Departamento</label
+                                            >País</label
                                         >
-                                        <select
-                                            v-model="userForm.department_id"
-                                            class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
-                                        >
-                                            <option value="">
-                                                Seleccionar
-                                            </option>
-                                            <template
-                                                v-if="
-                                                    userForm.unit_id &&
-                                                    userForm.unit_id !== 'other'
-                                                "
-                                            >
-                                                <option
-                                                    v-for="dept in (
-                                                        departments || []
-                                                    ).filter(
-                                                        (d) =>
-                                                            d.unit_id?.toString() ==
-                                                            userForm.unit_id.toString(),
-                                                    )"
-                                                    :key="dept.id"
-                                                    :value="dept.id"
-                                                >
-                                                    {{ dept.name }}
-                                                </option>
-                                            </template>
-                                            <option value="other">Otro</option>
-                                        </select>
                                         <input
-                                            v-if="
-                                                userForm.department_id ===
-                                                'other'
-                                            "
-                                            v-model="userForm.custom_department"
+                                            v-model="userForm.country"
                                             type="text"
-                                            required
-                                            class="mt-2 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                                            placeholder="Especifique"
+                                            class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
+                                            placeholder="México"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label
+                                            class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                            >Estado</label
+                                        >
+                                        <input
+                                            v-model="userForm.state"
+                                            type="text"
+                                            class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
+                                            placeholder="Jalisco"
                                         />
                                     </div>
                                 </div>
@@ -927,24 +802,6 @@ const handleFileUpload = (event: Event) => {
                                 <div
                                     class="grid grid-cols-1 gap-4 sm:grid-cols-2"
                                 >
-                                    <div>
-                                        <label
-                                            class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                            >Tamaño playera</label
-                                        >
-                                        <select
-                                            v-model="userForm.tshirt_size"
-                                            class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
-                                        >
-                                            <option value="">
-                                                Seleccionar
-                                            </option>
-                                            <option value="S">CH (S)</option>
-                                            <option value="M">M</option>
-                                            <option value="L">G (L)</option>
-                                            <option value="XL">XL</option>
-                                        </select>
-                                    </div>
                                     <div>
                                         <label
                                             class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
@@ -964,27 +821,6 @@ const handleFileUpload = (event: Event) => {
                                                 :value="role.id"
                                             >
                                                 {{ role.name }}
-                                            </option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label
-                                            class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                            >Stand</label
-                                        >
-                                        <select
-                                            v-model="userForm.stand_id"
-                                            class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
-                                        >
-                                            <option value="">
-                                                Seleccionar
-                                            </option>
-                                            <option
-                                                v-for="stand in stands || []"
-                                                :key="stand.id"
-                                                :value="stand.id"
-                                            >
-                                                {{ stand.name }}
                                             </option>
                                         </select>
                                     </div>

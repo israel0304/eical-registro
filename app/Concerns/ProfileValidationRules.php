@@ -19,6 +19,9 @@ trait ProfileValidationRules
             'last_name' => $this->lastNameRules(),
             'dni' => $this->dniRules($userId),
             'email' => $this->emailRules($userId),
+            'affiliation' => ['required', 'string', 'max:255'],
+            'country' => ['required', 'string', 'max:255'],
+            'state' => ['required', 'string', 'max:255'],
         ];
     }
 
