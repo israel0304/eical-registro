@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Home, Users, Store, Package, ClipboardList, CalendarCheck, ScanBarcode, LayoutTemplate, FileDown, BarChart, Settings, Folder, BookOpen } from 'lucide-vue-next';
+import { Home, Users, BookOpen, Mic, CalendarCheck, Award, BarChart3 } from 'lucide-vue-next';
 import { computed } from 'vue';
-import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -20,59 +19,39 @@ import AppLogo from './AppLogo.vue';
 
 const page = usePage();
 
-const role_id = computed(() => page.props.auth.user?.role_id || 1); // fallback to 1 (Admin) for dev testing if missing
+const role_id = computed(() => page.props.auth.user?.role_id || 1);
 
 const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
         { title: 'Inicio', href: dashboard(), icon: Home },
     ];
 
-    if (role_id.value === 1) { // Administrador
+    if (role_id.value === 1) { // Administrator
         items.push(
             { title: 'Usuarios', href: '/users', icon: Users },
-            { title: 'Stands', href: '#', icon: Store },
-            { title: 'Registro de inventario', href: '#', icon: Package },
-            { title: 'Solicitud de material', href: '#', icon: ClipboardList },
-            { title: 'Registro de Asistencia', href: '#', icon: CalendarCheck },
-            { title: 'Entrega de material', href: '#', icon: ScanBarcode },
-            { title: 'Plantillas', href: '#', icon: LayoutTemplate },
-            { title: 'Descargas', href: '#', icon: FileDown },
-            { title: 'Reportes', href: '#', icon: BarChart },
-            { title: 'Ajustes', href: '#', icon: Settings }
+            { title: 'Talleres', href: '/workshops', icon: BookOpen },
+            { title: 'Ponencias', href: '/presentations', icon: Mic },
+            { title: 'Importar Ponencias', href: '/admin/presentations/import', icon: Mic },
+            { title: 'Constancias', href: '/admin/constancias', icon: Award },
+            { title: 'Reportes', href: '/admin/reportes', icon: BarChart3 },
         );
-    } else if (role_id.value === 2) { // Staff
+    } else if (role_id.value === 2) { // Ponente
         items.push(
-            { title: 'Registro de Asistencia', href: '#', icon: CalendarCheck },
-            { title: 'Entrega de material', href: '#', icon: ScanBarcode }
+            { title: 'Mis Ponencias', href: '/presentations', icon: Mic },
+            { title: 'Talleres', href: '/workshops', icon: BookOpen },
+            { title: 'Mis Talleres', href: '/my-workshops', icon: CalendarCheck },
+            { title: 'Mis Constancias', href: '/constancias', icon: Award },
         );
-    } else if (role_id.value === 3) { // Tallerista
+    } else if (role_id.value === 3) { // Asistente
         items.push(
-            { title: 'Stands', href: '#', icon: Store },
-            { title: 'Solicitud de material', href: '#', icon: ClipboardList },
-            { title: 'Descargas', href: '#', icon: FileDown }
-        );
-    } else if (role_id.value === 4) { // Participante
-        items.push(
-            { title: 'Stands', href: '#', icon: Store },
-            { title: 'Descargas', href: '#', icon: FileDown }
+            { title: 'Talleres', href: '/workshops', icon: BookOpen },
+            { title: 'Mis Talleres', href: '/my-workshops', icon: CalendarCheck },
+            { title: 'Mis Constancias', href: '/constancias', icon: Award },
         );
     }
 
     return items;
 });
-
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Github Repo',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
-];
 </script>
 
 <template>
@@ -94,7 +73,6 @@ const footerNavItems: NavItem[] = [
         </SidebarContent>
 
         <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
             <NavUser />
         </SidebarFooter>
     </Sidebar>

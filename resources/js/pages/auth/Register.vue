@@ -13,10 +13,10 @@ import { store } from '@/routes/register';
 
 <template>
     <AuthBase
-        title="Create an account"
-        description="Enter your details below to create your account"
+        title="Crear cuenta de Asistente"
+        description="Regístrate para participar en el evento"
     >
-        <Head title="Register" />
+        <Head title="Registro" />
 
         <Form
             v-bind="store.form()"
@@ -26,58 +26,111 @@ import { store } from '@/routes/register';
         >
             <div class="grid gap-6">
                 <div class="grid gap-2">
-                    <Label for="name">Name</Label>
+                    <Label for="first_name">Nombre(s)</Label>
                     <Input
-                        id="name"
+                        id="first_name"
                         type="text"
                         required
                         autofocus
                         :tabindex="1"
-                        autocomplete="name"
-                        name="name"
-                        placeholder="Full name"
+                        autocomplete="given-name"
+                        name="first_name"
+                        placeholder="Tus nombres"
                     />
-                    <InputError :message="errors.name" />
+                    <InputError :message="errors.first_name" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="email">Email address</Label>
+                    <Label for="last_name">Apellido(s)</Label>
+                    <Input
+                        id="last_name"
+                        type="text"
+                        :tabindex="2"
+                        autocomplete="family-name"
+                        name="last_name"
+                        placeholder="Tus apellidos"
+                    />
+                    <InputError :message="errors.last_name" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="affiliation">Institución / Afiliación</Label>
+                    <Input
+                        id="affiliation"
+                        type="text"
+                        required
+                        :tabindex="3"
+                        name="affiliation"
+                        placeholder="Universidad, institución o empresa"
+                    />
+                    <InputError :message="errors.affiliation" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="grid gap-2">
+                        <Label for="country">País</Label>
+                        <Input
+                            id="country"
+                            type="text"
+                            required
+                            :tabindex="4"
+                            name="country"
+                            placeholder="México"
+                        />
+                        <InputError :message="errors.country" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="state">Estado</Label>
+                        <Input
+                            id="state"
+                            type="text"
+                            required
+                            :tabindex="5"
+                            name="state"
+                            placeholder="Jalisco"
+                        />
+                        <InputError :message="errors.state" />
+                    </div>
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="email">Correo electrónico</Label>
                     <Input
                         id="email"
                         type="email"
                         required
-                        :tabindex="2"
+                        :tabindex="6"
                         autocomplete="email"
                         name="email"
-                        placeholder="email@example.com"
+                        placeholder="correo@ejemplo.com"
                     />
                     <InputError :message="errors.email" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="password">Password</Label>
+                    <Label for="password">Contraseña</Label>
                     <Input
                         id="password"
                         type="password"
                         required
-                        :tabindex="3"
+                        :tabindex="7"
                         autocomplete="new-password"
                         name="password"
-                        placeholder="Password"
+                        placeholder="Mínimo 8 caracteres"
                     />
                     <InputError :message="errors.password" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="password_confirmation">Confirm password</Label>
+                    <Label for="password_confirmation">Confirmar contraseña</Label>
                     <Input
                         id="password_confirmation"
                         type="password"
                         required
-                        :tabindex="4"
+                        :tabindex="8"
                         autocomplete="new-password"
                         name="password_confirmation"
-                        placeholder="Confirm password"
+                        placeholder="Repite tu contraseña"
                     />
                     <InputError :message="errors.password_confirmation" />
                 </div>
@@ -85,23 +138,22 @@ import { store } from '@/routes/register';
                 <Button
                     type="submit"
                     class="mt-2 w-full"
-                    tabindex="5"
+                    tabindex="9"
                     :disabled="processing"
                     data-test="register-user-button"
                 >
                     <Spinner v-if="processing" />
-                    Create account
+                    Crear cuenta
                 </Button>
             </div>
 
             <div class="text-center text-sm text-muted-foreground">
-                Already have an account?
+                ¿Ya tienes cuenta?
                 <TextLink
                     :href="login()"
                     class="underline underline-offset-4"
                     :tabindex="6"
-                    >Log in</TextLink
-                >
+                >Iniciar sesión</TextLink>
             </div>
         </Form>
     </AuthBase>

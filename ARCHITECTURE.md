@@ -1,8 +1,8 @@
-# 🏗️ Arquitectura del Sistema: Cinvesniñ@s 2026
+# 🏗️ Arquitectura del Sistema: Registro EICAL 2026
 
 ## 1. Resumen del Proyecto
 
-El sistema es una plataforma de gestión integral diseñada para centralizar la logística, el inventario y la acreditación del evento **Cinvesniñ@s**. Sustituye flujos de trabajo manuales y formularios dispersos por una arquitectura relacional robusta que garantiza la integridad de los datos y la trazabilidad de los insumos.
+El sistema es una plataforma de gestión integral diseñada para centralizar la logística, el inventario y la acreditación del evento **Registro EICAL**. Sustituye flujos de trabajo manuales y formularios dispersos por una arquitectura relacional robusta que garantiza la integridad de los datos y la trazabilidad de los insumos.
 
 ---
 
@@ -25,7 +25,7 @@ Gestión de usuarios con jerarquía de permisos y SoftDeletes para conservar his
 
 - **`roles`**: Define niveles de acceso (Admin, Staff, Tallerista, Participante).
 - **`participation_roles`**: Roles específicos de participación (ej. Niño, Joven, Adulto).
-- **`users`**: Tabla central de usuarios. Incluye `first_name`, `last_name`, `dni` (unique), `email` (unique), `phone`, `extension`, `tshirt_size`, `profile_photo_path`, `role_id` (FK requerida), `unit_id`, `department_id`, `participation_role_id`, y relación `stand_id`. Soporta 2FA con columnas `two_factor_secret`, `two_factor_recovery_codes`, `two_factor_confirmed_at`.
+- **`users`**: Tabla central de usuarios. Incluye `first_name`, `last_name`, `dni` (unique), `email` (unique), `affiliation`, `country`, `profile_photo_path`, `role_id` (FK requerida), `is_active`. Soporta 2FA con columnas `two_factor_secret`, `two_factor_recovery_codes`, `two_factor_confirmed_at`.
 
 ### 🏗️ Módulo 2: Infraestructura y Espacios
 

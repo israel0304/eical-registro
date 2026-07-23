@@ -10,7 +10,7 @@ import AppLogoIcon from '@/components/AppLogoIcon.vue';
     </div>
     <div class="ml-1 grid flex-1 text-left text-sm">
         <span class="mb-0.5 truncate leading-tight font-semibold text-zinc-900 dark:text-zinc-100"
-            >Cinvesninos Pannel</span
+            >Registro EICAL</span
         >
     </div>
 </template>

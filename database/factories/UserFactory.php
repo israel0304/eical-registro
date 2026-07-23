@@ -28,11 +28,9 @@ class UserFactory extends Factory
             'last_name' => fake()->lastName(),
             'dni' => fake()->unique()->numerify('###########'),
             'email' => fake()->unique()->safeEmail(),
-            'phone' => fake()->phoneNumber(),
-            'extension' => fake()->optional()->numerify('###'),
-            'tshirt_size' => fake()->randomElement(['XS', 'S', 'M', 'L', 'XL', 'XXL']),
+
             'role_id' => static function () {
-                $roleName = fake()->randomElement(['Administrator', 'Staff', 'Tallerista', 'Participante']);
+                $roleName = fake()->randomElement(['Administrator', 'Ponente', 'Asistente']);
 
                 return \App\Models\Role::firstOrCreate(['name' => $roleName])->id;
             },
