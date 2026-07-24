@@ -31,6 +31,9 @@ class ProfileUpdateTest extends TestCase
                 'first_name' => 'Test',
                 'last_name' => 'User',
                 'email' => 'test@example.com',
+                'affiliation' => 'CINVESTAV',
+                'country' => 'Mexico',
+                'state' => 'CDMX',
             ]);
 
         $response
@@ -55,6 +58,9 @@ class ProfileUpdateTest extends TestCase
                 'first_name' => 'Test',
                 'last_name' => 'User',
                 'email' => $user->email,
+                'affiliation' => 'CINVESTAV',
+                'country' => 'Mexico',
+                'state' => 'CDMX',
             ]);
 
         $response
