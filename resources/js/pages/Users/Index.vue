@@ -845,22 +845,24 @@ const handleFileUpload = (event: Event) => {
                             </div>
                         </div>
 
-<div
-                            class="mt-6 sm:mt-8 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-100 pt-4 dark:border-zinc-800"
+                        <div
+                            class="mt-6 flex flex-col-reverse items-stretch justify-between gap-3 border-t border-gray-100 pt-4 sm:mt-8 sm:flex-row sm:items-center dark:border-zinc-800"
                         >
                             <button
                                 type="button"
                                 @click="showUserModal = false"
-                                class="w-full sm:w-auto order-1 sm:order-none rounded-md border border-red-200 bg-red-50 px-3 py-2 sm:px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                                class="order-1 w-full rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 sm:order-none sm:w-auto sm:px-4 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
                             >
                                 Cancelar
                             </button>
-                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 order-2 sm:order-none">
+                            <div
+                                class="order-2 flex flex-col items-stretch gap-2 sm:order-none sm:flex-row sm:items-center sm:gap-3"
+                            >
                                 <button
                                     v-if="isEditing"
                                     type="button"
                                     @click.prevent="sendResetPassword"
-                                    class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                                    class="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 sm:w-auto dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30"
                                 >
                                     <svg
                                         class="h-3.5 w-3.5"
@@ -875,13 +877,15 @@ const handleFileUpload = (event: Event) => {
                                             d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
                                         />
                                     </svg>
-                                    <span class="hidden sm:inline">Restablecer</span>
+                                    <span class="hidden sm:inline"
+                                        >Restablecer</span
+                                    >
                                     <span class="sm:hidden">🔑</span>
                                 </button>
                                 <button
                                     type="submit"
                                     :disabled="userForm.processing"
-                                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                                    class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto dark:bg-indigo-500 dark:hover:bg-indigo-600"
                                 >
                                     <Plus v-if="!isEditing" class="h-4 w-4" />
                                     <svg
@@ -898,9 +902,10 @@ const handleFileUpload = (event: Event) => {
                                         <path
                                             d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"
                                         />
-                                        <path d="M7 3v4a1 1 0 0 0 1 1h7" /></svg>
+                                        <path d="M7 3v4a1 1 0 0 0 1 1h7" />
+                                    </svg>
                                     <span v-if="!isEditing">Añadir</span>
-                                    <span v-else">Guardar</span>
+                                    <span v-else>Guardar</span>
                                 </button>
                             </div>
                         </div>
