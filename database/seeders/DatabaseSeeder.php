@@ -2,17 +2,19 @@
 
 namespace Database\Seeders;
 
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        \App\Models\Role::updateOrCreate(['id' => 1], ['name' => 'Administrator']);
-        \App\Models\Role::updateOrCreate(['id' => 2], ['name' => 'Ponente']);
-        \App\Models\Role::updateOrCreate(['id' => 3], ['name' => 'Asistente']);
+        Role::updateOrCreate(['id' => 1], ['name' => 'Administrator']);
+        Role::updateOrCreate(['id' => 2], ['name' => 'Ponente']);
+        Role::updateOrCreate(['id' => 3], ['name' => 'Asistente']);
 
-        \App\Models\User::factory()->create([
+        User::factory()->create([
             'first_name' => 'Admin',
             'last_name' => 'Sistema',
             'email' => 'admin@cinvestav.edu.mx',
