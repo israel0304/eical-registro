@@ -102,11 +102,15 @@ defineProps<{
             <div class="text-center text-sm text-muted-foreground">
                 <div v-if="canRegister">
                     ¿No tienes cuenta?
-                    <TextLink :href="register()" :tabindex="5">Regístrate</TextLink>
+                    <TextLink :href="register()" :tabindex="5"
+                        >Regístrate</TextLink
+                    >
                 </div>
                 <div class="mt-2">
                     ¿Eres ponente?
-                    <TextLink :href="activate()" :tabindex="6">Activa tu cuenta</TextLink>
+                    <TextLink :href="activate()" :tabindex="6"
+                        >Activa tu cuenta</TextLink
+                    >
                 </div>
             </div>
         </Form>

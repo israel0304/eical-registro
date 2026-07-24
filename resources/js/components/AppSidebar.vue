@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Home, Users, BookOpen, Mic, CalendarCheck, Award, BarChart3 } from 'lucide-vue-next';
+import {
+    Home,
+    Users,
+    BookOpen,
+    Mic,
+    CalendarCheck,
+    Award,
+    BarChart3,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -26,26 +34,41 @@ const mainNavItems = computed<NavItem[]>(() => {
         { title: 'Inicio', href: dashboard(), icon: Home },
     ];
 
-    if (role_id.value === 1) { // Administrator
+    if (role_id.value === 1) {
+        // Administrator
         items.push(
             { title: 'Usuarios', href: '/users', icon: Users },
             { title: 'Talleres', href: '/workshops', icon: BookOpen },
             { title: 'Ponencias', href: '/presentations', icon: Mic },
-            { title: 'Importar Ponencias', href: '/admin/presentations/import', icon: Mic },
+            {
+                title: 'Importar Ponencias',
+                href: '/admin/presentations/import',
+                icon: Mic,
+            },
             { title: 'Constancias', href: '/admin/constancias', icon: Award },
             { title: 'Reportes', href: '/admin/reportes', icon: BarChart3 },
         );
-    } else if (role_id.value === 2) { // Ponente
+    } else if (role_id.value === 2) {
+        // Ponente
         items.push(
             { title: 'Mis Ponencias', href: '/presentations', icon: Mic },
             { title: 'Talleres', href: '/workshops', icon: BookOpen },
-            { title: 'Mis Talleres', href: '/my-workshops', icon: CalendarCheck },
+            {
+                title: 'Mis Talleres',
+                href: '/my-workshops',
+                icon: CalendarCheck,
+            },
             { title: 'Mis Constancias', href: '/constancias', icon: Award },
         );
-    } else if (role_id.value === 3) { // Asistente
+    } else if (role_id.value === 3) {
+        // Asistente
         items.push(
             { title: 'Talleres', href: '/workshops', icon: BookOpen },
-            { title: 'Mis Talleres', href: '/my-workshops', icon: CalendarCheck },
+            {
+                title: 'Mis Talleres',
+                href: '/my-workshops',
+                icon: CalendarCheck,
+            },
             { title: 'Mis Constancias', href: '/constancias', icon: Award },
         );
     }

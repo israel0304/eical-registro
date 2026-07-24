@@ -122,7 +122,9 @@ import { store } from '@/routes/register';
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="password_confirmation">Confirmar contraseña</Label>
+                    <Label for="password_confirmation"
+                        >Confirmar contraseña</Label
+                    >
                     <Input
                         id="password_confirmation"
                         type="password"
@@ -153,7 +155,8 @@ import { store } from '@/routes/register';
                     :href="login()"
                     class="underline underline-offset-4"
                     :tabindex="6"
-                >Iniciar sesión</TextLink>
+                    >Iniciar sesión</TextLink
+                >
             </div>
         </Form>
     </AuthBase>

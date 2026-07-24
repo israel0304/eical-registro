@@ -50,7 +50,9 @@ function submit() {
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="password_confirmation">Confirmar Contraseña</Label>
+                    <Label for="password_confirmation"
+                        >Confirmar Contraseña</Label
+                    >
                     <Input
                         id="password_confirmation"
                         v-model="form.password_confirmation"
