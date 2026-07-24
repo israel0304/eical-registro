@@ -1,129 +1,149 @@
-# 🏗️ Arquitectura del Sistema: Registro EICAL 2026
+# Arquitectura del Sistema: Registro EICAL 2026
 
 ## 1. Resumen del Proyecto
 
-El sistema es una plataforma de gestión integral diseñada para centralizar la logística, el inventario y la acreditación del evento **Registro EICAL**. Sustituye flujos de trabajo manuales y formularios dispersos por una arquitectura relacional robusta que garantiza la integridad de los datos y la trazabilidad de los insumos.
+Plataforma de gestion integral para el evento **Registro EICAL 2026**. Administra registro de participantes, talleres, ponencias, asistencia y constancias. Sustituye flujos de trabajo manuales con una arquitectura relacional que garantiza integridad de datos y trazabilidad.
 
 ---
 
-## 2. Stack Tecnológico
+## 2. Stack Tecnologico
 
 - **Framework:** Laravel 12 (PHP 8.2+)
-- **Base de Datos:** MySQL / SQLite (configurable)
-- **Autenticación:** Laravel Fortify (2FA, verificación de email)
+- **Base de Datos:** MySQL (`eical_registro`)
+- **Autenticacion:** Laravel Fortify (2FA, verificacion de email)
 - **Frontend:** Vue 3 + Inertia.js + TypeScript
 - **UI:** Tailwind CSS 4 + Reka UI + Lucide Icons
-- **Reportes:** (pendiente de implementar)
+- **QR:** qrcode (frontend) + bacon/bacon-qr-code (server-side PNG)
+- **Mail:** `MAIL_MAILER=log` (emails en `storage/logs/laravel.log`)
 
 ---
 
-## 3. Modelo de Datos (Esquema Relacional)
+## 3. Modelo de Datos
 
-### 👥 Módulo 1: Identidad y Acceso (IAM)
+### 3.1 Identidad y Acceso (IAM)
 
-Gestión de usuarios con jerarquía de permisos y SoftDeletes para conservar historial.
+- **`roles`**: 3 roles con IDs fijos: Administrator (1), Ponente (2), Asistente (3)
+- **`users`**: `first_name`, `last_name`, `dni` (unique, auto-generado `CNV-` + 7 chars), `email` (unique), `password`, `affiliation`, `country`, `state`, `role_id` (FK), `is_active`, `activation_token`, `password_set_at`. Soporta 2FA.
 
-- **`roles`**: Define niveles de acceso (Admin, Staff, Tallerista, Participante).
-- **`participation_roles`**: Roles específicos de participación (ej. Niño, Joven, Adulto).
-- **`users`**: Tabla central de usuarios. Incluye `first_name`, `last_name`, `dni` (unique), `email` (unique), `affiliation`, `country`, `profile_photo_path`, `role_id` (FK requerida), `is_active`. Soporta 2FA con columnas `two_factor_secret`, `two_factor_recovery_codes`, `two_factor_confirmed_at`.
+### 3.2 Talleres (Workshops)
 
-### 🏗️ Módulo 2: Infraestructura y Espacios
+- **`workshops`**: `title`, `description`, `capacity`, `location` (texto libre), `starts_at`, `ends_at`, `event_day`, `qr_time_restricted` (bool), `created_by` (FK a users). Sin campos de instructor (ver abajo).
+- **`instructors`**: `workshop_id` (FK cascade delete), `name`, `institution`, `email` (requerido). Max 5 por taller.
+- **`workshop_enrollments`**: `user_id` + `workshop_id` (unique), `status` enum (`enrolled`/`cancelled`), `enrolled_at`.
 
-Administración física del recinto.
+### 3.3 Ponencias (Presentations)
 
-- **`stand_types`**: Catálogo de dimensiones y servicios (ej. 2x3 con luz).
-- **`stands`**: Registro de actividades (Talleres, Teatro, etc.) vinculadas a un responsable.
-- **`qr_codes`**: Tabla polimórfica que genera identificadores UUID para usuarios y stands.
+- **`presentations`**: `submission_id` (unique), `title`, `abstract`, `type`, `status`, `event_day`, `starts_at`, `ends_at`, `ponente_user_id` (FK).
+- **`presentation_authors`**: `presentation_id` (FK cascade), `name`, `institution`, `email`, `order` (para autores ordenados).
 
-### 📦 Módulo 3: Inventario y Variaciones
+### 3.4 Asistencia (Attendances)
 
-Motor de stock con soporte para productos complejos.
+- **`attendances`**: `user_id` (FK cascade), `presentation_id` (FK nullOnDelete), `workshop_id` (FK nullOnDelete), `event_day` (string, formato YYYY-MM-DD), `registered_by` (FK a users), `certificate_generated`, `certificate_generated_at`.
 
-- **`products`**: Definición base de artículos (ej. "Playera").
-- **`attributes`** & **`attribute_values`**: Manejo de variantes (Talla: S, M, L).
-- **`product_skus`**: Control de stock físico y comprometido por cada variante única.
-- **`sku_values`**: Pivote con **PK compuesta** para definir la relación SKU-Atributo.
+### 3.5 Infraestructura
 
-### 🚚 Módulo 4: Logística y Auditoría
-
-Unificación de pedidos y control de movimientos de almacén.
-
-- **`product_requests`**: Tabla unificada para pedidos normales y especiales. Incluye trazabilidad de quién solicita, quién aprueba y quién entrega.
-- **`stock_movements`**: Libro mayor de auditoría. Registra `previous_stock` y `new_stock` con referencias polimórficas a los pedidos.
-- **`stand_type_quotas`**: Reglas de negocio y límites por tipo de espacio.
-
-### 🎓 Módulo 5: Acreditación y Configuración
-
-Control de asistencia y generación de salidas.
-
-- **`attendances`**: Registro de entrada por día con **Unique Constraint** (`user_id`, `event_day`).
-- **`templates`** & **`template_fields`**: Sistema de coordenadas para imprimir datos sobre PDFs de constancias.
-- **`settings`**: Configuración dinámica de llaves/valores para controlar fechas de cierre y permisos de edición.
-
-### 🏢 Módulo 6: Estructura Organizacional
-
-Definición de la jerarquía institucional.
-
-- **`departments`**: Departamentos o áreas de la organización.
-- **`units`**: Unidades o subáreas dentro de cada departamento.
+- **`qr_codes`**: Tabla polimorfica con identificadores UUID.
+- **`templates`** y **`template_fields`**: Sistema de coordenadas para constancias.
+- **`settings`**: Configuracion dinamica llave/valor.
 
 ---
 
-## 4. Reglas de Negocio Críticas
+## 4. Roles y Permisos
 
-### 🔐 Jerarquía de Gestión
-
-1.  **Administrador:** Crea stands, asigna responsables y gestiona el inventario global.
-2.  **Responsable (Tallerista):** Gestiona a su propio equipo (Participantes) y solicita materiales.
-3.  **Participante:** Rol de privilegios mínimos para validar datos personales, elegir talla de playera y descargar su constancia.
-
-### 📝 Registro de Usuarios
-
-- **Campos requeridos en registro:** `first_name`, `last_name`, `dni` (único), `email` (único), `password`
-- **Asignación automática:** Nuevos usuarios reciben el rol "Participante" por defecto
-- **Validaciones:** `dni` debe ser único en el sistema, `email` debe ser único y válido
-
-### 🔧 GitHub Actions
-
-- **PHP version:** 8.2 (compatible con `composer.json` que requiere `^8.2`)
-- **Node.js version:** 22
-- **Workflows:** `tests.yml` y `lint.yml` configurados correctamente
-
-### 📦 Lógica de Stock
-
-- **Stock Comprometido:** Al registrar un usuario o hacer un pedido, el sistema aparta las unidades sin restarlas del físico.
-- **Descuento Real:** Solo ocurre cuando el Staff marca el pedido como `delivered`, generando el movimiento contable correspondiente.
-
-### ⚙️ Flexibilidad de Configuración
-
-El sistema utiliza la tabla `settings` para validar procesos en tiempo real:
-
-- Si `tshirt_edit_deadline` es nulo, la edición permanece abierta.
-- Si el switch `allow_participant_edit_name` está en `false`, el participante solo puede ver su nombre pero no corregirlo.
-
-### 🔒 Seguridad Adicional
-
-- **2FA:** Autenticación de dos factores via Laravel Fortify (columnas: `two_factor_secret`, `two_factor_recovery_codes`, `two_factor_confirmed_at`)
-- **Verificación de Email:** Campo `email_verified_at` para tracking de verificación
-- **Appearance:** Sistema de tema oscuro/claro configurable por usuario
-- **Navigación SPA:** Inertia.js para experiencia fluida sin recargas
+| Rol | Permisos |
+|---|---|
+| **Administrator** (id=1) | CRUD completo: usuarios, talleres, ponencias, asistencia, constancias, reportes. Puede cancelar cualquier inscripcion. |
+| **Ponente** (id=2) | Editar propias ponencias, perfil propio, inscribirse a talleres, ver constancias. |
+| **Asistente** (id=3) | Auto-registro o creado por admin. Inscribirse a talleres libremente, ver constancias. |
 
 ---
 
-## 5. Diagrama de Flujo: Ciclo de Vida de un Participante
+## 5. Funcionalidades Principales
 
-1.  **Alta:** El Responsable lo registra en el stand.
-2.  **Validación:** El Participante entra, sube su foto y confirma su talla.
-3.  **Acreditación:** El Staff escanea su QR en el evento y marca la asistencia.
-4.  **Certificación:** Si tiene asistencia completa, el sistema habilita la descarga del PDF basado en el `template` asignado.
+### 5.1 Registro y Activacion de Ponentes
+
+- Ponentes importados via CSV desde sistema academico OJS (tab-delimited).
+- Solo se importan submissions con status "Aceptada".
+- Cuenta creada inactiva (sin password). Activacion via `submission_id` + email.
+- Seleccion de password en segundo paso.
+
+### 5.2 Talleres
+
+- CRUD restringido a administrador.
+- Instructores en tabla separada (max 5, email requerido).
+- Capacidad limitada, inscripcion/desuscripcion con reglas:
+  - No cancelar dentro de 10 minutos de inicio.
+  - No cancelar si asistencia ya confirmada.
+  - Admin puede cancelar cualquier inscripcion.
+
+### 5.3 Sistema QR y Asistencia
+
+- **QR por taller** (no por usuario). Un solo QR se proyecta/imprime en el salón.
+- **Restriccion de horario**: Admin puede activar/desactivar que solo se acepte QR dentro del rango del taller.
+- **Auto-checkin**: Escaneo de QR registra asistencia automaticamente.
+- **Manual**: Admin puede toggle asistencia individual por usuario.
+- **Email**: QR se envia por email a los instructores del taller.
+
+### 5.4 Constancias
+
+- Generadas como HTML por cada taller completado.
+- Descargables por el usuario.
+
+### 5.5 Reportes (Solo Admin)
+
+- Asistencia por taller (exportable CSV)
+- Asistencia general
+- Asistencia a ponencias
+- Resumen general
+- Ocupacion de talleres
+- Estadisticas
 
 ---
 
-## 6. Seguridad y Auditoría
+## 6. Flujo de Datos Clave
 
-- **SoftDeletes:** Ningún usuario o pedido se elimina físicamente para evitar "huecos" en los reportes de inventario.
-- **Trazabilidad Polimórfica:** Cada cambio en el stock está ligado a un modelo de referencia (Pedido o Ajuste Manual) y a un usuario responsable (`created_by`).
+### Inscripcion a Taller
+
+1. Usuario ve talleres disponibles en `/workshops`.
+2. Hace click en "Inscribirse" → `POST /workshops/{id}/enroll`.
+3. Backend valida capacidad, crea `workshop_enrollment` con status `enrolled`.
+4. Se envia email de confirmacion al usuario.
+5. QR del taller se envia por email a los instructores.
+
+### Asistencia via QR
+
+1. QR del taller se muestra en pantalla/imprese.
+2. Usuario escanea → `/scan` → redirige a confirmacion.
+3. Si `qr_time_restricted` esta activo, valida hora actual contra `starts_at`/`ends_at`.
+4. `POST /workshops/{workshop}/scan` registra attendance.
+5. Toggle: `POST/DELETE /admin/workshops/{workshop}/attendance/{userId}`.
+
+### Cancelacion de Inscripcion
+
+1. Usuario hace click en "Cancelar" → `DELETE /workshops/{id}/enroll`.
+2. Backend valida: no tiene asistencia confirmada, no esta dentro de 10 min de inicio.
+3. Admin no tiene restricciones.
+4. Enrollment status cambia a `cancelled`.
 
 ---
 
-_Documentación generada para el equipo de desarrollo - Abril 2026._
+## 7. Configuracion
+
+- **DB:** MySQL `eical_registro` / `eical_registro` / `4xTqhK576$F2`
+- **Mail:** `MAIL_MAILER=log` (emails en `storage/logs/laravel.log`)
+- **Roles IDs:** Administrator=1, Ponente=2, Asistente=3 (fijos en seeder)
+- **DNI format:** `CNV-` + 7 caracteres aleatorios (auto-generado)
+
+---
+
+## 8. Notas de Implementacion
+
+- **Role ID casting:** `role_id` casteado como `integer` en User model para evitar issues con comparaciones estrictas en JavaScript.
+- **Imagick:** Usar `flattenImages()` en vez de `compositeImages()` para compatibilidad con PHP 8.4.
+- **Instructor email:** Validacion `email` (sin `rfc,dns`) para evitar fallos por verificacion DNS.
+- **Event day:** Campo string (no integer) para flexibilidad de formato.
+- **Wayfinder:** Las rutas generan objetos `{ url, method }` compatibles con Inertia `Link`.
+
+---
+
+_Documentacion actualizada - Julio 2026._
