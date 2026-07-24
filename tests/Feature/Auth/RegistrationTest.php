@@ -25,6 +25,9 @@ class RegistrationTest extends TestCase
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
+            'affiliation' => 'Test University',
+            'country' => 'Mexico',
+            'state' => 'CDMX',
         ]);
 
         $response->assertSessionHasNoErrors();
