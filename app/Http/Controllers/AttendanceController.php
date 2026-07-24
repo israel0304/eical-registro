@@ -11,6 +11,7 @@ use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
@@ -56,8 +57,8 @@ class AttendanceController extends Controller
             $startTime = $workshop->start_time;
             $endTime = $workshop->end_time;
 
-            $start = \Carbon\Carbon::parse("{$eventDate} {$startTime}");
-            $end = \Carbon\Carbon::parse("{$eventDate} {$endTime}");
+            $start = Carbon::parse("{$eventDate} {$startTime}");
+            $end = Carbon::parse("{$eventDate} {$endTime}");
 
             if ($now->lt($start) || $now->gt($end)) {
                 return Inertia::render('Workshops/Scan', [

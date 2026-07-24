@@ -9,6 +9,10 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkshopController;
 use App\Http\Controllers\WorkshopEnrollmentController;
+use App\Models\Presentation;
+use App\Models\User;
+use App\Models\Workshop;
+use App\Models\WorkshopEnrollment;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -27,12 +31,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         if ($user->isAdmin()) {
             $stats = [
-                'total_users' => \App\Models\User::count(),
-                'asistentes' => \App\Models\User::whereHas('role', fn ($q) => $q->where('name', 'Asistente'))->count(),
-                'ponentes' => \App\Models\User::whereHas('role', fn ($q) => $q->where('name', 'Ponente'))->count(),
-                'talleres' => \App\Models\Workshop::count(),
-                'ponencias' => \App\Models\Presentation::count(),
-                'inscripciones' => \App\Models\WorkshopEnrollment::where('status', 'enrolled')->count(),
+                'total_users' => User::count(),
+                'asistentes' => User::whereHas('role', fn ($q) => $q->where('name', 'Asistente'))->count(),
+                'ponentes' => User::whereHas('role', fn ($q) => $q->where('name', 'Ponente'))->count(),
+                'talleres' => Workshop::count(),
+                'ponencias' => Presentation::count(),
+                'inscripciones' => WorkshopEnrollment::where('status', 'enrolled')->count(),
             ];
         } elseif ($user->isPonente()) {
             $stats = [

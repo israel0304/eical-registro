@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Models\Workshop;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -62,7 +63,7 @@ class ConstanciaController extends Controller
     public function adminDownload($workshopId, $userId)
     {
         $workshop = Workshop::findOrFail($workshopId);
-        $user = \App\Models\User::findOrFail($userId);
+        $user = User::findOrFail($userId);
 
         return $this->generateCertificatePdf($user, $workshop);
     }

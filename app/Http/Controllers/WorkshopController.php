@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attendance;
 use App\Models\Workshop;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -72,7 +73,7 @@ class WorkshopController extends Controller
         $workshop->setRelation(
             'enrollments',
             $workshop->enrollments->map(function ($enrollment) {
-                $enrollment->has_attendance = \App\Models\Attendance::where('user_id', $enrollment->user_id)
+                $enrollment->has_attendance = Attendance::where('user_id', $enrollment->user_id)
                     ->where('workshop_id', $enrollment->workshop_id)
                     ->exists();
 
