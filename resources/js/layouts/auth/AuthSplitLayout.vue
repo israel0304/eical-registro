@@ -19,11 +19,11 @@ defineProps<{
             <div
                 class="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]"
             >
-                <div class="flex flex-col items-center space-y-2 text-center">
+                <div class="flex flex-col items-center text-center">
                     <img
                         src="/images/logo.png"
                         alt="Registro EICAL"
-                        class="size-20 object-contain"
+                        class="size-32 object-contain"
                     />
                     <h1 class="text-xl font-medium tracking-tight" v-if="title">
                         {{ title }}

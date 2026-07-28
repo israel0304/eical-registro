@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
+import { setPassword } from '@/routes/ponente';
 
 defineProps<{
     email: string;
@@ -18,7 +19,7 @@ const form = useForm({
 });
 
 function submit() {
-    form.post(route('ponente.set-password'));
+    form.post(setPassword());
 }
 </script>
 
