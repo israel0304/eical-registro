@@ -23,7 +23,7 @@ defineProps<{
                     <img
                         src="/images/logo.png"
                         alt="Registro EICAL"
-                        class="size-32 object-contain"
+                        class="size-60 object-contain"
                     />
                     <h1 class="text-xl font-medium tracking-tight" v-if="title">
                         {{ title }}
