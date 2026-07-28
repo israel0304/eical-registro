@@ -1,10 +1,6 @@
 <script setup lang="ts">
-import { Link, usePage } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import { Link } from '@inertiajs/vue3';
 import { home } from '@/routes';
-
-const page = usePage();
-const name = page.props.name;
 
 defineProps<{
     title?: string;
@@ -17,15 +13,24 @@ defineProps<{
         class="relative grid h-dvh flex-col items-center justify-center px-8 sm:px-0 lg:max-w-none lg:grid-cols-2 lg:px-0"
     >
         <div
-            class="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r"
+            class="relative hidden h-full flex-col items-center justify-center bg-cover bg-center p-10 text-white lg:flex dark:border-r"
+            :style="{
+                backgroundImage: 'url(/images/fondo-portada-scaled.png)',
+            }"
         >
-            <div class="absolute inset-0 bg-zinc-900" />
+            <div class="absolute inset-0 bg-black/40" />
             <Link
                 :href="home()"
-                class="relative z-20 flex items-center text-lg font-medium"
+                class="relative z-20 flex flex-col items-center gap-4"
             >
-                <AppLogoIcon class="mr-2 size-8 fill-current text-white" />
-                {{ name }}
+                <img
+                    src="/images/logo.png"
+                    alt="Registro EICAL"
+                    class="size-24 object-contain"
+                />
+                <span class="text-2xl font-bold tracking-tight">
+                    Registro EICAL 2026
+                </span>
             </Link>
         </div>
         <div class="lg:p-8">
