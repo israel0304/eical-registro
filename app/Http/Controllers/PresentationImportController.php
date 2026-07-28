@@ -30,7 +30,20 @@ class PresentationImportController extends Controller
             return back()->withErrors(['csv_file' => 'No se pudo leer el archivo.']);
         }
 
-        $headers = fgetcsv($handle, 0, "\t");
+        $firstLine = fgets($handle);
+        if ($firstLine === false) {
+            fclose($handle);
+
+            return back()->withErrors(['csv_file' => 'El archivo está vacío.']);
+        }
+
+        $commas = substr_count($firstLine, ',');
+        $tabs = substr_count($firstLine, "\t");
+        $delimiter = $commas >= $tabs ? ',' : "\t";
+
+        rewind($handle);
+
+        $headers = fgetcsv($handle, 0, $delimiter);
 
         if ($headers === false) {
             fclose($handle);
@@ -39,6 +52,7 @@ class PresentationImportController extends Controller
         }
 
         $headerMap = array_map('trim', $headers);
+        $headerMap[0] = preg_replace('/^\xEF\xBB\xBF/', '', $headerMap[0]);
 
         $ponenteRole = Role::where('name', 'Ponente')->first();
         if (! $ponenteRole) {
@@ -47,12 +61,19 @@ class PresentationImportController extends Controller
 
         $imported = 0;
         $skipped = 0;
+        $malformed = 0;
 
-        while (($row = fgetcsv($handle, 0, "\t")) !== false) {
+        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+            if (count($headerMap) !== count($row)) {
+                $malformed++;
+
+                continue;
+            }
+
             $data = array_combine($headerMap, $row);
 
             $estado = trim($data['Estado'] ?? '');
-            if (strtolower($estado) !== 'aceptada' && strtolower($estado) !== 'accepted') {
+            if (! in_array(strtolower($estado), ['aceptada', 'aceptado', 'accepted'])) {
                 $skipped++;
 
                 continue;
@@ -117,6 +138,9 @@ class PresentationImportController extends Controller
         $message = "Importación completada: $imported ponencias importadas";
         if ($skipped > 0) {
             $message .= ", $skipped omitidas";
+        }
+        if ($malformed > 0) {
+            $message .= ". Se encontraron $malformed filas con formato incorrecto y no se procesaron";
         }
 
         return back()->with('success', $message.'.');

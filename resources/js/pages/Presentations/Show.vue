@@ -1,37 +1,43 @@
 <script setup lang="ts">
-import { Head, useForm, router } from '@inertiajs/vue3';
-import { ArrowLeft, Save } from 'lucide-vue-next';
+import { Head, router } from '@inertiajs/vue3';
+import { ArrowLeft, Calendar, Clock, MapPin, Hash } from 'lucide-vue-next';
+import { computed } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const props = defineProps<{
     presentation: any;
-    auth: any;
 }>();
-
-const isAdmin = props.auth.user.role_id === 1;
-
-const form = useForm({
-    title: props.presentation.title || '',
-    abstract: props.presentation.abstract || '',
-    discipline: props.presentation.discipline || '',
-    keywords: props.presentation.keywords || '',
-    location: props.presentation.location || '',
-    day: props.presentation.day || '',
-    start_time: props.presentation.start_time || '',
-    end_time: props.presentation.end_time || '',
-});
-
-const savePresentation = () => {
-    form.put('/presentations/' + props.presentation.id, {
-        onSuccess: () => {
-            // Saved
-        },
-    });
-};
 
 const goBack = () => {
     router.get('/presentations');
 };
+
+const formatDay = (day: string) => {
+    if (!day) return '';
+    const date = new Date(day + 'T00:00:00');
+    return date.toLocaleDateString('es-MX', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+    });
+};
+
+const keywordsList = computed(() => {
+    if (!props.presentation.keywords) return [];
+    return props.presentation.keywords
+        .split(/[,;]\s*/)
+        .map((k: string) => k.trim())
+        .filter(Boolean);
+});
+
+const disciplinesList = computed(() => {
+    if (!props.presentation.discipline) return [];
+    return props.presentation.discipline
+        .split(/\s*\|\|\s*/)
+        .map((d: string) => d.trim())
+        .filter(Boolean);
+});
 </script>
 
 <template>
@@ -63,164 +69,144 @@ const goBack = () => {
                     {{ presentation.title }}
                 </h1>
 
-                <div class="mt-4">
-                    <span
-                        class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                        >Autores</span
+                <div
+                    v-if="presentation.submission_id"
+                    class="mt-3 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400"
+                >
+                    <Hash class="h-4 w-4" />
+                    ID de envío: {{ presentation.submission_id }}
+                </div>
+
+                <div
+                    v-if="presentation.discipline || presentation.keywords"
+                    class="mt-4 flex flex-wrap items-start gap-x-6 gap-y-2 text-sm"
+                >
+                    <div
+                        v-if="disciplinesList.length"
+                        class="flex flex-wrap items-center gap-x-6 gap-y-2"
                     >
-                    <div class="mt-1 space-y-1">
-                        <div
-                            v-for="author in presentation.authors"
-                            :key="author.id"
-                            class="text-sm text-gray-700 dark:text-gray-300"
-                        >
-                            {{ author.first_name }} {{ author.last_name }}
-                            <span class="text-xs text-gray-400"
-                                >({{
-                                    author.affiliation || author.email
-                                }})</span
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span
+                                v-for="d in disciplinesList"
+                                :key="d"
+                                class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200"
                             >
+                                {{ d }}
+                            </span>
                         </div>
+                    </div>
+                    <div
+                        v-if="keywordsList.length"
+                        class="flex flex-wrap items-center gap-x-6 gap-y-2"
+                    >
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span
+                                v-for="kw in keywordsList"
+                                :key="kw"
+                                class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200"
+                            >
+                                {{ kw }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="mt-4 flex flex-wrap items-start gap-x-6 gap-y-2 rounded-lg bg-gray-50 p-4 text-sm dark:bg-zinc-800"
+                >
+                    <div
+                        class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                    >
+                        <Calendar class="h-4 w-4 shrink-0" />
+                        {{ presentation.day ? formatDay(presentation.day) : '—' }}
+                    </div>
+                    <div
+                        class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                    >
+                        <Clock class="h-4 w-4 shrink-0" />
+                        {{ presentation.start_time || '—' }}
+                        {{ presentation.start_time && presentation.end_time ? '-' : '' }}
+                        {{ presentation.end_time || '' }}
+                    </div>
+                    <div
+                        class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                    >
+                        <MapPin class="h-4 w-4 shrink-0" />
+                        {{ presentation.location || '—' }}
                     </div>
                 </div>
             </div>
 
-            <form
-                @submit.prevent="savePresentation"
+            <div
                 class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
             >
-                <h2
-                    class="mb-4 text-lg font-semibold text-gray-900 dark:text-white"
+                <span
+                    class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
                 >
-                    {{
-                        isAdmin ? 'Editar Ponencia' : 'Editar Datos Académicos'
-                    }}
-                </h2>
+                    Autores
+                </span>
 
-                <div class="space-y-4">
-                    <div>
-                        <label
-                            class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >Título *</label
+                <ul class="mt-3 space-y-2">
+                    <li
+                        v-for="author in presentation.authors"
+                        :key="author.id"
+                        class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+                    >
+                        <span
+                            class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300"
                         >
-                        <input
-                            v-model="form.title"
-                            type="text"
-                            required
-                            :disabled="!isAdmin"
-                            class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                        />
-                    </div>
-                    <div>
-                        <label
-                            class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >Resumen / Abstract</label
-                        >
-                        <textarea
-                            v-model="form.abstract"
-                            rows="4"
-                            :disabled="!isAdmin"
-                            class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                        ></textarea>
-                    </div>
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            {{ author.first_name?.[0] }}{{ author.last_name?.[0] }}
+                        </span>
                         <div>
-                            <label
-                                class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                >Disciplina</label
+                            <span class="font-medium"
+                                >{{ author.first_name }}
+                                {{ author.last_name }}</span
                             >
-                            <input
-                                v-model="form.discipline"
-                                type="text"
-                                :disabled="!isAdmin"
-                                class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                            />
-                        </div>
-                        <div>
-                            <label
-                                class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                >Palabras clave</label
+                            <span
+                                v-if="author.affiliation"
+                                class="ml-1 text-xs text-gray-400"
                             >
-                            <input
-                                v-model="form.keywords"
-                                type="text"
-                                :disabled="!isAdmin"
-                                class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                            />
+                                ({{ author.affiliation }})
+                            </span>
                         </div>
-                    </div>
-
-                    <template v-if="isAdmin">
-                        <div
-                            class="border-t border-gray-100 pt-4 dark:border-zinc-800"
-                        >
-                            <h3
-                                class="mb-3 text-sm font-semibold text-gray-900 dark:text-white"
-                            >
-                                Asignación (Solo Admin)
-                            </h3>
-                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <div>
-                                    <label
-                                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                        >Lugar</label
-                                    >
-                                    <input
-                                        v-model="form.location"
-                                        type="text"
-                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                                    />
-                                </div>
-                                <div>
-                                    <label
-                                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                        >Día</label
-                                    >
-                                    <input
-                                        v-model="form.day"
-                                        type="text"
-                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                                    />
-                                </div>
-                                <div>
-                                    <label
-                                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                        >Hora Inicio</label
-                                    >
-                                    <input
-                                        v-model="form.start_time"
-                                        type="time"
-                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                                    />
-                                </div>
-                                <div>
-                                    <label
-                                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                        >Hora Fin</label
-                                    >
-                                    <input
-                                        v-model="form.end_time"
-                                        type="time"
-                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </template>
-                </div>
+                    </li>
+                </ul>
 
                 <div
-                    class="mt-6 flex justify-end border-t border-gray-100 pt-4 dark:border-zinc-800"
+                    class="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200"
                 >
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
-                    >
-                        <Save class="h-4 w-4" /> Guardar
-                    </button>
+                    <p class="font-medium">Información para autores</p>
+                    <p class="mt-1 leading-relaxed">
+                        Si algún autor requiere corregir sus datos personales
+                        (nombre, correo, institución), puede hacerlo desde su
+                        perfil. Para solicitar el alta o baja de un autor en
+                        esta ponencia, es necesario contactar al administrador
+                        escribiendo a
+                        <a
+                            href="mailto:soporte.encuentro.eical@gmail.com"
+                            class="font-medium underline underline-offset-2 hover:text-blue-600"
+                        >
+                            soporte.encuentro.eical@gmail.com
+                        </a>
+                    </p>
                 </div>
-            </form>
+            </div>
+
+            <div
+                v-if="presentation.abstract"
+                class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+            >
+                <span
+                    class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                >
+                    Resumen / Abstract
+                </span>
+                <p
+                    class="mt-3 whitespace-pre-line text-sm leading-relaxed text-gray-700 dark:text-gray-300"
+                >
+                    {{ presentation.abstract }}
+                </p>
+            </div>
         </div>
     </AppLayout>
 </template>

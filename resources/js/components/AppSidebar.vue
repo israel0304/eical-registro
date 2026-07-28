@@ -40,11 +40,6 @@ const mainNavItems = computed<NavItem[]>(() => {
             { title: 'Usuarios', href: '/users', icon: Users },
             { title: 'Talleres', href: '/workshops', icon: BookOpen },
             { title: 'Ponencias', href: '/presentations', icon: Mic },
-            {
-                title: 'Importar Ponencias',
-                href: '/admin/presentations/import',
-                icon: Mic,
-            },
             { title: 'Constancias', href: '/admin/constancias', icon: Award },
             { title: 'Reportes', href: '/admin/reportes', icon: BarChart3 },
         );

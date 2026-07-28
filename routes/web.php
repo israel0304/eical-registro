@@ -13,7 +13,9 @@ use App\Models\Presentation;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopEnrollment;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -88,9 +90,46 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Presentations
     Route::get('presentations', [PresentationController::class, 'index'])->name('presentations.index');
     Route::get('presentations/{presentation}', [PresentationController::class, 'show'])->name('presentations.show');
+    Route::post('presentations', [PresentationController::class, 'store'])->name('presentations.store');
     Route::put('presentations/{presentation}', [PresentationController::class, 'update'])->name('presentations.update');
 
-    Route::get('admin/presentations/import', [PresentationImportController::class, 'index'])->name('presentations.import');
+    // API-like routes for internal use (ponente search/create)
+    Route::get('api/ponentes', function (Request $request) {
+        $search = $request->input('search');
+
+        return User::where('role_id', 2)
+            ->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            })
+            ->limit(20)
+            ->get(['id', 'first_name', 'last_name', 'email']);
+    })->name('api.ponentes.index');
+
+    Route::post('api/ponentes', function (Request $request) {
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+        ]);
+
+        $user = User::create([
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'email' => $validated['email'],
+            'role_id' => 2,
+            'dni' => 'CNV-'.Str::random(7),
+            'password' => bcrypt(Str::random(16)),
+            'affiliation' => $request->input('affiliation', ''),
+            'country' => $request->input('country', ''),
+            'state' => $request->input('state', ''),
+        ]);
+
+        return $user->only(['id', 'first_name', 'last_name', 'email']);
+    })->name('api.ponentes.store');
+
+    Route::redirect('admin/presentations/import', '/presentations?tab=import')->name('presentations.import');
     Route::post('admin/presentations/import', [PresentationImportController::class, 'store'])->name('presentations.import.store');
 
     Route::prefix('admin/reportes')->name('reportes.')->group(function () {
