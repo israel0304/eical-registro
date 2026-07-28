@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
+import { login } from '@/routes';
+import { verify } from '@/routes/ponente';
 
 const form = useForm({
     submission_id: '',
@@ -14,7 +16,7 @@ const form = useForm({
 });
 
 function submit() {
-    form.post(route('ponente.verify'));
+    form.post(verify());
 }
 </script>
 
@@ -64,7 +66,7 @@ function submit() {
 
             <div class="text-center text-sm text-muted-foreground">
                 ¿Ya tienes cuenta?
-                <TextLink :href="route('login')">Iniciar sesión</TextLink>
+                <TextLink :href="login()">Iniciar sesión</TextLink>
             </div>
         </form>
     </AuthLayout>
