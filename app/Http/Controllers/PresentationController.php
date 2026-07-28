@@ -33,7 +33,41 @@ class PresentationController extends Controller
         return Inertia::render('Presentations/Index', [
             'presentations' => $presentations,
             'filters' => $request->only(['search']),
+            'tab' => $request->input('tab', 'list'),
         ]);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'abstract' => 'nullable|string',
+            'discipline' => 'nullable|string|max:255',
+            'keywords' => 'nullable|string',
+            'location' => 'nullable|string|max:255',
+            'day' => 'nullable|string|max:50',
+            'start_time' => 'nullable|date_format:H:i',
+            'end_time' => 'nullable|date_format:H:i',
+            'submission_id' => 'nullable|string|max:50',
+            'author_ids' => 'required|array|min:1',
+            'author_ids.*' => 'exists:users,id',
+        ]);
+
+        $presentation = Presentation::create([
+            'title' => $validated['title'],
+            'abstract' => $validated['abstract'] ?? null,
+            'discipline' => $validated['discipline'] ?? null,
+            'keywords' => $validated['keywords'] ?? null,
+            'location' => $validated['location'] ?? null,
+            'day' => $validated['day'] ?? null,
+            'start_time' => $validated['start_time'] ?? null,
+            'end_time' => $validated['end_time'] ?? null,
+            'submission_id' => $validated['submission_id'] ?? null,
+        ]);
+
+        $presentation->authors()->sync($validated['author_ids']);
+
+        return to_route('presentations.index')->with('success', 'Ponencia creada correctamente.');
     }
 
     public function show(Presentation $presentation)
@@ -66,11 +100,16 @@ class PresentationController extends Controller
                 'day' => 'nullable|string|max:50',
                 'start_time' => 'nullable|date_format:H:i',
                 'end_time' => 'nullable|date_format:H:i',
+                'submission_id' => 'nullable|string|max:50',
+                'author_ids' => 'required|array|min:1',
+                'author_ids.*' => 'exists:users,id',
             ]);
+
+            $presentation->authors()->sync($validated['author_ids']);
         }
 
         $presentation->update($validated);
 
-        return back()->with('success', 'Ponencia actualizada correctamente.');
+        return to_route('presentations.index')->with('success', 'Ponencia actualizada correctamente.');
     }
 }
