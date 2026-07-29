@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
 import { X } from 'lucide-vue-next';
+import { ref, watch } from 'vue';
 
 const props = defineProps<{
     modelValue: string;
@@ -24,7 +24,10 @@ watch(
     () => props.modelValue,
     (val) => {
         const parsed = val
-            ? val.split(/\s*\|\|\s*/).map((s) => s.trim()).filter(Boolean)
+            ? val
+                  .split(/\s*\|\|\s*/)
+                  .map((s) => s.trim())
+                  .filter(Boolean)
             : [];
         if (JSON.stringify(parsed) !== JSON.stringify(tags.value)) {
             tags.value = parsed;
@@ -33,9 +36,13 @@ watch(
     { immediate: true },
 );
 
-watch(tags, () => {
-    emit('update:modelValue', tags.value.join(' || '));
-}, { deep: true });
+watch(
+    tags,
+    () => {
+        emit('update:modelValue', tags.value.join(' || '));
+    },
+    { deep: true },
+);
 
 function addTag(val: string) {
     const trimmed = val.trim();

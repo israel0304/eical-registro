@@ -21,7 +21,9 @@ const flashMessage = ref<string | null>(null);
 const flashType = ref<'success' | 'error'>('success');
 
 function checkFlash() {
-    const flash = (page.props as any).flash as Record<string, string> | undefined;
+    const flash = (page.props as any).flash as
+        | Record<string, string>
+        | undefined;
     if (flash?.success) {
         flashMessage.value = flash.success;
         flashType.value = 'success';
@@ -55,7 +57,7 @@ const dismissFlash = () => {
                 ]"
             >
                 <span>{{ flashMessage }}</span>
-                <button @click="dismissFlash" class="shrink-0 ml-3">
+                <button @click="dismissFlash" class="ml-3 shrink-0">
                     <X class="h-4 w-4" />
                 </button>
             </div>

@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
-import { ArrowLeft, Calendar, Clock, MapPin, Hash, Download } from 'lucide-vue-next';
+import {
+    ArrowLeft,
+    Calendar,
+    Clock,
+    MapPin,
+    Hash,
+    Download,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
@@ -35,7 +42,11 @@ const togglePresented = (userId: number, presented: boolean) => {
 
 const downloadConstancia = (authorId: number) => {
     window.open(
-        '/admin/constancias/ponencia/' + props.presentation.id + '/' + authorId + '/download',
+        '/admin/constancias/ponencia/' +
+            props.presentation.id +
+            '/' +
+            authorId +
+            '/download',
         '_blank',
     );
 };
@@ -135,14 +146,20 @@ const disciplinesList = computed(() => {
                         class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
                     >
                         <Calendar class="h-4 w-4 shrink-0" />
-                        {{ presentation.day ? formatDay(presentation.day) : '—' }}
+                        {{
+                            presentation.day ? formatDay(presentation.day) : '—'
+                        }}
                     </div>
                     <div
                         class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
                     >
                         <Clock class="h-4 w-4 shrink-0" />
                         {{ presentation.start_time || '—' }}
-                        {{ presentation.start_time && presentation.end_time ? '-' : '' }}
+                        {{
+                            presentation.start_time && presentation.end_time
+                                ? '-'
+                                : ''
+                        }}
                         {{ presentation.end_time || '' }}
                     </div>
                     <div
@@ -172,7 +189,8 @@ const disciplinesList = computed(() => {
                         <span
                             class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300"
                         >
-                            {{ author.first_name?.[0] }}{{ author.last_name?.[0] }}
+                            {{ author.first_name?.[0]
+                            }}{{ author.last_name?.[0] }}
                         </span>
                         <div class="flex-1">
                             <span class="font-medium"
@@ -197,7 +215,8 @@ const disciplinesList = computed(() => {
                                     @change="
                                         togglePresented(
                                             author.id,
-                                            ($event.target as HTMLInputElement).checked,
+                                            ($event.target as HTMLInputElement)
+                                                .checked,
                                         )
                                     "
                                     class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
@@ -254,7 +273,7 @@ const disciplinesList = computed(() => {
                     Resumen / Abstract
                 </span>
                 <p
-                    class="mt-3 whitespace-pre-line text-sm leading-relaxed text-gray-700 dark:text-gray-300"
+                    class="mt-3 text-sm leading-relaxed whitespace-pre-line text-gray-700 dark:text-gray-300"
                 >
                     {{ presentation.abstract }}
                 </p>

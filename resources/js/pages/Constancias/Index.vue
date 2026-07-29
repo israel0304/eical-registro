@@ -21,7 +21,10 @@ const downloadCertificate = (workshopId: number) => {
 };
 
 const downloadPonencia = (presentationId: number) => {
-    window.open('/constancias/ponencia/' + presentationId + '/download', '_blank');
+    window.open(
+        '/constancias/ponencia/' + presentationId + '/download',
+        '_blank',
+    );
 };
 </script>
 
@@ -84,9 +87,7 @@ const downloadPonencia = (presentationId: number) => {
             </div>
 
             <!-- Ponencias (solo ponente y admin) -->
-            <div
-                v-if="canSeePonencias && presentationCertificates?.length"
-            >
+            <div v-if="canSeePonencias && presentationCertificates?.length">
                 <h2
                     class="mb-4 text-xl font-normal tracking-tight text-gray-800 dark:text-gray-200"
                 >
@@ -117,9 +118,16 @@ const downloadPonencia = (presentationId: number) => {
                                 >
                                     {{ presentation.discipline || '—' }}
                                 </p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                <p
+                                    class="text-xs text-gray-500 dark:text-gray-400"
+                                >
                                     {{ presentation.day || '—' }}
-                                    {{ presentation.day && presentation.location ? '|' : '' }}
+                                    {{
+                                        presentation.day &&
+                                        presentation.location
+                                            ? '|'
+                                            : ''
+                                    }}
                                     {{ presentation.location || '' }}
                                 </p>
                             </div>
@@ -129,7 +137,8 @@ const downloadPonencia = (presentationId: number) => {
                                 @click="downloadPonencia(presentation.id)"
                                 class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
                             >
-                                <Download class="h-4 w-4" /> Descargar Constancia
+                                <Download class="h-4 w-4" /> Descargar
+                                Constancia
                             </button>
                         </div>
                     </div>
@@ -137,7 +146,10 @@ const downloadPonencia = (presentationId: number) => {
             </div>
 
             <div
-                v-if="(!completedWorkshops || completedWorkshops.length === 0) && (!canSeePonencias || !presentationCertificates?.length)"
+                v-if="
+                    (!completedWorkshops || completedWorkshops.length === 0) &&
+                    (!canSeePonencias || !presentationCertificates?.length)
+                "
                 class="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
             >
                 <Award
