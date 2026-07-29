@@ -40,7 +40,6 @@ const mainNavItems = computed<NavItem[]>(() => {
             { title: 'Usuarios', href: '/users', icon: Users },
             { title: 'Talleres', href: '/workshops', icon: BookOpen },
             { title: 'Ponencias', href: '/presentations', icon: Mic },
-            { title: 'Constancias', href: '/admin/constancias', icon: Award },
             { title: 'Reportes', href: '/admin/reportes', icon: BarChart3 },
         );
     } else if (role_id.value === 2) {

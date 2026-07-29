@@ -31,6 +31,7 @@ class User extends Authenticatable
         'is_active',
         'activation_token',
         'password_set_at',
+        'semblanza',
     ];
 
     protected $appends = [
@@ -64,7 +65,7 @@ class User extends Authenticatable
     public function presentations(): BelongsToMany
     {
         return $this->belongsToMany(Presentation::class, 'presentation_authors')
-            ->withPivot('author_order')
+            ->withPivot('author_order', 'presented', 'presented_at')
             ->withTimestamps();
     }
 

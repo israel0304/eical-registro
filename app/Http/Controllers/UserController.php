@@ -59,6 +59,7 @@ class UserController extends Controller
             'role_id' => 'required|exists:roles,id',
             'is_active' => 'boolean',
             'photo' => 'nullable|image|max:5120',
+            'semblanza' => 'nullable|string|max:5000',
         ]);
 
         if ($request->hasFile('photo')) {
@@ -86,6 +87,7 @@ class UserController extends Controller
             'is_active' => 'boolean',
             'photo' => 'nullable|image|max:5120',
             'delete_photo' => 'nullable|boolean',
+            'semblanza' => 'nullable|string|max:5000',
         ]);
 
         if ($request->boolean('delete_photo')) {

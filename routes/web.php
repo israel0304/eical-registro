@@ -147,8 +147,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Constancias
     Route::get('constancias', [ConstanciaController::class, 'myCertificates'])->name('constancias.my');
     Route::get('constancias/{id}/download', [ConstanciaController::class, 'download'])->name('constancias.download');
-    Route::get('admin/constancias', [ConstanciaController::class, 'adminCertificates'])->name('constancias.admin');
     Route::get('admin/constancias/{workshopId}/{userId}/download', [ConstanciaController::class, 'adminDownload'])->name('constancias.admin.download');
+
+    // Constancias de ponencia
+    Route::get('constancias/ponencia/{presentation}/download', [ConstanciaController::class, 'downloadPonencia'])->name('constancias.ponencia.download');
+    Route::get('admin/constancias/ponencia/{presentation}/{user}/download', [ConstanciaController::class, 'adminDownloadPonencia'])->name('constancias.ponencia.admin-download');
 });
 
 require __DIR__.'/settings.php';
