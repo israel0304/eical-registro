@@ -168,6 +168,7 @@ const newPonente = reactive({
     affiliation: '',
     country: '',
     state: '',
+    semblanza: '',
 });
 const newPonenteErrors = reactive<Record<string, string>>({});
 
@@ -189,6 +190,7 @@ const createPonente = async () => {
             affiliation: newPonente.affiliation,
             country: newPonente.country,
             state: newPonente.state,
+            semblanza: newPonente.semblanza,
         });
         selectAuthor(res.data);
         showCreatePonente.value = false;
@@ -198,6 +200,7 @@ const createPonente = async () => {
         newPonente.affiliation = '';
         newPonente.country = '';
         newPonente.state = '';
+        newPonente.semblanza = '';
     } catch (err: any) {
         if (err.response?.data?.errors) {
             Object.assign(newPonenteErrors, err.response.data.errors);
@@ -540,7 +543,7 @@ const submitImport = () => {
                                 class="mt-2 list-inside list-disc text-sm text-gray-600 dark:text-gray-400"
                             >
                                 <li>Ponencias con estado "Aceptada"</li>
-                                <li>Hasta 5 autores por ponencia</li>
+                                <li>Hasta 10 autores por ponencia</li>
                                 <li>
                                     Cada autor se crea como usuario con rol
                                     "Ponente"
@@ -1049,6 +1052,12 @@ const submitImport = () => {
                                         placeholder="Estado"
                                         class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                     />
+                                    <textarea
+                                        v-model="newPonente.semblanza"
+                                        rows="3"
+                                        placeholder="Semblanza / Breve currículum"
+                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    ></textarea>
                                 </div>
                             </div>
                         </div>

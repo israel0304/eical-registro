@@ -89,7 +89,7 @@ const goBack = () => {
                             class="mt-2 list-inside list-disc text-sm text-gray-600 dark:text-gray-400"
                         >
                             <li>Ponencias con estado "Aceptada"</li>
-                            <li>Hasta 5 autores por ponencia</li>
+                            <li>Hasta 10 autores por ponencia</li>
                             <li>
                                 Cada autor se crea como usuario con rol
                                 "Ponente"

@@ -112,6 +112,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
+            'semblanza' => 'nullable|string|max:5000',
         ]);
 
         $user = User::create([
@@ -124,6 +125,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'affiliation' => $request->input('affiliation', ''),
             'country' => $request->input('country', ''),
             'state' => $request->input('state', ''),
+            'semblanza' => $request->input('semblanza', ''),
         ]);
 
         return $user->only(['id', 'first_name', 'last_name', 'email']);
