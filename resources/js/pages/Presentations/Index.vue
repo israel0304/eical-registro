@@ -3,8 +3,8 @@ import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { Search, Eye, Plus, X, UserPlus, UploadCloud, Pencil } from 'lucide-vue-next';
 import { ref, watch, computed, reactive } from 'vue';
-import TagInput from '@/components/TagInput.vue';
 import DisciplineInput from '@/components/DisciplineInput.vue';
+import TagInput from '@/components/TagInput.vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const page = usePage();
@@ -104,6 +104,12 @@ const savePresentation = () => {
 };
 
 const selectedAuthors = ref<any[]>([]);
+
+const togglePresented = (presentationId: number, userId: number, presented: boolean) => {
+    axios.put('/presentations/' + presentationId, {
+        authors_presented: [{ user_id: userId, presented }],
+    });
+};
 
 const searchQuery = ref('');
 const searchResults = ref<any[]>([]);
@@ -338,12 +344,6 @@ const submitImport = () => {
                                         scope="col"
                                         class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
                                     >
-                                        Autores
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
-                                    >
                                         Disciplina
                                     </th>
                                     <th
@@ -357,6 +357,12 @@ const submitImport = () => {
                                         class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
                                     >
                                         Lugar
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
+                                    >
+                                        Presentó
                                     </th>
                                     <th scope="col" class="relative px-6 py-4">
                                         <span class="sr-only">Acciones</span>
@@ -376,28 +382,6 @@ const submitImport = () => {
                                             class="max-w-xs truncate text-sm font-medium text-gray-900 dark:text-white"
                                         >
                                             {{ presentation.title }}
-                                        </div>
-                                    </td>
-                                    <td
-                                        class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
-                                    >
-                                        <div
-                                            v-for="author in presentation.authors?.slice(
-                                                0,
-                                                2,
-                                            )"
-                                            :key="author.id"
-                                            class="text-xs"
-                                        >
-                                            {{ author.first_name }}
-                                            {{ author.last_name }}
-                                        </div>
-                                        <div
-                                            v-if="presentation.authors?.length > 2"
-                                            class="text-xs text-gray-400"
-                                        >
-                                            +{{ presentation.authors.length - 2 }}
-                                            más
                                         </div>
                                     </td>
                                     <td
@@ -423,6 +407,48 @@ const submitImport = () => {
                                         class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
                                     >
                                         {{ presentation.location || 'Sin asignar' }}
+                                    </td>
+                                    <td
+                                        class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
+                                    >
+                                        <div
+                                            v-if="isAdmin"
+                                            class="flex flex-wrap gap-2"
+                                        >
+                                            <label
+                                                v-for="author in presentation.authors"
+                                                :key="author.id"
+                                                class="flex cursor-pointer items-center gap-1 text-xs"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    :checked="author.pivot?.presented"
+                                                    @change="
+                                                        togglePresented(
+                                                            presentation.id,
+                                                            author.id,
+                                                            ($event.target as HTMLInputElement)
+                                                                .checked,
+                                                        )
+                                                    "
+                                                    class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                />
+                                                {{ author.first_name }}
+                                                {{ author.last_name }}
+                                            </label>
+                                        </div>
+                                        <span
+                                            v-else
+                                            class="text-xs text-gray-400"
+                                        >
+                                            {{
+                                                presentation.authors?.some(
+                                                    (a: any) => a.pivot?.presented,
+                                                )
+                                                    ? 'Sí'
+                                                    : '—'
+                                            }}
+                                        </span>
                                     </td>
                                     <td
                                         class="px-6 py-4 text-right text-sm font-medium whitespace-nowrap"

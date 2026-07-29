@@ -127,6 +127,13 @@ const toggleAttendance = (userId: number) => {
     );
 };
 
+const downloadConstancia = (userId: number) => {
+    window.open(
+        '/admin/constancias/' + props.workshop.id + '/' + userId + '/download',
+        '_blank',
+    );
+};
+
 const toggleQrTimeRestricted = () => {
     router.put(
         '/workshops/' + props.workshop.id,
@@ -542,14 +549,24 @@ watch(
                                 <td
                                     class="px-6 py-4 text-right text-sm font-medium whitespace-nowrap"
                                 >
-                                    <button
-                                        v-if="activeTab === 'enrolled'"
-                                        @click="removeEnrollment(enrollment.id)"
-                                        class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-red-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-red-400"
-                                        title="Eliminar inscripción"
-                                    >
-                                        <Trash2 class="h-4 w-4" />
-                                    </button>
+                                    <div class="flex items-center justify-end gap-2">
+                                        <button
+                                            v-if="activeTab === 'enrolled'"
+                                            @click="downloadConstancia(enrollment.user?.id)"
+                                            class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-indigo-400"
+                                            title="Descargar constancia"
+                                        >
+                                            <Download class="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            v-if="activeTab === 'enrolled'"
+                                            @click="removeEnrollment(enrollment.id)"
+                                            class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-red-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-red-400"
+                                            title="Eliminar inscripción"
+                                        >
+                                            <Trash2 class="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             <tr v-if="filteredEnrollments.length === 0">

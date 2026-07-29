@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import { ArrowLeft, Calendar, Clock, MapPin, Hash } from 'lucide-vue-next';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
+import { ArrowLeft, Calendar, Clock, MapPin, Hash, Download } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const props = defineProps<{
     presentation: any;
 }>();
+
+const page = usePage();
+const isAdmin = computed(() => page.props.auth.user?.role_id === 1);
 
 const goBack = () => {
     router.get('/presentations');
@@ -21,6 +25,19 @@ const formatDay = (day: string) => {
         month: 'long',
         year: 'numeric',
     });
+};
+
+const togglePresented = (userId: number, presented: boolean) => {
+    axios.put('/presentations/' + props.presentation.id, {
+        authors_presented: [{ user_id: userId, presented }],
+    });
+};
+
+const downloadConstancia = (authorId: number) => {
+    window.open(
+        '/admin/constancias/ponencia/' + props.presentation.id + '/' + authorId + '/download',
+        '_blank',
+    );
 };
 
 const keywordsList = computed(() => {
@@ -146,18 +163,18 @@ const disciplinesList = computed(() => {
                     Autores
                 </span>
 
-                <ul class="mt-3 space-y-2">
+                <ul class="mt-3 space-y-3">
                     <li
                         v-for="author in presentation.authors"
                         :key="author.id"
-                        class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+                        class="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
                     >
                         <span
                             class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300"
                         >
                             {{ author.first_name?.[0] }}{{ author.last_name?.[0] }}
                         </span>
-                        <div>
+                        <div class="flex-1">
                             <span class="font-medium"
                                 >{{ author.first_name }}
                                 {{ author.last_name }}</span
@@ -169,6 +186,41 @@ const disciplinesList = computed(() => {
                                 ({{ author.affiliation }})
                             </span>
                         </div>
+
+                        <template v-if="isAdmin">
+                            <label
+                                class="flex cursor-pointer items-center gap-1 text-xs text-gray-600 dark:text-gray-400"
+                            >
+                                <input
+                                    type="checkbox"
+                                    :checked="author.pivot?.presented"
+                                    @change="
+                                        togglePresented(
+                                            author.id,
+                                            ($event.target as HTMLInputElement).checked,
+                                        )
+                                    "
+                                    class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                Presentó
+                            </label>
+                            <button
+                                v-if="author.pivot?.presented"
+                                type="button"
+                                @click="downloadConstancia(author.id)"
+                                class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300"
+                            >
+                                <Download class="h-3 w-3" />
+                                Constancia
+                            </button>
+                        </template>
+
+                        <span
+                            v-else-if="author.pivot?.presented"
+                            class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-200"
+                        >
+                            Presentada
+                        </span>
                     </li>
                 </ul>
 

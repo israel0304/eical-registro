@@ -22,6 +22,7 @@ trait ProfileValidationRules
             'affiliation' => ['required', 'string', 'max:255'],
             'country' => ['required', 'string', 'max:255'],
             'state' => ['required', 'string', 'max:255'],
+            'semblanza' => ['nullable', 'string', 'max:5000'],
         ];
     }
 

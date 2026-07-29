@@ -27,7 +27,7 @@ class Presentation extends Model
     public function authors(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'presentation_authors')
-            ->withPivot('author_order')
+            ->withPivot('author_order', 'presented', 'presented_at')
             ->withTimestamps();
     }
 

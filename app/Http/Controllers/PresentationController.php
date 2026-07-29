@@ -92,20 +92,37 @@ class PresentationController extends Controller
             ]);
         } else {
             $validated = $request->validate([
-                'title' => 'required|string|max:255',
-                'abstract' => 'nullable|string',
-                'discipline' => 'nullable|string|max:255',
-                'keywords' => 'nullable|string',
-                'location' => 'nullable|string|max:255',
-                'day' => 'nullable|string|max:50',
-                'start_time' => 'nullable|date_format:H:i',
-                'end_time' => 'nullable|date_format:H:i',
-                'submission_id' => 'nullable|string|max:50',
-                'author_ids' => 'required|array|min:1',
+                'title' => 'sometimes|string|max:255',
+                'abstract' => 'sometimes|string',
+                'discipline' => 'sometimes|string|max:255',
+                'keywords' => 'sometimes|string',
+                'location' => 'sometimes|string|max:255',
+                'day' => 'sometimes|string|max:50',
+                'start_time' => 'sometimes|date_format:H:i',
+                'end_time' => 'sometimes|date_format:H:i',
+                'submission_id' => 'sometimes|string|max:50',
+                'author_ids' => 'sometimes|array|min:1',
                 'author_ids.*' => 'exists:users,id',
             ]);
 
-            $presentation->authors()->sync($validated['author_ids']);
+            if ($request->has('author_ids')) {
+                $presentation->authors()->sync($validated['author_ids']);
+            }
+
+            if ($request->has('authors_presented')) {
+                $request->validate([
+                    'authors_presented' => 'array',
+                    'authors_presented.*.user_id' => 'required|exists:users,id',
+                    'authors_presented.*.presented' => 'required|boolean',
+                ]);
+
+                foreach ($request->input('authors_presented') as $item) {
+                    $presentation->authors()->updateExistingPivot($item['user_id'], [
+                        'presented' => $item['presented'],
+                        'presented_at' => $item['presented'] ? now() : null,
+                    ]);
+                }
+            }
         }
 
         $presentation->update($validated);

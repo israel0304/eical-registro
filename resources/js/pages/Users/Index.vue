@@ -97,6 +97,7 @@ const userForm = useForm({
     affiliation: '',
     country: '',
     state: '',
+    semblanza: '',
     role_id: '',
     is_active: true,
     photo: null,
@@ -130,6 +131,7 @@ const openEditModal = (user: any) => {
     userForm.affiliation = user.affiliation || '';
     userForm.country = user.country || '';
     userForm.state = user.state || '';
+    userForm.semblanza = user.semblanza || '';
     userForm.role_id = user.role_id || '';
     userForm.is_active = !!user.is_active;
     userForm.delete_photo = false;
@@ -789,6 +791,18 @@ const handleFileUpload = (event: Event) => {
                                             class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
                                             placeholder="Jalisco"
                                         />
+                                    </div>
+                                    <div class="sm:col-span-2">
+                                        <label
+                                            class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                            >Semblanza / Breve currículum</label
+                                        >
+                                        <textarea
+                                            v-model="userForm.semblanza"
+                                            rows="3"
+                                            class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
+                                            placeholder="Breve descripción del perfil académico o profesional"
+                                        ></textarea>
                                     </div>
                                 </div>
                             </div>
