@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
-import { Search, Eye, Plus, X, UserPlus, UploadCloud, Pencil } from 'lucide-vue-next';
+import {
+    Search,
+    Eye,
+    Plus,
+    X,
+    UserPlus,
+    UploadCloud,
+    Pencil,
+} from 'lucide-vue-next';
 import { ref, watch, computed, reactive } from 'vue';
 import DisciplineInput from '@/components/DisciplineInput.vue';
 import TagInput from '@/components/TagInput.vue';
@@ -54,7 +62,7 @@ const form = useForm({
     day: '',
     start_time: '',
     end_time: '',
-    submission_id: '' as (string | number),
+    submission_id: '' as string | number,
     author_ids: [] as number[],
 });
 
@@ -81,7 +89,8 @@ const openEditModal = (presentation: any) => {
     form.end_time = presentation.end_time || '';
     form.submission_id = presentation.submission_id || '';
     form.author_ids = presentation.authors?.map((a: any) => a.id) || [];
-    selectedAuthors.value = presentation.authors?.map((a: any) => ({ ...a })) || [];
+    selectedAuthors.value =
+        presentation.authors?.map((a: any) => ({ ...a })) || [];
     showModal.value = true;
 };
 
@@ -105,7 +114,11 @@ const savePresentation = () => {
 
 const selectedAuthors = ref<any[]>([]);
 
-const togglePresented = (presentationId: number, userId: number, presented: boolean) => {
+const togglePresented = (
+    presentationId: number,
+    userId: number,
+    presented: boolean,
+) => {
     axios.put('/presentations/' + presentationId, {
         authors_presented: [{ user_id: userId, presented }],
     });
@@ -134,7 +147,8 @@ const searchAuthors = (query: string) => {
             searchResults.value = res.data.filter(
                 (u: any) => !selectedAuthors.value.some((a) => a.id === u.id),
             );
-            showSearchResults.value = searchResults.value.length > 0 || query.trim().length > 0;
+            showSearchResults.value =
+                searchResults.value.length > 0 || query.trim().length > 0;
         } catch {
             searchResults.value = [];
         } finally {
@@ -177,7 +191,11 @@ const createPonente = async () => {
     newPonenteErrors.last_name = '';
     newPonenteErrors.email = '';
 
-    if (!newPonente.first_name.trim() || !newPonente.last_name.trim() || !newPonente.email.trim()) {
+    if (
+        !newPonente.first_name.trim() ||
+        !newPonente.last_name.trim() ||
+        !newPonente.email.trim()
+    ) {
         return;
     }
 
@@ -259,7 +277,10 @@ const submitImport = () => {
                 Ponencias
             </h1>
 
-            <div v-if="isAdmin" class="mb-6 border-b border-gray-200 dark:border-zinc-800">
+            <div
+                v-if="isAdmin"
+                class="mb-6 border-b border-gray-200 dark:border-zinc-800"
+            >
                 <nav class="-mb-px flex gap-6">
                     <button
                         @click="activeTab = 'list'"
@@ -409,7 +430,10 @@ const submitImport = () => {
                                     <td
                                         class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
                                     >
-                                        {{ presentation.location || 'Sin asignar' }}
+                                        {{
+                                            presentation.location ||
+                                            'Sin asignar'
+                                        }}
                                     </td>
                                     <td
                                         class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
@@ -425,13 +449,16 @@ const submitImport = () => {
                                             >
                                                 <input
                                                     type="checkbox"
-                                                    :checked="author.pivot?.presented"
+                                                    :checked="
+                                                        author.pivot?.presented
+                                                    "
                                                     @change="
                                                         togglePresented(
                                                             presentation.id,
                                                             author.id,
-                                                            ($event.target as HTMLInputElement)
-                                                                .checked,
+                                                            (
+                                                                $event.target as HTMLInputElement
+                                                            ).checked,
                                                         )
                                                     "
                                                     class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
@@ -446,7 +473,8 @@ const submitImport = () => {
                                         >
                                             {{
                                                 presentation.authors?.some(
-                                                    (a: any) => a.pivot?.presented,
+                                                    (a: any) =>
+                                                        a.pivot?.presented,
                                                 )
                                                     ? 'Sí'
                                                     : '—'
@@ -470,7 +498,9 @@ const submitImport = () => {
                                             </Link>
                                             <button
                                                 type="button"
-                                                @click="openEditModal(presentation)"
+                                                @click="
+                                                    openEditModal(presentation)
+                                                "
                                                 class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
                                             >
                                                 <Pencil class="h-4 w-4" />
@@ -595,11 +625,17 @@ const submitImport = () => {
                         >
                             <button
                                 @click="submitImport"
-                                :disabled="!selectedFile || importForm.processing"
+                                :disabled="
+                                    !selectedFile || importForm.processing
+                                "
                                 class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
                             >
                                 <UploadCloud class="h-4 w-4" />
-                                {{ importForm.processing ? 'Importando...' : 'Importar' }}
+                                {{
+                                    importForm.processing
+                                        ? 'Importando...'
+                                        : 'Importar'
+                                }}
                             </button>
                         </div>
                     </div>
@@ -693,7 +729,9 @@ const submitImport = () => {
                                         class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
                                         >Disciplina</label
                                     >
-                                    <DisciplineInput v-model="form.discipline" />
+                                    <DisciplineInput
+                                        v-model="form.discipline"
+                                    />
                                     <p
                                         v-if="form.errors.discipline"
                                         class="mt-1 text-xs text-red-500"
@@ -856,13 +894,12 @@ const submitImport = () => {
                                             v-model="searchQuery"
                                             @input="
                                                 searchAuthors(
-                                                    ($event.target as HTMLInputElement)
-                                                        .value,
+                                                    (
+                                                        $event.target as HTMLInputElement
+                                                    ).value,
                                                 )
                                             "
-                                            @focus="
-                                                searchAuthors(searchQuery)
-                                            "
+                                            @focus="searchAuthors(searchQuery)"
                                             type="text"
                                             placeholder="Buscar ponentes por nombre o correo..."
                                             class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
@@ -908,10 +945,15 @@ const submitImport = () => {
                                     </div>
 
                                     <p
-                                        v-if="isEditing && !isAdmin && selectedAuthors.length"
+                                        v-if="
+                                            isEditing &&
+                                            !isAdmin &&
+                                            selectedAuthors.length
+                                        "
                                         class="mt-2 text-xs text-gray-500"
                                     >
-                                        Para modificar los autores, contacta al administrador.
+                                        Para modificar los autores, contacta al
+                                        administrador.
                                     </p>
 
                                     <p
@@ -1028,7 +1070,9 @@ const submitImport = () => {
                                 />
                             </div>
 
-                            <div class="border-t border-gray-100 pt-4 dark:border-zinc-800">
+                            <div
+                                class="border-t border-gray-100 pt-4 dark:border-zinc-800"
+                            >
                                 <label
                                     class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
                                     >Datos adicionales</label
@@ -1076,7 +1120,11 @@ const submitImport = () => {
                                 :disabled="creatingPonente"
                                 class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
                             >
-                                {{ creatingPonente ? 'Creando...' : 'Crear ponente' }}
+                                {{
+                                    creatingPonente
+                                        ? 'Creando...'
+                                        : 'Crear ponente'
+                                }}
                             </button>
                         </div>
                     </form>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\BienvenidaNuevoUsuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -69,9 +70,13 @@ class UserController extends Controller
         $validated['password'] = Hash::make(Str::random(12));
         $validated['dni'] = 'CNV-'.strtoupper(Str::random(7));
 
-        User::create($validated);
+        $user = User::create($validated);
 
-        return back()->with('success', 'Usuario creado correctamente.');
+        $token = Password::broker()->createToken($user);
+        $url = url('/password/reset/'.$token.'?email='.urlencode($user->email));
+        $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
+
+        return back()->with('success', 'Usuario creado correctamente. Se le ha enviado un correo de bienvenida.');
     }
 
     public function update(Request $request, User $user)

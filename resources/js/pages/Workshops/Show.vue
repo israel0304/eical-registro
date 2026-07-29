@@ -549,10 +549,16 @@ watch(
                                 <td
                                     class="px-6 py-4 text-right text-sm font-medium whitespace-nowrap"
                                 >
-                                    <div class="flex items-center justify-end gap-2">
+                                    <div
+                                        class="flex items-center justify-end gap-2"
+                                    >
                                         <button
                                             v-if="activeTab === 'enrolled'"
-                                            @click="downloadConstancia(enrollment.user?.id)"
+                                            @click="
+                                                downloadConstancia(
+                                                    enrollment.user?.id,
+                                                )
+                                            "
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-indigo-400"
                                             title="Descargar constancia"
                                         >
@@ -560,7 +566,9 @@ watch(
                                         </button>
                                         <button
                                             v-if="activeTab === 'enrolled'"
-                                            @click="removeEnrollment(enrollment.id)"
+                                            @click="
+                                                removeEnrollment(enrollment.id)
+                                            "
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-red-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-red-400"
                                             title="Eliminar inscripción"
                                         >

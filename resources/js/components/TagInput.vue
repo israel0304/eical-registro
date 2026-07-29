@@ -19,7 +19,10 @@ watch(
     () => props.modelValue,
     (val) => {
         const parsed = val
-            ? val.split(/[,;]\s*/).map((s) => s.trim()).filter(Boolean)
+            ? val
+                  .split(/[,;]\s*/)
+                  .map((s) => s.trim())
+                  .filter(Boolean)
             : [];
         if (JSON.stringify(parsed) !== JSON.stringify(tags.value)) {
             tags.value = parsed;
@@ -28,9 +31,13 @@ watch(
     { immediate: true },
 );
 
-watch(tags, () => {
-    emit('update:modelValue', tags.value.join(', '));
-}, { deep: true });
+watch(
+    tags,
+    () => {
+        emit('update:modelValue', tags.value.join(', '));
+    },
+    { deep: true },
+);
 
 function addTag() {
     const val = inputValue.value.trim();
@@ -57,7 +64,10 @@ function onKeydown(e: KeyboardEvent) {
 function onPaste(e: ClipboardEvent) {
     e.preventDefault();
     const text = e.clipboardData?.getData('text') || '';
-    const pasted = text.split(/[,;\n]\s*/).map((s) => s.trim()).filter(Boolean);
+    const pasted = text
+        .split(/[,;\n]\s*/)
+        .map((s) => s.trim())
+        .filter(Boolean);
     for (const item of pasted) {
         if (!tags.value.includes(item)) {
             tags.value.push(item);
@@ -91,7 +101,11 @@ function onPaste(e: ClipboardEvent) {
             @keydown="onKeydown"
             @paste="onPaste"
             type="text"
-            :placeholder="tags.length ? '' : placeholder || 'Escribe y presiona Enter o coma...'"
+            :placeholder="
+                tags.length
+                    ? ''
+                    : placeholder || 'Escribe y presiona Enter o coma...'
+            "
             class="min-w-[80px] flex-1 border-none bg-transparent p-0 text-sm text-gray-900 placeholder-gray-400 outline-none dark:text-gray-100 dark:placeholder-gray-500"
         />
     </div>

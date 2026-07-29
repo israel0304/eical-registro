@@ -13,7 +13,9 @@ use App\Models\Presentation;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopEnrollment;
+use App\Notifications\BienvenidaNuevoUsuario;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -27,6 +29,7 @@ Route::get('/', function () {
 
 Route::get('/ponente/activar', [PonenteActivationController::class, 'showForm'])->name('ponente.activate');
 Route::post('/ponente/activar', [PonenteActivationController::class, 'verify'])->name('ponente.verify');
+Route::get('/ponente/activar/{token}', [PonenteActivationController::class, 'showSetPasswordForm'])->name('ponente.activate-token');
 Route::post('/ponente/establecer-contrasena', [PonenteActivationController::class, 'setPassword'])->name('ponente.set-password');
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -127,6 +130,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'state' => $request->input('state', ''),
             'semblanza' => $request->input('semblanza', ''),
         ]);
+
+        $token = Password::broker()->createToken($user);
+        $url = url('/password/reset/'.$token.'?email='.urlencode($user->email));
+        $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
 
         return $user->only(['id', 'first_name', 'last_name', 'email']);
     })->name('api.ponentes.store');
