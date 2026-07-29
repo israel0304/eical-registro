@@ -103,7 +103,7 @@ class PresentationImportController extends Controller
                 'keywords' => trim($data['Palabras clave'] ?? ''),
             ]);
 
-            for ($i = 1; $i <= 5; $i++) {
+            for ($i = 1; $i <= 10; $i++) {
                 $firstName = trim($data["Nombre (Autor/a $i)"] ?? '');
                 $lastName = trim($data["Apellidos (Autor/a $i)"] ?? '');
                 $email = trim($data["Correo electrónico (Autor/a $i)"] ?? '');
