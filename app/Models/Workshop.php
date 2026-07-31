@@ -30,9 +30,11 @@ class Workshop extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function instructors(): HasMany
+    public function instructors(): BelongsToMany
     {
-        return $this->hasMany(Instructor::class);
+        return $this->belongsToMany(User::class, 'workshop_instructor_user')
+            ->withPivot('institution')
+            ->withTimestamps();
     }
 
     public function enrollments(): HasMany

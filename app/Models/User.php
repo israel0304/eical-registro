@@ -6,7 +6,6 @@ use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -51,7 +50,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'state',
 
         'profile_photo_path',
-        'role_id',
         'is_active',
         'activation_token',
         'password_set_at',
@@ -73,7 +71,6 @@ class User extends Authenticatable implements MustVerifyEmail
     protected function casts(): array
     {
         return [
-            'role_id' => 'integer',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
@@ -81,9 +78,14 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
-    public function role(): BelongsTo
+    public function roles(): BelongsToMany
     {
-        return $this->belongsTo(Role::class);
+        return $this->belongsToMany(Role::class)->withTimestamps();
+    }
+
+    public function hasRole(string $name): bool
+    {
+        return $this->roles->contains(fn ($role) => $role->name === $name);
     }
 
     public function presentations(): BelongsToMany
@@ -119,17 +121,22 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function isPonente(): bool
     {
-        return $this->role?->name === 'Ponente';
+        return $this->hasRole('Ponente');
     }
 
     public function isAsistente(): bool
     {
-        return $this->role?->name === 'Asistente';
+        return $this->hasRole('Asistente');
     }
 
     public function isAdmin(): bool
     {
-        return $this->role?->name === 'Administrator';
+        return $this->hasRole('Administrator');
+    }
+
+    public function isInstructor(): bool
+    {
+        return $this->hasRole('Instructor');
     }
 
     public function hasSetPassword(): bool

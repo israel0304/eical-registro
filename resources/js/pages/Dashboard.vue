@@ -21,6 +21,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const user = usePage().props.auth.user;
+
+const hasRole = (name: string) =>
+    user?.roles?.some((r: any) => r.name === name) ?? false;
 </script>
 
 <template>
@@ -35,7 +38,7 @@ const user = usePage().props.auth.user;
             </h1>
 
             <!-- Admin Dashboard -->
-            <template v-if="user.role_id === 1">
+            <template v-if="hasRole('Administrator')">
                 <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
                     <div
                         class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
@@ -230,7 +233,7 @@ const user = usePage().props.auth.user;
             </template>
 
             <!-- Ponente Dashboard -->
-            <template v-else-if="user.role_id === 2">
+            <template v-if="hasRole('Ponente')">
                 <div class="grid grid-cols-2 gap-4">
                     <div
                         class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
@@ -287,7 +290,7 @@ const user = usePage().props.auth.user;
             </template>
 
             <!-- Asistente Dashboard -->
-            <template v-else>
+            <template v-if="hasRole('Asistente') || hasRole('Instructor')">
                 <div
                     class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
                 >

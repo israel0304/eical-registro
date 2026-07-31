@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import {
     Search,
@@ -16,7 +16,9 @@ import TagInput from '@/components/TagInput.vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const page = usePage();
-const isAdmin = computed(() => page.props.auth.user?.role_id === 1);
+const hasRole = (name: string) =>
+    page.props.auth.user?.roles?.some((r: any) => r.name === name) ?? false;
+const isAdmin = computed(() => hasRole('Administrator'));
 
 const props = defineProps<{
     presentations: {
@@ -119,9 +121,13 @@ const togglePresented = (
     userId: number,
     presented: boolean,
 ) => {
-    axios.put('/presentations/' + presentationId, {
-        authors_presented: [{ user_id: userId, presented }],
-    });
+    router.put(
+        '/presentations/' + presentationId,
+        {
+            authors_presented: [{ user_id: userId, presented }],
+        },
+        { preserveScroll: true, preserveState: true },
+    );
 };
 
 const searchQuery = ref('');
@@ -187,9 +193,7 @@ const newPonente = reactive({
 const newPonenteErrors = reactive<Record<string, string>>({});
 
 const createPonente = async () => {
-    newPonenteErrors.first_name = '';
-    newPonenteErrors.last_name = '';
-    newPonenteErrors.email = '';
+    Object.keys(newPonenteErrors).forEach(key => delete newPonenteErrors[key]);
 
     if (
         !newPonente.first_name.trim() ||

@@ -154,8 +154,9 @@ class ConstanciaController extends Controller
         $workshop->load('instructors');
         $instructorsList = $workshop->instructors->map(function ($i) {
             $text = htmlspecialchars($i->name);
-            if ($i->institution) {
-                $text .= ' - '.htmlspecialchars($i->institution);
+            $institution = $i->pivot?->institution;
+            if ($institution) {
+                $text .= ' - '.htmlspecialchars($institution);
             }
 
             return $text;

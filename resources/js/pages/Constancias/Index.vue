@@ -12,8 +12,10 @@ defineProps<{
     user: any;
 }>();
 
-const isAdmin = computed(() => page.props.auth.user?.role_id === 1);
-const isPonente = computed(() => page.props.auth.user?.role_id === 2);
+const hasRole = (name: string) =>
+    page.props.auth.user?.roles?.some((r: any) => r.name === name) ?? false;
+const isAdmin = computed(() => hasRole('Administrator'));
+const isPonente = computed(() => hasRole('Ponente'));
 const canSeePonencias = computed(() => isAdmin.value || isPonente.value);
 
 const downloadCertificate = (workshopId: number) => {

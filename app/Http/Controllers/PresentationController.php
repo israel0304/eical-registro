@@ -14,7 +14,7 @@ class PresentationController extends Controller
 
         $query = Presentation::with('authors');
 
-        if ($user->isPonente()) {
+        if ($user->isPonente() && ! $user->isAdmin()) {
             $query->whereHas('authors', function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             });
@@ -45,7 +45,7 @@ class PresentationController extends Controller
             'discipline' => 'nullable|string|max:255',
             'keywords' => 'nullable|string',
             'location' => 'nullable|string|max:255',
-            'day' => 'nullable|string|max:50',
+            'day' => 'nullable|date',
             'start_time' => 'nullable|date_format:H:i',
             'end_time' => 'nullable|date_format:H:i',
             'submission_id' => 'nullable|string|max:50',
@@ -83,7 +83,40 @@ class PresentationController extends Controller
     {
         $user = $request->user();
 
-        if ($user->isPonente()) {
+        if ($user->isAdmin()) {
+            $validated = $request->validate([
+                'title' => 'sometimes|string|max:255',
+                'abstract' => 'sometimes|string',
+                'discipline' => 'sometimes|string|max:255',
+                'keywords' => 'sometimes|string',
+                'location' => 'nullable|string|max:255',
+                'day' => 'nullable|date',
+                'start_time' => 'nullable|date_format:H:i',
+                'end_time' => 'nullable|date_format:H:i',
+                'submission_id' => 'nullable|string|max:50',
+                'author_ids' => 'sometimes|array|min:1',
+                'author_ids.*' => 'exists:users,id',
+            ]);
+
+            if ($request->has('author_ids')) {
+                $presentation->authors()->sync($validated['author_ids']);
+            }
+
+            if ($request->has('authors_presented')) {
+                $request->validate([
+                    'authors_presented' => 'array',
+                    'authors_presented.*.user_id' => 'required|exists:users,id',
+                    'authors_presented.*.presented' => 'required|boolean',
+                ]);
+
+                foreach ($request->input('authors_presented') as $item) {
+                    $presentation->authors()->updateExistingPivot($item['user_id'], [
+                        'presented' => $item['presented'],
+                        'presented_at' => $item['presented'] ? now() : null,
+                    ]);
+                }
+            }
+        } elseif ($user->isPonente()) {
             $validated = $request->validate([
                 'title' => 'sometimes|string|max:255',
                 'abstract' => 'sometimes|string',
@@ -96,11 +129,11 @@ class PresentationController extends Controller
                 'abstract' => 'sometimes|string',
                 'discipline' => 'sometimes|string|max:255',
                 'keywords' => 'sometimes|string',
-                'location' => 'sometimes|string|max:255',
-                'day' => 'sometimes|string|max:50',
-                'start_time' => 'sometimes|date_format:H:i',
-                'end_time' => 'sometimes|date_format:H:i',
-                'submission_id' => 'sometimes|string|max:50',
+                'location' => 'nullable|string|max:255',
+                'day' => 'nullable|date',
+                'start_time' => 'nullable|date_format:H:i',
+                'end_time' => 'nullable|date_format:H:i',
+                'submission_id' => 'nullable|string|max:50',
                 'author_ids' => 'sometimes|array|min:1',
                 'author_ids.*' => 'exists:users,id',
             ]);

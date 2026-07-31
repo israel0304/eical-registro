@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\WorkshopQRForInstructor;
 use App\Models\Attendance;
-use App\Models\Instructor;
+use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopEnrollment;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
@@ -121,16 +121,13 @@ class AttendanceController extends Controller
         abort_if(! $request->user()->isAdmin(), 403);
 
         $validated = $request->validate([
-            'instructor_id' => 'required|exists:instructors,id',
+            'user_id' => 'required|exists:workshop_instructor_user,user_id',
         ]);
 
-        $instructor = Instructor::findOrFail($validated['instructor_id']);
+        $instructor = User::findOrFail($validated['user_id']);
 
-        if (! $instructor->email) {
-            return back()->withErrors(['error' => 'Este instructor no tiene correo electrónico.']);
-        }
-
-        if ($instructor->workshop_id !== $workshop->id) {
+        $belongsToWorkshop = $workshop->instructors()->where('user_id', $instructor->id)->exists();
+        if (! $belongsToWorkshop) {
             abort(404);
         }
 

@@ -15,7 +15,6 @@ use App\Models\Workshop;
 use App\Models\WorkshopEnrollment;
 use App\Notifications\BienvenidaNuevoUsuario;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -40,21 +39,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         if ($user->isAdmin()) {
             $stats = [
                 'total_users' => User::count(),
-                'asistentes' => User::whereHas('role', fn ($q) => $q->where('name', 'Asistente'))->count(),
-                'ponentes' => User::whereHas('role', fn ($q) => $q->where('name', 'Ponente'))->count(),
+                'asistentes' => User::whereHas('roles', fn ($q) => $q->where('name', 'Asistente'))->count(),
+                'ponentes' => User::whereHas('roles', fn ($q) => $q->where('name', 'Ponente'))->count(),
                 'talleres' => Workshop::count(),
                 'ponencias' => Presentation::count(),
                 'inscripciones' => WorkshopEnrollment::where('status', 'enrolled')->count(),
             ];
-        } elseif ($user->isPonente()) {
-            $stats = [
-                'mis_ponencias' => $user->presentations()->count(),
-                'talleres_inscritos' => $user->enrolledWorkshops()->wherePivot('status', 'enrolled')->count(),
-            ];
-        } else {
-            $stats = [
-                'talleres_inscritos' => $user->enrolledWorkshops()->wherePivot('status', 'enrolled')->count(),
-            ];
+        }
+
+        if ($user->isPonente()) {
+            $stats['mis_ponencias'] = $user->presentations()->count();
+        }
+
+        if ($user->isPonente() || $user->isAsistente() || $user->isInstructor()) {
+            $stats['talleres_inscritos'] = $user->enrolledWorkshops()->wherePivot('status', 'enrolled')->count();
         }
 
         return Inertia::render('Dashboard', ['stats' => $stats]);
@@ -100,7 +98,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('api/ponentes', function (Request $request) {
         $search = $request->input('search');
 
-        return User::where('role_id', 2)
+        return User::whereHas('roles', fn ($q) => $q->where('name', 'Ponente'))
             ->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
                     ->orWhere('last_name', 'like', "%{$search}%")
@@ -122,7 +120,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
             'email' => $validated['email'],
-            'role_id' => 2,
             'dni' => 'CNV-'.Str::random(7),
             'password' => bcrypt(Str::random(16)),
             'affiliation' => $request->input('affiliation', ''),
@@ -131,8 +128,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'semblanza' => $request->input('semblanza', ''),
         ]);
 
-        $token = Password::broker()->createToken($user);
-        $url = url('/password/reset/'.$token.'?email='.urlencode($user->email));
+        $user->roles()->sync([2]); // Ponente
+
+        $activationToken = Str::random(60);
+        $user->update(['activation_token' => $activationToken]);
+        $url = url('/ponente/activar/'.$activationToken);
         $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
 
         return $user->only(['id', 'first_name', 'last_name', 'email']);

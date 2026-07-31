@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\User;
 use App\Models\Workshop;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class WorkshopController extends Controller
@@ -55,8 +58,20 @@ class WorkshopController extends Controller
 
         $workshop = Workshop::create($validated);
 
-        foreach ($instructorsData as $instructor) {
-            $workshop->instructors()->create($instructor);
+        foreach ($instructorsData as $data) {
+            $user = User::firstOrCreate(
+                ['email' => $data['email']],
+                [
+                    'first_name' => explode(' ', $data['name'], 2)[0],
+                    'last_name' => explode(' ', $data['name'], 2)[1] ?? '',
+                    'dni' => 'CNV-'.strtoupper(Str::random(7)),
+                    'password' => Hash::make(Str::random(16)),
+                ]
+            );
+
+            $user->roles()->syncWithoutDetaching([4]); // Instructor
+
+            $workshop->instructors()->attach($user->id, ['institution' => $data['institution'] ?? null]);
         }
 
         return back()->with('success', 'Taller creado correctamente.');
@@ -110,10 +125,22 @@ class WorkshopController extends Controller
 
         $workshop->update($validated);
 
-        // Sync instructors: delete existing, recreate
-        $workshop->instructors()->delete();
-        foreach ($instructorsData as $instructor) {
-            $workshop->instructors()->create($instructor);
+        // Sync instructors
+        $workshop->instructors()->detach();
+        foreach ($instructorsData as $data) {
+            $user = User::firstOrCreate(
+                ['email' => $data['email']],
+                [
+                    'first_name' => explode(' ', $data['name'], 2)[0],
+                    'last_name' => explode(' ', $data['name'], 2)[1] ?? '',
+                    'dni' => 'CNV-'.strtoupper(Str::random(7)),
+                    'password' => Hash::make(Str::random(16)),
+                ]
+            );
+
+            $user->roles()->syncWithoutDetaching([4]); // Instructor
+
+            $workshop->instructors()->attach($user->id, ['institution' => $data['institution'] ?? null]);
         }
 
         return back()->with('success', 'Taller actualizado correctamente.');
