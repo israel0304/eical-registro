@@ -17,7 +17,9 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
-const isAdmin = computed(() => page.props.auth.user?.role_id === 1);
+const hasRole = (name: string) =>
+    page.props.auth.user?.roles?.some((r: any) => r.name === name) ?? false;
+const isAdmin = computed(() => hasRole('Administrator'));
 
 const goBack = () => {
     router.get('/presentations');
@@ -172,6 +174,22 @@ const disciplinesList = computed(() => {
             </div>
 
             <div
+                v-if="presentation.abstract"
+                class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+            >
+                <span
+                    class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                >
+                    Resumen / Abstract
+                </span>
+                <p
+                    class="mt-3 text-sm leading-relaxed whitespace-pre-line text-gray-700 dark:text-gray-300"
+                >
+                    {{ presentation.abstract }}
+                </p>
+            </div>
+
+            <div
                 class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
             >
                 <span
@@ -261,22 +279,6 @@ const disciplinesList = computed(() => {
                         </a>
                     </p>
                 </div>
-            </div>
-
-            <div
-                v-if="presentation.abstract"
-                class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-            >
-                <span
-                    class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
-                >
-                    Resumen / Abstract
-                </span>
-                <p
-                    class="mt-3 text-sm leading-relaxed whitespace-pre-line text-gray-700 dark:text-gray-300"
-                >
-                    {{ presentation.abstract }}
-                </p>
             </div>
         </div>
     </AppLayout>

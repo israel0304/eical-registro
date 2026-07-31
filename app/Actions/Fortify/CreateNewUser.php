@@ -4,7 +4,6 @@ namespace App\Actions\Fortify;
 
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
-use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -26,9 +25,7 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ])->validate();
 
-        $role = Role::firstOrCreate(['name' => 'Asistente']);
-
-        return User::create([
+        $user = User::create([
             'first_name' => $input['first_name'],
             'last_name' => $input['last_name'] ?? '',
             'dni' => 'CNV-'.strtoupper(Str::random(7)),
@@ -37,7 +34,10 @@ class CreateNewUser implements CreatesNewUsers
             'country' => $input['country'],
             'state' => $input['state'],
             'password' => $input['password'],
-            'role_id' => $role->id,
         ]);
+
+        $user->roles()->sync([3]); // Asistente
+
+        return $user;
     }
 }

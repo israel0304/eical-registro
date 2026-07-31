@@ -5,7 +5,9 @@ import { ref, watch, computed } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const page = usePage();
-const isAdmin = computed(() => page.props.auth.user?.role_id === 1);
+const hasRole = (name: string) =>
+    page.props.auth.user?.roles?.some((r: any) => r.name === name) ?? false;
+const isAdmin = computed(() => hasRole('Administrator'));
 
 const props = defineProps<{
     workshops: {

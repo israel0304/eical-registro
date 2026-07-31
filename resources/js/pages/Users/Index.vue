@@ -18,16 +18,6 @@ const getRoleName = (roleId: number | string) => {
     return role?.name || 'Sin asignar';
 };
 
-interface Unit {
-    id: number;
-    name: string;
-}
-interface Department {
-    id: number;
-    unit_id: number;
-    name: string;
-}
-
 const photoPreview = ref<string | null>(null);
 const profilePhotoInput = ref<HTMLInputElement | null>(null);
 
@@ -55,23 +45,20 @@ const props = defineProps<{
         next_page_url: string | null;
     };
     roles: any[];
-    stands: any[];
-    units: Unit[];
-    departments: Department[];
     filters: any;
 }>();
 
 // Filtros Reactivos
 const formFilters = useForm({
     search: props.filters?.search || '',
-    role_id: props.filters?.role_id || '',
+    role: props.filters?.role || '',
     status: props.filters?.status || 'active',
 });
 
 // Auto-submit para los filtros (con pequeño retraso)
 let searchTimeout: ReturnType<typeof setTimeout>;
 watch(
-    () => [formFilters.search, formFilters.role_id, formFilters.status],
+    () => [formFilters.search, formFilters.role, formFilters.status],
     () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
@@ -98,7 +85,7 @@ const userForm = useForm({
     country: '',
     state: '',
     semblanza: '',
-    role_id: '',
+    role_ids: [] as number[],
     is_active: true,
     photo: null,
     delete_photo: false,
@@ -132,7 +119,7 @@ const openEditModal = (user: any) => {
     userForm.country = user.country || '';
     userForm.state = user.state || '';
     userForm.semblanza = user.semblanza || '';
-    userForm.role_id = user.role_id || '';
+    userForm.role_ids = user.roles?.map((r: any) => r.id) || [];
     userForm.is_active = !!user.is_active;
     userForm.delete_photo = false;
     userForm.dni = user.dni || '';
@@ -256,14 +243,14 @@ const handleFileUpload = (event: Event) => {
                             >Perfil de usuario</label
                         >
                         <select
-                            v-model="formFilters.role_id"
+                            v-model="formFilters.role"
                             class="w-full rounded-md border border-gray-300 py-2 pr-8 pl-3 shadow-sm focus:border-black focus:ring-1 focus:ring-black sm:w-48 sm:text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-white dark:focus:ring-white"
                         >
                             <option value="">Todo</option>
                             <option
                                 v-for="role in roles"
                                 :key="role.id"
-                                :value="role.id"
+                                :value="role.name"
                             >
                                 {{ role.name }}
                             </option>
@@ -438,7 +425,11 @@ const handleFileUpload = (event: Event) => {
                                 <td
                                     class="px-6 py-4 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400"
                                 >
-                                    {{ user.role?.name || '-' }}
+                                    {{
+                                        user.roles
+                                            ?.map((r: any) => r.name)
+                                            .join(', ') || '-'
+                                    }}
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-500 dark:text-gray-400"
@@ -643,11 +634,16 @@ const handleFileUpload = (event: Event) => {
                             >
                                 {{ userForm.email }}
                             </div>
-                            <div v-if="userForm.role_id" class="mt-1">
+                            <div
+                                v-if="userForm.role_ids.length"
+                                class="mt-1 flex flex-wrap gap-1"
+                            >
                                 <span
+                                    v-for="rid in userForm.role_ids"
+                                    :key="rid"
                                     class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
                                 >
-                                    {{ getRoleName(userForm.role_id) }}
+                                    {{ getRoleName(rid) }}
                                 </span>
                             </div>
                             <div
@@ -819,24 +815,25 @@ const handleFileUpload = (event: Event) => {
                                     <div>
                                         <label
                                             class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                            >Perfil *</label
+                                            >Perfiles *</label
                                         >
-                                        <select
-                                            v-model="userForm.role_id"
-                                            required
-                                            class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100 dark:focus:border-indigo-500"
+                                        <div
+                                            class="flex flex-wrap gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800"
                                         >
-                                            <option value="">
-                                                Seleccionar
-                                            </option>
-                                            <option
+                                            <label
                                                 v-for="role in roles"
                                                 :key="role.id"
-                                                :value="role.id"
+                                                class="flex cursor-pointer items-center gap-1.5 text-sm"
                                             >
+                                                <input
+                                                    type="checkbox"
+                                                    :value="role.id"
+                                                    v-model="userForm.role_ids"
+                                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                />
                                                 {{ role.name }}
-                                            </option>
-                                        </select>
+                                            </label>
+                                        </div>
                                     </div>
                                     <div v-if="isEditing">
                                         <label

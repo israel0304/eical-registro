@@ -10,12 +10,19 @@ import {
     Send,
     Check,
     X,
+    Calendar,
+    Clock,
+    MapPin,
+    UserCheck,
+    Users,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted, nextTick, watch } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const page = usePage();
-const isAdmin = computed(() => page.props.auth.user?.role_id === 1);
+const hasRole = (name: string) =>
+    page.props.auth.user?.roles?.some((r: any) => r.name === name) ?? false;
+const isAdmin = computed(() => hasRole('Administrator'));
 const currentUserId = computed(() => page.props.auth.user?.id);
 
 const props = defineProps<{
@@ -24,7 +31,7 @@ const props = defineProps<{
 
 const activeTab = ref<'enrolled' | 'cancelled'>('enrolled');
 const qrCanvas = ref<HTMLCanvasElement | null>(null);
-const sendForm = useForm({ instructor_id: null as number | null });
+const sendForm = useForm({ user_id: null as number | null });
 
 const isEnrolled = computed(() => {
     return props.workshop.enrollments?.some(
@@ -198,7 +205,7 @@ const printQR = () => {
 };
 
 const sendQRToInstructor = (instructorId: number) => {
-    sendForm.instructor_id = instructorId;
+    sendForm.user_id = instructorId;
     sendForm.post('/admin/workshops/' + props.workshop.id + '/send-qr', {
         preserveScroll: true,
         onSuccess: () => {
@@ -260,105 +267,107 @@ watch(
                 </h1>
 
                 <div
-                    class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+                    class="mt-4 space-y-3 rounded-lg bg-gray-50 p-4 text-sm dark:bg-zinc-800"
                 >
-                    <div>
-                        <span
-                            class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                            >Instructores</span
-                        >
-                        <div
-                            v-for="(instructor, idx) in workshop.instructors"
-                            :key="instructor.id"
-                            class="mt-1"
-                        >
-                            <p class="text-sm text-gray-900 dark:text-white">
-                                {{ instructor.name }}
-                            </p>
-                            <p
-                                v-if="instructor.institution"
-                                class="text-xs text-gray-500"
-                            >
-                                {{ instructor.institution }}
-                            </p>
-                            <p
-                                v-if="instructor.email"
-                                class="text-xs text-gray-400"
-                            >
-                                {{ instructor.email }}
-                            </p>
-                            <div
-                                v-if="
-                                    idx <
-                                    (workshop.instructors?.length ?? 0) - 1
-                                "
-                                class="my-1 border-b border-gray-100 dark:border-zinc-800"
-                            ></div>
+                    <div
+                        class="flex flex-wrap items-center gap-x-5 gap-y-1 text-gray-700 dark:text-gray-300"
+                    >
+                        <div class="flex items-center gap-1.5">
+                            <Calendar class="h-4 w-4 shrink-0" />
+                            <span class="text-gray-900 dark:text-white">{{
+                                formatDate(workshop.day)
+                            }}</span>
                         </div>
-                        <p
-                            v-if="!workshop.instructors?.length"
-                            class="mt-1 text-sm text-gray-400"
-                        >
-                            —
-                        </p>
+                        <div class="flex items-center gap-1.5">
+                            <Clock class="h-4 w-4 shrink-0" />
+                            <span class="text-gray-900 dark:text-white">{{
+                                workshop.start_time
+                            }}
+                            -
+                            {{ workshop.end_time }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <MapPin class="h-4 w-4 shrink-0" />
+                            <span class="text-gray-900 dark:text-white">{{
+                                workshop.location
+                            }}</span>
+                        </div>
                     </div>
-                    <div>
-                        <span
-                            class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                            >Lugar</span
-                        >
-                        <p class="text-sm text-gray-900 dark:text-white">
-                            {{ workshop.location }}
-                        </p>
-                    </div>
-                    <div>
-                        <span
-                            class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                            >Horario</span
-                        >
-                        <p class="text-sm text-gray-900 dark:text-white">
-                            {{ formatDate(workshop.day) }}
-                        </p>
-                        <p class="text-xs text-gray-500">
-                            {{ workshop.start_time }} - {{ workshop.end_time }}
-                        </p>
-                    </div>
-                    <div>
+
+                    <div class="border-t border-gray-200 pt-3 dark:border-zinc-700">
                         <span
                             class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
                             >Cupos</span
                         >
-                        <p class="text-sm text-gray-900 dark:text-white">
-                            {{ workshop.enrolled_count || 0 }} /
-                            {{ workshop.capacity }}
-                        </p>
-                        <div
-                            class="mt-1 h-2 w-full rounded-full bg-gray-200 dark:bg-zinc-700"
-                        >
+                        <div class="mt-1 flex items-center gap-2">
+                            <Users class="h-4 w-4 shrink-0 text-gray-400" />
+                            <span class="text-gray-900 dark:text-white">
+                                {{ workshop.enrolled_count || 0 }} /
+                                {{ workshop.capacity }}</span
+                            >
                             <div
-                                class="h-2 rounded-full bg-indigo-600"
-                                :style="{
-                                    width:
-                                        Math.min(
-                                            ((workshop.enrolled_count || 0) /
-                                                workshop.capacity) *
+                                class="h-2 flex-1 rounded-full bg-gray-200 dark:bg-zinc-700"
+                            >
+                                <div
+                                    class="h-2 rounded-full bg-indigo-600"
+                                    :style="{
+                                        width:
+                                            Math.min(
+                                                ((workshop.enrolled_count ||
+                                                    0) /
+                                                    workshop.capacity) *
+                                                    100,
                                                 100,
-                                            100,
-                                        ) + '%',
-                                }"
-                            ></div>
+                                            ) + '%',
+                                    }"
+                                ></div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div v-if="workshop.description" class="mt-4">
-                    <span
-                        class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                        >Descripción</span
-                    >
-                    <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">
-                        {{ workshop.description }}
-                    </p>
+                    <div v-if="workshop.description" class="border-t border-gray-200 pt-3 dark:border-zinc-700">
+                        <span
+                            class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+                            >Descripción</span
+                        >
+                        <p
+                            class="mt-1 text-sm leading-relaxed whitespace-pre-line text-gray-700 dark:text-gray-300"
+                        >
+                            {{ workshop.description }}
+                        </p>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-3 dark:border-zinc-700">
+                        <span
+                            class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+                            >Instructores</span
+                        >
+                        <div class="mt-1 flex items-start gap-1.5">
+                            <UserCheck class="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                            <template v-if="workshop.instructors?.length">
+                                <span
+                                    v-for="(instructor, idx) in workshop.instructors"
+                                    :key="instructor.id"
+                                    class="text-gray-900 dark:text-white"
+                                >
+                                    {{ instructor.name }}<span
+                                        v-if="instructor.institution"
+                                        class="text-xs text-gray-500"
+                                    >
+                                        ({{ instructor.institution }})</span
+                                    ><span
+                                        v-if="
+                                            idx <
+                                            workshop.instructors.length - 1
+                                        "
+                                    >
+                                        ,
+                                    </span>
+                                </span>
+                            </template>
+                            <span v-else class="text-gray-400">—</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Enrollment buttons (non-admin) -->

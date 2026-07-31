@@ -8,21 +8,10 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
-/**
- * @extends Factory<User>
- */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
     protected static ?string $password;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
@@ -30,12 +19,6 @@ class UserFactory extends Factory
             'last_name' => fake()->lastName(),
             'dni' => fake()->unique()->numerify('###########'),
             'email' => fake()->unique()->safeEmail(),
-
-            'role_id' => static function () {
-                $roleName = fake()->randomElement(['Administrator', 'Ponente', 'Asistente']);
-
-                return Role::firstOrCreate(['name' => $roleName])->id;
-            },
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
@@ -45,9 +28,17 @@ class UserFactory extends Factory
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            if ($user->roles()->count() === 0) {
+                $roleName = fake()->randomElement(['Administrator', 'Ponente', 'Asistente']);
+                $role = Role::firstOrCreate(['name' => $roleName]);
+                $user->roles()->sync([$role->id]);
+            }
+        });
+    }
+
     public function unverified(): static
     {
         return $this->state(fn (array $attributes) => [
@@ -55,9 +46,6 @@ class UserFactory extends Factory
         ]);
     }
 
-    /**
-     * Indicate that the model has two-factor authentication configured.
-     */
     public function withTwoFactor(): static
     {
         return $this->state(fn (array $attributes) => [

@@ -120,12 +120,13 @@ class PresentationImportController extends Controller
                         'dni' => 'CNV-'.strtoupper(Str::random(7)),
                         'affiliation' => trim($data["Afiliación (Autor/a $i)"] ?? ''),
                         'country' => trim($data["País (Autor/a $i)"] ?? ''),
-                        'role_id' => $ponenteRole->id,
                         'password' => Hash::make(Str::random(16)),
                         'is_active' => true,
                         'activation_token' => Str::random(60),
                     ]
                 );
+
+                $user->roles()->syncWithoutDetaching([2]); // Ponente
 
                 $presentation->authors()->attach($user->id, ['author_order' => $i]);
             }

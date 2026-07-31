@@ -16,7 +16,7 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::with(['role']);
+        $query = User::with('roles');
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -28,8 +28,9 @@ class UserController extends Controller
             });
         }
 
-        if ($request->filled('role_id')) {
-            $query->where('role_id', $request->input('role_id'));
+        if ($request->filled('role')) {
+            $roleName = $request->input('role');
+            $query->whereHas('roles', fn ($q) => $q->where('name', $roleName));
         }
 
         if ($request->has('status') && $request->input('status') === 'inactive') {
@@ -44,7 +45,7 @@ class UserController extends Controller
         return Inertia::render('Users/Index', [
             'users' => $users,
             'roles' => $roles,
-            'filters' => $request->only(['search', 'role_id', 'status']),
+            'filters' => $request->only(['search', 'role', 'status']),
         ]);
     }
 
@@ -57,7 +58,8 @@ class UserController extends Controller
             'affiliation' => 'nullable|string|max:255',
             'country' => 'nullable|string|max:255',
             'state' => 'nullable|string|max:255',
-            'role_id' => 'required|exists:roles,id',
+            'role_ids' => 'required|array|min:1',
+            'role_ids.*' => 'exists:roles,id',
             'is_active' => 'boolean',
             'photo' => 'nullable|image|max:5120',
             'semblanza' => 'nullable|string|max:5000',
@@ -71,9 +73,11 @@ class UserController extends Controller
         $validated['dni'] = 'CNV-'.strtoupper(Str::random(7));
 
         $user = User::create($validated);
+        $user->roles()->sync($validated['role_ids']);
 
-        $token = Password::broker()->createToken($user);
-        $url = url('/password/reset/'.$token.'?email='.urlencode($user->email));
+        $activationToken = Str::random(60);
+        $user->update(['activation_token' => $activationToken]);
+        $url = url('/ponente/activar/'.$activationToken);
         $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
 
         return back()->with('success', 'Usuario creado correctamente. Se le ha enviado un correo de bienvenida.');
@@ -85,7 +89,8 @@ class UserController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
-            'role_id' => 'required|exists:roles,id',
+            'role_ids' => 'required|array|min:1',
+            'role_ids.*' => 'exists:roles,id',
             'affiliation' => 'nullable|string|max:255',
             'country' => 'nullable|string|max:255',
             'state' => 'nullable|string|max:255',
@@ -110,6 +115,7 @@ class UserController extends Controller
         }
 
         $user->update($validated);
+        $user->roles()->sync($validated['role_ids']);
 
         return back()->with('success', 'Usuario modificado correctamente.');
     }
@@ -147,7 +153,7 @@ class UserController extends Controller
 
     public function exportCsv(Request $request)
     {
-        $users = User::with(['role'])->get();
+        $users = User::with('roles')->get();
         $headers = [
             'Content-type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename=usuarios_registro_eical.csv',
@@ -168,7 +174,7 @@ class UserController extends Controller
                     $user->first_name,
                     $user->last_name,
                     $user->email,
-                    $user->role->name ?? '',
+                    $user->roles->pluck('name')->implode(', '),
                     $user->affiliation ?? '',
                     $user->country ?? '',
                     $user->is_active ? 'Activo' : 'Inactivo',
@@ -199,25 +205,26 @@ class UserController extends Controller
                 continue;
             }
 
-            $roleId = 3;
+            $roleIds = [3]; // default Asistente
             if (! empty($row[6])) {
                 $role = Role::where('name', 'like', "%{$row[6]}%")->first();
                 if ($role) {
-                    $roleId = $role->id;
+                    $roleIds = [$role->id];
                 }
             }
 
-            User::updateOrCreate(
+            $user = User::updateOrCreate(
                 ['email' => $row[2] ?? ''],
                 [
                     'first_name' => $row[0] ?? 'CSV',
                     'last_name' => $row[1] ?? 'User',
                     'dni' => 'CNV-'.strtoupper(Str::random(7)),
-                    'role_id' => $roleId,
                     'is_active' => true,
                     'password' => Hash::make(Str::random(12)),
                 ]
             );
+
+            $user->roles()->syncWithoutDetaching($roleIds);
             $imported++;
         }
 

@@ -2,7 +2,7 @@
 
 namespace App\Mail;
 
-use App\Models\Instructor;
+use App\Models\User;
 use App\Models\Workshop;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -16,7 +16,7 @@ class WorkshopQRForInstructor extends Mailable
 
     public function __construct(
         public Workshop $workshop,
-        public Instructor $instructor,
+        public User $instructor,
         public string $qrPngBase64,
         public string $scanUrl,
     ) {}

@@ -16,8 +16,8 @@ class ReportController extends Controller
     public function index()
     {
         $stats = [
-            'total_asistentes' => User::whereHas('role', fn ($q) => $q->where('name', 'Asistente'))->count(),
-            'total_ponentes' => User::whereHas('role', fn ($q) => $q->where('name', 'Ponente'))->count(),
+            'total_asistentes' => User::whereHas('roles', fn ($q) => $q->where('name', 'Asistente'))->count(),
+            'total_ponentes' => User::whereHas('roles', fn ($q) => $q->where('name', 'Ponente'))->count(),
             'total_talleres' => Workshop::count(),
             'total_ponencias' => Presentation::count(),
             'total_inscritos' => WorkshopEnrollment::where('status', 'enrolled')->count(),
@@ -48,7 +48,7 @@ class ReportController extends Controller
 
     public function asistenciaGeneral(Request $request)
     {
-        $query = User::whereHas('role', fn ($q) => $q->where('name', 'Asistente'))
+        $query = User::whereHas('roles', fn ($q) => $q->where('name', 'Asistente'))
             ->with('attendances');
 
         if ($request->filled('search')) {
@@ -89,9 +89,9 @@ class ReportController extends Controller
     {
         $stats = [
             'total_users' => User::count(),
-            'asistentes' => User::whereHas('role', fn ($q) => $q->where('name', 'Asistente'))->count(),
-            'asistentes_activos' => User::whereHas('role', fn ($q) => $q->where('name', 'Asistente'))->where('is_active', true)->count(),
-            'ponentes' => User::whereHas('role', fn ($q) => $q->where('name', 'Ponente'))->count(),
+            'asistentes' => User::whereHas('roles', fn ($q) => $q->where('name', 'Asistente'))->count(),
+            'asistentes_activos' => User::whereHas('roles', fn ($q) => $q->where('name', 'Asistente'))->where('is_active', true)->count(),
+            'ponentes' => User::whereHas('roles', fn ($q) => $q->where('name', 'Ponente'))->count(),
             'talleres' => Workshop::count(),
             'inscripciones' => WorkshopEnrollment::where('status', 'enrolled')->count(),
             'ponencias' => Presentation::count(),
@@ -136,7 +136,7 @@ class ReportController extends Controller
         }])->get(['id', 'name', 'capacity']);
 
         $totalInscritos = WorkshopEnrollment::where('status', 'enrolled')->count();
-        $totalAsistentes = User::whereHas('role', fn ($q) => $q->where('name', 'Asistente'))->count();
+        $totalAsistentes = User::whereHas('roles', fn ($q) => $q->where('name', 'Asistente'))->count();
         $tasaCompletado = $totalAsistentes > 0 ? round(($totalInscritos / $totalAsistentes) * 100, 1) : 0;
 
         return Inertia::render('Reports/Estadisticas', [
@@ -174,7 +174,7 @@ class ReportController extends Controller
 
                 case 'asistencia-general':
                     fputcsv($file, ['DNI', 'Nombre', 'Email', 'Días asistidos']);
-                    $users = User::whereHas('role', fn ($q) => $q->where('name', 'Asistente'))
+                    $users = User::whereHas('roles', fn ($q) => $q->where('name', 'Asistente'))
                         ->withCount('attendances as dias_asistidos')->get();
                     foreach ($users as $u) {
                         fputcsv($file, [$u->dni, $u->name, $u->email, $u->dias_asistidos]);
@@ -184,8 +184,8 @@ class ReportController extends Controller
                 case 'resumen':
                     fputcsv($file, ['Métrica', 'Valor']);
                     fputcsv($file, ['Total usuarios', User::count()]);
-                    fputcsv($file, ['Asistentes', User::whereHas('role', fn ($q) => $q->where('name', 'Asistente'))->count()]);
-                    fputcsv($file, ['Ponentes', User::whereHas('role', fn ($q) => $q->where('name', 'Ponente'))->count()]);
+                    fputcsv($file, ['Asistentes', User::whereHas('roles', fn ($q) => $q->where('name', 'Asistente'))->count()]);
+                    fputcsv($file, ['Ponentes', User::whereHas('roles', fn ($q) => $q->where('name', 'Ponente'))->count()]);
                     fputcsv($file, ['Talleres', Workshop::count()]);
                     fputcsv($file, ['Ponencias', Presentation::count()]);
                     fputcsv($file, ['Inscripciones', WorkshopEnrollment::where('status', 'enrolled')->count()]);

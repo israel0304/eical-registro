@@ -27,35 +27,34 @@ import AppLogo from './AppLogo.vue';
 
 const page = usePage();
 
-const role_id = computed(() => page.props.auth.user?.role_id || 1);
+const hasRole = (name: string) =>
+    page.props.auth.user?.roles?.some((r: any) => r.name === name) ?? false;
 
 const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
         { title: 'Inicio', href: dashboard(), icon: Home },
     ];
 
-    if (role_id.value === 1) {
-        // Administrator
+    if (hasRole('Administrator')) {
         items.push(
             { title: 'Usuarios', href: '/users', icon: Users },
             { title: 'Talleres', href: '/workshops', icon: BookOpen },
             { title: 'Ponencias', href: '/presentations', icon: Mic },
             { title: 'Reportes', href: '/admin/reportes', icon: BarChart3 },
         );
-    } else if (role_id.value === 2) {
-        // Ponente
-        items.push(
-            { title: 'Mis Ponencias', href: '/presentations', icon: Mic },
-            { title: 'Talleres', href: '/workshops', icon: BookOpen },
-            {
-                title: 'Mis Talleres',
-                href: '/my-workshops',
-                icon: CalendarCheck,
-            },
-            { title: 'Mis Constancias', href: '/constancias', icon: Award },
-        );
-    } else if (role_id.value === 3) {
-        // Asistente
+    }
+
+    if (hasRole('Ponente')) {
+        items.push({
+            title: 'Mis Ponencias',
+            href: '/presentations',
+            icon: Mic,
+        });
+    }
+
+    const canSeeWorkshops =
+        hasRole('Ponente') || hasRole('Asistente') || hasRole('Instructor');
+    if (canSeeWorkshops) {
         items.push(
             { title: 'Talleres', href: '/workshops', icon: BookOpen },
             {

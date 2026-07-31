@@ -24,7 +24,7 @@ class PonenteActivationController extends Controller
         ]);
 
         $user = User::where('email', $validated['email'])
-            ->whereHas('role', fn ($q) => $q->where('name', 'Ponente'))
+            ->whereHas('roles', fn ($q) => $q->where('name', 'Ponente'))
             ->whereHas('presentations', fn ($q) => $q->where('submission_id', $validated['submission_id']))
             ->first();
 
