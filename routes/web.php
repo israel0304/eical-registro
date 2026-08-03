@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\CertificateTemplateController;
+use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\ConstanciaController;
+use App\Http\Controllers\ParticipationTypeController;
 use App\Http\Controllers\PonenteActivationController;
 use App\Http\Controllers\PresentationController;
 use App\Http\Controllers\PresentationImportController;
@@ -30,6 +33,8 @@ Route::get('/ponente/activar', [PonenteActivationController::class, 'showForm'])
 Route::post('/ponente/activar', [PonenteActivationController::class, 'verify'])->name('ponente.verify');
 Route::get('/ponente/activar/{token}', [PonenteActivationController::class, 'showSetPasswordForm'])->name('ponente.activate-token');
 Route::post('/ponente/establecer-contrasena', [PonenteActivationController::class, 'setPassword'])->name('ponente.set-password');
+
+Route::get('constancias/verificar/{folio}', [CertificateVerificationController::class, 'show'])->name('constancias.verificar');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
@@ -156,11 +161,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Constancias
     Route::get('constancias', [ConstanciaController::class, 'myCertificates'])->name('constancias.my');
     Route::get('constancias/{id}/download', [ConstanciaController::class, 'download'])->name('constancias.download');
+    Route::get('constancias/{certificate}/pdf', [ConstanciaController::class, 'downloadPdf'])->name('constancias.pdf');
     Route::get('admin/constancias/{workshopId}/{userId}/download', [ConstanciaController::class, 'adminDownload'])->name('constancias.admin.download');
 
     // Constancias de ponencia
     Route::get('constancias/ponencia/{presentation}/download', [ConstanciaController::class, 'downloadPonencia'])->name('constancias.ponencia.download');
     Route::get('admin/constancias/ponencia/{presentation}/{user}/download', [ConstanciaController::class, 'adminDownloadPonencia'])->name('constancias.ponencia.admin-download');
+
+    // Admin: certificate templates
+    Route::get('admin/constancias/plantillas', [CertificateTemplateController::class, 'index'])->name('constancias.templates.index');
+    Route::post('admin/constancias/plantillas', [CertificateTemplateController::class, 'store'])->name('constancias.templates.store');
+    Route::get('admin/constancias/plantillas/{template}/edit', [CertificateTemplateController::class, 'edit'])->name('constancias.templates.edit');
+    Route::put('admin/constancias/plantillas/{template}', [CertificateTemplateController::class, 'update'])->name('constancias.templates.update');
+    Route::delete('admin/constancias/plantillas/{template}', [CertificateTemplateController::class, 'destroy'])->name('constancias.templates.destroy');
+
+    // Admin: participation types
+    Route::post('admin/constancias/tipos', [ParticipationTypeController::class, 'store'])->name('constancias.types.store');
+    Route::put('admin/constancias/tipos/{type}', [ParticipationTypeController::class, 'update'])->name('constancias.types.update');
+    Route::delete('admin/constancias/tipos/{type}', [ParticipationTypeController::class, 'destroy'])->name('constancias.types.destroy');
 });
 
 require __DIR__.'/settings.php';

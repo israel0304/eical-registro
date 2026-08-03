@@ -61,21 +61,39 @@ const downloadPonencia = (presentationId: number) => {
                                 class="h-6 w-6 text-indigo-600 dark:text-indigo-400"
                             />
                         </div>
-                        <div class="flex-1">
-                            <h3
-                                class="text-sm font-semibold text-gray-900 dark:text-white"
-                            >
-                                {{ workshop.name }}
-                            </h3>
-                            <p
-                                class="mt-1 text-xs text-gray-500 dark:text-gray-400"
-                            >
-                                {{ workshop.instructor_name }}
-                            </p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ workshop.day }} | {{ workshop.location }}
-                            </p>
-                        </div>
+                            <div class="flex-1">
+                                <h3
+                                    class="text-sm font-semibold text-gray-900 dark:text-white"
+                                >
+                                    {{ workshop.name }}
+                                </h3>
+                                <p
+                                    class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                                >
+                                    {{
+                                        workshop.instructors
+                                            ?.map(
+                                                (i) =>
+                                                    i.name +
+                                                    (i.institution
+                                                        ? ' (' +
+                                                          i.institution +
+                                                          ')'
+                                                        : ''),
+                                            )
+                                            .join(', ') || '—'
+                                    }}
+                                </p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ workshop.day }} | {{ workshop.location }}
+                                </p>
+                                <p
+                                    v-if="workshop.folio"
+                                    class="mt-1 font-mono text-[11px] text-indigo-600 dark:text-indigo-400"
+                                >
+                                    Folio: {{ workshop.folio }}
+                                </p>
+                            </div>
                     </div>
                     <div class="mt-4">
                         <button
@@ -131,6 +149,12 @@ const downloadPonencia = (presentationId: number) => {
                                             : ''
                                     }}
                                     {{ presentation.location || '' }}
+                                </p>
+                                <p
+                                    v-if="presentation.folio"
+                                    class="mt-1 font-mono text-[11px] text-emerald-600 dark:text-emerald-400"
+                                >
+                                    Folio: {{ presentation.folio }}
                                 </p>
                             </div>
                         </div>

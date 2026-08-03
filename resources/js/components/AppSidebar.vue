@@ -8,6 +8,7 @@ import {
     CalendarCheck,
     Award,
     BarChart3,
+    FileBadge,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
@@ -41,6 +42,11 @@ const mainNavItems = computed<NavItem[]>(() => {
             { title: 'Talleres', href: '/workshops', icon: BookOpen },
             { title: 'Ponencias', href: '/presentations', icon: Mic },
             { title: 'Reportes', href: '/admin/reportes', icon: BarChart3 },
+            {
+                title: 'Plantillas',
+                href: '/admin/constancias/plantillas',
+                icon: FileBadge,
+            },
         );
     }
 
