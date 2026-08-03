@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Presentation;
+use App\Models\Workshop;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -23,6 +26,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Relation::morphMap([
+            'workshop' => Workshop::class,
+            'presentation' => Presentation::class,
+        ]);
+
         $this->configureDefaults();
     }
 

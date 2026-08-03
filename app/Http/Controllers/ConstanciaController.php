@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Certificate;
 use App\Models\Presentation;
 use App\Models\User;
 use App\Models\Workshop;
+use App\Services\CertificateRenderer;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ConstanciaController extends Controller
 {
+    public function __construct(private readonly CertificateRenderer $renderer) {}
+
     public function myCertificates(Request $request)
     {
         $user = $request->user();
@@ -22,6 +26,7 @@ class ConstanciaController extends Controller
             ->whereHas('attendances', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })
+            ->with('instructors')
             ->withCount(['attendances as attendance_count' => function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             }])
@@ -36,6 +41,19 @@ class ConstanciaController extends Controller
                     ->withPivot('presented', 'presented_at');
             }])
             ->get();
+
+        $certificates = Certificate::query()
+            ->where('user_id', $user->id)
+            ->get()
+            ->keyBy(fn ($certificate) => $certificate->event_type.'-'.$certificate->event_id);
+
+        foreach ($completedWorkshops as $workshop) {
+            $workshop->folio = $certificates->get('workshop-'.$workshop->id)?->folio;
+        }
+
+        foreach ($presentationCertificates as $presentation) {
+            $presentation->folio = $certificates->get('presentation-'.$presentation->id)?->folio;
+        }
 
         return Inertia::render('Constancias/Index', [
             'completedWorkshops' => $completedWorkshops,
@@ -58,15 +76,45 @@ class ConstanciaController extends Controller
             return back()->withErrors(['error' => 'No estás inscrito en este taller.']);
         }
 
-        return $this->generateCertificatePdf($user, $workshop);
+        $hasAttendance = $workshop->attendances()->where('user_id', $user->id)->exists();
+
+        if (! $hasAttendance) {
+            return back()->withErrors(['error' => 'Tu asistencia aún no ha sido verificada.']);
+        }
+
+        $certificate = $this->renderer->issue($user, 'workshop', $workshop);
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible generar la constancia.']);
+        }
+
+        $certificate->update(['downloaded_at' => now()]);
+
+        return $this->respondWithHtml($certificate);
     }
 
     public function adminDownload($workshopId, $userId)
     {
+        abort_if(! request()->user()->isAdmin(), 403);
+
         $workshop = Workshop::findOrFail($workshopId);
         $user = User::findOrFail($userId);
 
-        return $this->generateCertificatePdf($user, $workshop);
+        $hasAttendance = $workshop->attendances()->where('user_id', $user->id)->exists();
+
+        if (! $hasAttendance) {
+            return back()->withErrors(['error' => 'El usuario no tiene asistencia verificada en este taller.']);
+        }
+
+        $certificate = $this->renderer->issue($user, 'workshop', $workshop);
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible generar la constancia.']);
+        }
+
+        $certificate->update(['downloaded_at' => now()]);
+
+        return $this->respondWithHtml($certificate);
     }
 
     public function downloadPonencia(Request $request, Presentation $presentation)
@@ -82,114 +130,51 @@ class ConstanciaController extends Controller
             return back()->withErrors(['error' => 'No tienes una ponencia presentada para descargar esta constancia.']);
         }
 
-        return $this->generatePonenciaPdf($user, $presentation);
+        $certificate = $this->renderer->issue($user, 'presentation', $presentation);
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible generar la constancia.']);
+        }
+
+        $certificate->update(['downloaded_at' => now()]);
+
+        return $this->respondWithHtml($certificate);
     }
 
     public function adminDownloadPonencia(Presentation $presentation, User $user)
     {
-        return $this->generatePonenciaPdf($user, $presentation);
-    }
+        abort_if(! request()->user()->isAdmin(), 403);
 
-    private function generatePonenciaPdf($user, $presentation)
-    {
-        if (! $presentation->relationLoaded('authors')) {
-            $presentation->load('authors');
+        $certificate = $this->renderer->issue($user, 'presentation', $presentation);
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible generar la constancia.']);
         }
 
-        $html = $this->buildPonenciaHtml($user, $presentation);
+        $certificate->update(['downloaded_at' => now()]);
 
-        return response($html, 200, [
-            'Content-Type' => 'text/html',
-            'Content-Disposition' => 'inline; filename=constancia_ponencia_'.$presentation->id.'.html',
+        return $this->respondWithHtml($certificate);
+    }
+
+    public function downloadPdf(Request $request, Certificate $certificate)
+    {
+        $user = $request->user();
+
+        abort_unless($certificate->user_id === $user->id || $user->isAdmin(), 403);
+
+        return response($this->renderer->renderPdf($certificate), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename=constancia_'.$certificate->folio.'.pdf',
         ]);
     }
 
-    private function buildPonenciaHtml($user, $presentation)
+    private function respondWithHtml(Certificate $certificate)
     {
-        $authorsList = $presentation->authors->map(function ($a) {
-            return htmlspecialchars($a->first_name.' '.$a->last_name);
-        })->implode(', ');
-
-        return '
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Constancia de Ponencia</title>
-    <style>
-        body { font-family: Georgia, serif; text-align: center; padding: 60px; }
-        .title { font-size: 28px; font-weight: bold; margin-bottom: 20px; }
-        .subtitle { font-size: 18px; margin-bottom: 30px; }
-        .name { font-size: 24px; font-weight: bold; color: #2c5282; margin: 20px 0; }
-        .details { font-size: 16px; margin: 10px 0; }
-        .date { margin-top: 40px; font-size: 14px; color: #666; }
-    </style>
-</head>
-<body>
-    <div class="title">CONSTANCIA DE PONENCIA</div>
-    <div class="subtitle">Registro EICAL 2026</div>
-    <div class="details">Se certifica que</div>
-    <div class="name">'.htmlspecialchars($user->first_name.' '.$user->last_name).'</div>
-    <div class="details">presentó la ponencia</div>
-    <div class="details"><strong>'.htmlspecialchars($presentation->title).'</strong></div>
-    <div class="details">Autores: '.$authorsList.'</div>
-    <div class="details">Disciplina: '.htmlspecialchars($presentation->discipline ?? '—').'</div>
-    <div class="date">Cinvestav, '.now()->format('d \d\e F \d\e Y').'</div>
-</body>
-</html>';
-    }
-
-    private function generateCertificatePdf($user, $workshop)
-    {
-        $html = $this->buildCertificateHtml($user, $workshop);
+        $html = $this->renderer->render($certificate);
 
         return response($html, 200, [
             'Content-Type' => 'text/html',
-            'Content-Disposition' => "inline; filename=constancia_{$workshop->name}.html",
+            'Content-Disposition' => 'inline; filename=constancia_'.$certificate->folio.'.html',
         ]);
-    }
-
-    private function buildCertificateHtml($user, $workshop)
-    {
-        $workshop->load('instructors');
-        $instructorsList = $workshop->instructors->map(function ($i) {
-            $text = htmlspecialchars($i->name);
-            $institution = $i->pivot?->institution;
-            if ($institution) {
-                $text .= ' - '.htmlspecialchars($institution);
-            }
-
-            return $text;
-        })->implode(', ');
-
-        return '
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Constancia - '.htmlspecialchars($workshop->name).'</title>
-    <style>
-        body { font-family: Georgia, serif; text-align: center; padding: 60px; }
-        .title { font-size: 28px; font-weight: bold; margin-bottom: 20px; }
-        .subtitle { font-size: 18px; margin-bottom: 30px; }
-        .name { font-size: 24px; font-weight: bold; color: #2c5282; margin: 20px 0; }
-        .details { font-size: 16px; margin: 10px 0; }
-        .instructor { font-style: italic; margin-top: 30px; }
-        .date { margin-top: 40px; font-size: 14px; color: #666; }
-    </style>
-</head>
-<body>
-    <div class="title">CONSTANCIA DE PARTICIPACIÓN</div>
-    <div class="subtitle">Registro EICAL 2026</div>
-    <div class="details">Se certifica que</div>
-    <div class="name">'.htmlspecialchars($user->first_name.' '.$user->last_name).'</div>
-    <div class="details">participó exitosamente en el taller</div>
-    <div class="details"><strong>'.htmlspecialchars($workshop->name).'</strong></div>
-    <div class="details">Impartido por: '.$instructorsList.'</div>
-    <div class="details">Lugar: '.htmlspecialchars($workshop->location).'</div>
-    <div class="details">Fecha: '.htmlspecialchars($workshop->day).'</div>
-    <div class="date">Cinvestav, '.now()->format('d \d\e F \d\e Y').'</div>
-</body>
-</html>';
     }
 }
