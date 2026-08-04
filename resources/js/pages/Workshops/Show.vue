@@ -154,8 +154,9 @@ const toggleQrTimeRestricted = () => {
             end_time: props.workshop.end_time?.substring(0, 5),
             instructors:
                 props.workshop.instructors?.map((i: any) => ({
-                    name: i.name,
-                    institution: i.institution,
+                    first_name: i.first_name,
+                    last_name: i.last_name,
+                    affiliation: i.affiliation,
                     email: i.email,
                 })) || [],
         },
@@ -350,11 +351,12 @@ watch(
                                     :key="instructor.id"
                                     class="text-gray-900 dark:text-white"
                                 >
-                                    {{ instructor.name }}<span
-                                        v-if="instructor.institution"
+                                    {{ instructor.first_name }}
+                                    {{ instructor.last_name }}<span
+                                        v-if="instructor.affiliation"
                                         class="text-xs text-gray-500"
                                     >
-                                        ({{ instructor.institution }})</span
+                                        ({{ instructor.affiliation }})</span
                                     ><span
                                         v-if="
                                             idx <
@@ -684,7 +686,9 @@ watch(
                             :disabled="sendForm.processing"
                             class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300"
                         >
-                            <Send class="h-3 w-3" /> {{ instructor.name }}
+                            <Send class="h-3 w-3" />
+                            {{ instructor.first_name }}
+                            {{ instructor.last_name }}
                         </button>
                     </div>
                 </div>

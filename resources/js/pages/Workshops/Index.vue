@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
-import { Search, Plus, Edit, Trash2, Users } from 'lucide-vue-next';
-import { ref, watch, computed } from 'vue';
+import axios from 'axios';
+import { Search, Plus, Edit, Trash2, Eye, UserPlus } from 'lucide-vue-next';
+import { ref, watch, computed, reactive } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const page = usePage();
@@ -42,8 +43,9 @@ const showModal = ref(false);
 const isEditing = ref(false);
 
 interface InstructorForm {
-    name: string;
-    institution: string;
+    first_name: string;
+    last_name: string;
+    affiliation: string;
     email: string;
 }
 
@@ -57,13 +59,13 @@ const form = useForm({
     start_time: '',
     end_time: '',
     qr_time_restricted: true,
-    instructors: [{ name: '', institution: '', email: '' }] as InstructorForm[],
+    instructors: [] as InstructorForm[],
 });
 
 const openCreateModal = () => {
     isEditing.value = false;
     form.reset();
-    form.instructors = [{ name: '', institution: '', email: '' }];
+    form.instructors = [];
     showModal.value = true;
 };
 
@@ -76,29 +78,112 @@ const openEditModal = (workshop: any) => {
     form.capacity = workshop.capacity || 30;
     form.location = workshop.location || '';
     form.day = workshop.day || '';
-    form.start_time = workshop.start_time || '';
-    form.end_time = workshop.end_time || '';
+    form.start_time = workshop.start_time ? workshop.start_time.slice(0, 5) : '';
+    form.end_time = workshop.end_time ? workshop.end_time.slice(0, 5) : '';
     form.qr_time_restricted = workshop.qr_time_restricted ?? true;
     form.instructors = workshop.instructors?.length
         ? workshop.instructors.map((i: any) => ({
-              name: i.name || '',
-              institution: i.institution || '',
+              first_name: i.first_name || '',
+              last_name: i.last_name || '',
+              affiliation: i.affiliation || '',
               email: i.email || '',
           }))
-        : [{ name: '', institution: '', email: '' }];
+        : [];
     showModal.value = true;
 };
 
-const addInstructor = () => {
-    if (form.instructors.length < 5) {
-        form.instructors.push({ name: '', institution: '', email: '' });
+const searchQuery = ref('');
+const searchResults = ref<any[]>([]);
+const showSearchResults = ref(false);
+const searching = ref(false);
+let searchInstructorTimeout: ReturnType<typeof setTimeout>;
+
+const searchInstructors = (query: string) => {
+    searchQuery.value = query;
+    clearTimeout(searchInstructorTimeout);
+    if (!query.trim()) {
+        searchResults.value = [];
+        showSearchResults.value = false;
+        return;
     }
+    searching.value = true;
+    searchInstructorTimeout = setTimeout(async () => {
+        try {
+            const res = await axios.get('/api/instructores', {
+                params: { search: query },
+            });
+            searchResults.value = res.data.filter(
+                (u: any) => !form.instructors.some((i) => i.email === u.email),
+            );
+            showSearchResults.value =
+                searchResults.value.length > 0 || query.trim().length > 0;
+        } catch {
+            searchResults.value = [];
+        } finally {
+            searching.value = false;
+        }
+    }, 300);
+};
+
+const selectInstructor = (user: any) => {
+    if (form.instructors.length >= 5) return;
+    if (form.instructors.some((i) => i.email === user.email)) return;
+    form.instructors.push({
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        affiliation: user.affiliation || '',
+        email: user.email,
+    });
+    searchQuery.value = '';
+    searchResults.value = [];
+    showSearchResults.value = false;
+};
+
+const clickOutsideSearch = () => {
+    showSearchResults.value = false;
+};
+
+const showNewInstructorModal = ref(false);
+const newInstructor = reactive({
+    first_name: '',
+    last_name: '',
+    affiliation: '',
+    email: '',
+});
+
+const resetNewInstructor = () => {
+    newInstructor.first_name = '';
+    newInstructor.last_name = '';
+    newInstructor.affiliation = '';
+    newInstructor.email = '';
+};
+
+const openNewInstructorModal = () => {
+    resetNewInstructor();
+    showNewInstructorModal.value = true;
+};
+
+const addNewInstructor = () => {
+    if (form.instructors.length >= 5) return;
+    if (
+        !newInstructor.first_name.trim() ||
+        !newInstructor.last_name.trim() ||
+        !newInstructor.email.trim()
+    ) {
+        return;
+    }
+    form.instructors.push({
+        first_name: newInstructor.first_name.trim(),
+        last_name: newInstructor.last_name.trim(),
+        affiliation: newInstructor.affiliation.trim(),
+        email: newInstructor.email.trim(),
+    });
+    showNewInstructorModal.value = false;
+    resetNewInstructor();
 };
 
 const removeInstructor = (index: number) => {
-    if (form.instructors.length > 1) {
-        form.instructors.splice(index, 1);
-    }
+    form.instructors.splice(index, 1);
 };
 
 const saveWorkshop = () => {
@@ -253,27 +338,23 @@ const formatDate = (dateStr: string) => {
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
                                 >
                                     <div
-                                        v-for="(
-                                            instructor, idx
-                                        ) in workshop.instructors"
-                                        :key="instructor.id"
+                                        class="flex items-center -space-x-2"
                                     >
-                                        <div>{{ instructor.name }}</div>
-                                        <div
-                                            v-if="instructor.institution"
-                                            class="text-xs text-gray-400"
-                                        >
-                                            {{ instructor.institution }}
-                                        </div>
-                                        <div
-                                            v-if="
-                                                idx <
-                                                (workshop.instructors?.length ??
-                                                    0) -
-                                                    1
+                                        <span
+                                            v-for="instructor in workshop.instructors"
+                                            :key="instructor.id"
+                                            :title="
+                                                instructor.name +
+                                                (instructor.affiliation
+                                                    ? ' — ' +
+                                                      instructor.affiliation
+                                                    : '')
                                             "
-                                            class="my-1 border-b border-gray-100 dark:border-zinc-800"
-                                        ></div>
+                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-xs font-medium text-indigo-700 ring-2 ring-white dark:bg-indigo-900 dark:text-indigo-300 dark:ring-zinc-900"
+                                        >
+                                            {{ instructor.first_name?.[0]
+                                            }}{{ instructor.last_name?.[0] }}
+                                        </span>
                                     </div>
                                     <div
                                         v-if="!workshop.instructors?.length"
@@ -309,7 +390,7 @@ const formatDate = (dateStr: string) => {
                                             :href="'/workshops/' + workshop.id"
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
                                         >
-                                            <Users class="h-4 w-4" />
+                                            <Eye class="h-4 w-4" />
                                         </Link>
                                         <template v-if="isAdmin">
                                             <button
@@ -385,7 +466,7 @@ const formatDate = (dateStr: string) => {
             >
                 <div
                     class="fixed inset-0 bg-black/50 transition-opacity"
-                    @click="showModal = false"
+                    @click="showModal = false; clickOutsideSearch()"
                 ></div>
                 <span class="hidden sm:inline-block sm:h-screen sm:align-middle"
                     >&#8203;</span
@@ -549,22 +630,92 @@ const formatDate = (dateStr: string) => {
                                 <div
                                     class="border-t border-gray-100 pt-4 sm:col-span-2 dark:border-zinc-800"
                                 >
-                                    <div
-                                        class="mb-3 flex items-center justify-between"
+                                    <label
+                                        class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                        >Instructores *</label
                                     >
-                                        <label
-                                            class="text-sm font-medium text-gray-700 dark:text-gray-300"
-                                            >Instructores *</label
+                                    <div class="relative mt-3">
+                                        <input
+                                            v-model="searchQuery"
+                                            type="text"
+                                            placeholder="Buscar instructores por nombre o correo..."
+                                            :disabled="
+                                                form.instructors.length >= 5
+                                            "
+                                            @input="
+                                                searchInstructors(searchQuery)
+                                            "
+                                            @keydown.esc="
+                                                showSearchResults = false
+                                            "
+                                            class="w-full rounded-md border border-gray-200 bg-white px-3 py-2 pr-9 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
+                                        />
+                                        <Search
+                                            class="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                        />
+                                        <p
+                                            v-if="
+                                                form.instructors.length >= 5
+                                            "
+                                            class="mt-1 text-xs text-gray-500 dark:text-gray-400"
                                         >
-                                        <button
-                                            v-if="form.instructors.length < 5"
-                                            type="button"
-                                            @click="addInstructor"
-                                            class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+                                            Límite de 5 instructores alcanzado.
+                                        </p>
+                                        <div
+                                            v-if="
+                                                showSearchResults &&
+                                                searchResults.length > 0
+                                            "
+                                            class="absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
                                         >
-                                            <Plus class="h-3 w-3" /> Agregar
-                                            instructor
-                                        </button>
+                                            <button
+                                                v-for="user in searchResults"
+                                                :key="user.id"
+                                                type="button"
+                                                @click="
+                                                    selectInstructor(user)
+                                                "
+                                                class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-zinc-700"
+                                            >
+                                                <UserPlus class="h-3.5 w-3.5 shrink-0 text-indigo-500" />
+                                                <span class="truncate">
+                                                    {{ user.first_name }}
+                                                    {{ user.last_name }}
+                                                </span>
+                                                <span
+                                                    class="ml-auto truncate text-xs text-gray-400"
+                                                >
+                                                    {{ user.email }}
+                                                </span>
+                                            </button>
+                                        </div>
+                                        <div
+                                            v-else-if="
+                                                showSearchResults &&
+                                                searchQuery.trim() &&
+                                                !searching
+                                            "
+                                            class="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
+                                        >
+                                            <p
+                                                class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400"
+                                            >
+                                                No se encontraron instructores.
+                                            </p>
+                                            <button
+                                                v-if="
+                                                    form.instructors.length < 5
+                                                "
+                                                type="button"
+                                                @click="
+                                                    openNewInstructorModal()
+                                                "
+                                                class="flex w-full items-center gap-2 border-t border-gray-100 px-3 py-2 text-left text-sm font-medium text-indigo-600 hover:bg-gray-50 dark:border-zinc-700 dark:text-indigo-400 dark:hover:bg-zinc-700"
+                                            >
+                                                <UserPlus class="h-3.5 w-3.5" />
+                                                Registrar nuevo instructor
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div
@@ -572,7 +723,7 @@ const formatDate = (dateStr: string) => {
                                             instructor, index
                                         ) in form.instructors"
                                         :key="index"
-                                        class="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800"
+                                        class="mt-3 mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800"
                                     >
                                         <div
                                             class="mb-2 flex items-center justify-between"
@@ -583,9 +734,6 @@ const formatDate = (dateStr: string) => {
                                                 {{ index + 1 }}</span
                                             >
                                             <button
-                                                v-if="
-                                                    form.instructors.length > 1
-                                                "
                                                 type="button"
                                                 @click="removeInstructor(index)"
                                                 class="text-xs text-red-500 hover:text-red-700 dark:text-red-400"
@@ -594,13 +742,15 @@ const formatDate = (dateStr: string) => {
                                             </button>
                                         </div>
                                         <div
-                                            class="grid grid-cols-1 gap-2 sm:grid-cols-3"
+                                            class="grid grid-cols-1 gap-2 sm:grid-cols-2"
                                         >
                                             <div>
                                                 <input
-                                                    v-model="instructor.name"
+                                                    v-model="
+                                                        instructor.first_name
+                                                    "
                                                     type="text"
-                                                    placeholder="Nombre *"
+                                                    placeholder="Nombre(s) *"
                                                     required
                                                     class="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
                                                 />
@@ -609,7 +759,7 @@ const formatDate = (dateStr: string) => {
                                                         form.errors[
                                                             'instructors.' +
                                                                 index +
-                                                                '.name'
+                                                                '.first_name'
                                                         ]
                                                     "
                                                     class="mt-1 text-xs text-red-500"
@@ -618,7 +768,7 @@ const formatDate = (dateStr: string) => {
                                                         form.errors[
                                                             'instructors.' +
                                                                 index +
-                                                                '.name'
+                                                                '.first_name'
                                                         ]
                                                     }}
                                                 </p>
@@ -626,10 +776,11 @@ const formatDate = (dateStr: string) => {
                                             <div>
                                                 <input
                                                     v-model="
-                                                        instructor.institution
+                                                        instructor.last_name
                                                     "
                                                     type="text"
-                                                    placeholder="Institución"
+                                                    placeholder="Apellido(s) *"
+                                                    required
                                                     class="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
                                                 />
                                                 <p
@@ -637,7 +788,7 @@ const formatDate = (dateStr: string) => {
                                                         form.errors[
                                                             'instructors.' +
                                                                 index +
-                                                                '.institution'
+                                                                '.last_name'
                                                         ]
                                                     "
                                                     class="mt-1 text-xs text-red-500"
@@ -646,7 +797,35 @@ const formatDate = (dateStr: string) => {
                                                         form.errors[
                                                             'instructors.' +
                                                                 index +
-                                                                '.institution'
+                                                                '.last_name'
+                                                        ]
+                                                    }}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <input
+                                                    v-model="
+                                                        instructor.affiliation
+                                                    "
+                                                    type="text"
+                                                    placeholder="Afiliación"
+                                                    class="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
+                                                />
+                                                <p
+                                                    v-if="
+                                                        form.errors[
+                                                            'instructors.' +
+                                                                index +
+                                                                '.affiliation'
+                                                        ]
+                                                    "
+                                                    class="mt-1 text-xs text-red-500"
+                                                >
+                                                    {{
+                                                        form.errors[
+                                                            'instructors.' +
+                                                                index +
+                                                                '.affiliation'
                                                         ]
                                                     }}
                                                 </p>
@@ -710,6 +889,100 @@ const formatDate = (dateStr: string) => {
                         </div>
                     </form>
                 </div>
+            </div>
+        </div>
+
+        <div
+            v-if="showNewInstructorModal"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+            <div
+                class="fixed inset-0 bg-black/50 transition-opacity"
+                @click="showNewInstructorModal = false"
+            ></div>
+            <div
+                class="relative w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-900"
+            >
+                <h3
+                    class="text-lg font-semibold text-gray-900 dark:text-gray-100"
+                >
+                    Nuevo instructor
+                </h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    El instructor se agregará a la lista de este taller.
+                </p>
+                <form class="mt-4 space-y-4" @submit.prevent="addNewInstructor">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label
+                                class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >Nombre(s) *</label
+                            >
+                            <input
+                                v-model="newInstructor.first_name"
+                                type="text"
+                                required
+                                placeholder="Nombre(s) del instructor"
+                                class="mt-1 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >Apellido(s) *</label
+                            >
+                            <input
+                                v-model="newInstructor.last_name"
+                                type="text"
+                                required
+                                placeholder="Apellido(s) del instructor"
+                                class="mt-1 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                            >Afiliación</label
+                        >
+                        <input
+                            v-model="newInstructor.affiliation"
+                            type="text"
+                            placeholder="Institución"
+                            class="mt-1 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
+                        />
+                    </div>
+                    <div>
+                        <label
+                            class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                            >Correo *</label
+                        >
+                        <input
+                            v-model="newInstructor.email"
+                            type="email"
+                            required
+                            placeholder="correo@ejemplo.com"
+                            class="mt-1 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
+                        />
+                    </div>
+                    <div
+                        class="flex justify-end gap-3 border-t border-gray-100 pt-4 dark:border-zinc-800"
+                    >
+                        <button
+                            type="button"
+                            @click="showNewInstructorModal = false"
+                            class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
+                        >
+                            Agregar
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </AppLayout>

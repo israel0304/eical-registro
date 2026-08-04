@@ -47,8 +47,9 @@ class WorkshopController extends Controller
             'end_time' => 'required|date_format:H:i|after:start_time',
             'qr_time_restricted' => 'boolean',
             'instructors' => 'required|array|min:1|max:5',
-            'instructors.*.name' => 'required|string|max:255',
-            'instructors.*.institution' => 'nullable|string|max:255',
+            'instructors.*.first_name' => 'required|string|max:255',
+            'instructors.*.last_name' => 'required|string|max:255',
+            'instructors.*.affiliation' => 'nullable|string|max:255',
             'instructors.*.email' => 'required|email|max:255',
         ]);
 
@@ -62,16 +63,21 @@ class WorkshopController extends Controller
             $user = User::firstOrCreate(
                 ['email' => $data['email']],
                 [
-                    'first_name' => explode(' ', $data['name'], 2)[0],
-                    'last_name' => explode(' ', $data['name'], 2)[1] ?? '',
+                    'first_name' => $data['first_name'],
+                    'last_name' => $data['last_name'],
+                    'affiliation' => $data['affiliation'] ?? null,
                     'dni' => 'CNV-'.strtoupper(Str::random(7)),
                     'password' => Hash::make(Str::random(16)),
                 ]
             );
 
+            if (! empty($data['affiliation'])) {
+                $user->update(['affiliation' => $data['affiliation']]);
+            }
+
             $user->roles()->syncWithoutDetaching([4]); // Instructor
 
-            $workshop->instructors()->attach($user->id, ['institution' => $data['institution'] ?? null]);
+            $workshop->instructors()->attach($user->id);
         }
 
         return back()->with('success', 'Taller creado correctamente.');
@@ -115,8 +121,9 @@ class WorkshopController extends Controller
             'end_time' => 'required|date_format:H:i|after:start_time',
             'qr_time_restricted' => 'boolean',
             'instructors' => 'required|array|min:1|max:5',
-            'instructors.*.name' => 'required|string|max:255',
-            'instructors.*.institution' => 'nullable|string|max:255',
+            'instructors.*.first_name' => 'required|string|max:255',
+            'instructors.*.last_name' => 'required|string|max:255',
+            'instructors.*.affiliation' => 'nullable|string|max:255',
             'instructors.*.email' => 'required|email|max:255',
         ]);
 
@@ -131,16 +138,21 @@ class WorkshopController extends Controller
             $user = User::firstOrCreate(
                 ['email' => $data['email']],
                 [
-                    'first_name' => explode(' ', $data['name'], 2)[0],
-                    'last_name' => explode(' ', $data['name'], 2)[1] ?? '',
+                    'first_name' => $data['first_name'],
+                    'last_name' => $data['last_name'],
+                    'affiliation' => $data['affiliation'] ?? null,
                     'dni' => 'CNV-'.strtoupper(Str::random(7)),
                     'password' => Hash::make(Str::random(16)),
                 ]
             );
 
+            if (! empty($data['affiliation'])) {
+                $user->update(['affiliation' => $data['affiliation']]);
+            }
+
             $user->roles()->syncWithoutDetaching([4]); // Instructor
 
-            $workshop->instructors()->attach($user->id, ['institution' => $data['institution'] ?? null]);
+            $workshop->instructors()->attach($user->id);
         }
 
         return back()->with('success', 'Taller actualizado correctamente.');
