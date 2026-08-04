@@ -71,54 +71,6 @@ const participationTypeLabel = (id: number | null) => {
     );
 };
 
-const eventKindLabel = (kind: string) =>
-    kind === 'presentation' ? 'Ponencia' : 'Taller';
-
-const roleLabel = (role: string) =>
-    ({
-        enrolled_attendance: 'Asistente',
-        instructor: 'Instructor',
-        presented_author: 'Ponente presentado',
-    })[role] ?? role;
-
-// Participation types management
-const typeForm = useForm({
-    key: '',
-    label: '',
-    event_kind: 'workshop',
-    role: 'enrolled_attendance',
-    is_active: true,
-});
-
-const saveType = () => {
-    typeForm.post('/admin/constancias/tipos', {
-        preserveScroll: true,
-        onSuccess: () => typeForm.reset(),
-    });
-};
-
-const updateType = (type: any) => {
-    router.put(
-        '/admin/constancias/tipos/' + type.id,
-        {
-            key: type.key,
-            label: type.label,
-            event_kind: type.event_kind,
-            role: type.role,
-            is_active: type.is_active,
-        },
-        { preserveScroll: true },
-    );
-};
-
-const deleteType = (id: number) => {
-    if (confirm('¿Eliminar este tipo de participación?')) {
-        router.delete('/admin/constancias/tipos/' + id, {
-            preserveScroll: true,
-        });
-    }
-};
-
 const activeTypes = computed(() =>
     props.participationTypes.filter((t) => t.is_active),
 );
@@ -264,245 +216,26 @@ const activeTypes = computed(() =>
             </div>
 
             <!-- Participation types -->
-            <section>
-                <div
-                    class="flex items-center justify-between gap-4 border-b border-gray-200 pb-4 dark:border-zinc-800"
+            <div class="flex items-center justify-between gap-4 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 dark:border-zinc-800 dark:bg-zinc-900/50">
+                <div>
+                    <h2
+                        class="text-xl font-normal tracking-tight text-gray-900 dark:text-white"
+                    >
+                        Tipos de Participación
+                    </h2>
+                    <p
+                        class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                    >
+                        La gestión de tipos se movió a su propio módulo.
+                    </p>
+                </div>
+                <Link
+                    href="/admin/constancias/tipos"
+                    class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300"
                 >
-                    <div>
-                        <h2
-                            class="text-xl font-normal tracking-tight text-gray-900 dark:text-white"
-                        >
-                            Tipos de Participación
-                        </h2>
-                        <p
-                            class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                        >
-                            Define los perfiles que reciben certificados y sus
-                            plantillas.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="mt-4 grid gap-5 lg:grid-cols-5">
-                    <!-- Create form -->
-                    <div
-                        class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2 dark:border-zinc-800 dark:bg-zinc-900"
-                    >
-                        <h3
-                            class="mb-4 text-sm font-semibold text-gray-900 dark:text-white"
-                        >
-                            Nuevo tipo
-                        </h3>
-                        <form
-                            @submit.prevent="saveType"
-                            class="space-y-3"
-                        >
-                            <div>
-                                <label
-                                    class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
-                                >
-                                    Clave (key) *
-                                </label>
-                                <input
-                                    v-model="typeForm.key"
-                                    type="text"
-                                    required
-                                    placeholder="ej. conferencia_magistral"
-                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                                />
-                                <p
-                                    v-if="typeForm.errors.key"
-                                    class="mt-1 text-xs text-red-500"
-                                >
-                                    {{ typeForm.errors.key }}
-                                </p>
-                            </div>
-                            <div>
-                                <label
-                                    class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
-                                >
-                                    Etiqueta *
-                                </label>
-                                <input
-                                    v-model="typeForm.label"
-                                    type="text"
-                                    required
-                                    placeholder="ej. Conferencista magistral"
-                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                                />
-                                <p
-                                    v-if="typeForm.errors.label"
-                                    class="mt-1 text-xs text-red-500"
-                                >
-                                    {{ typeForm.errors.label }}
-                                </p>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label
-                                        class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
-                                    >
-                                        Tipo de evento *
-                                    </label>
-                                    <select
-                                        v-model="typeForm.event_kind"
-                                        required
-                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                                    >
-                                        <option value="workshop">
-                                            Taller
-                                        </option>
-                                        <option value="presentation">
-                                            Ponencia
-                                        </option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label
-                                        class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
-                                    >
-                                        Rol *
-                                    </label>
-                                    <select
-                                        v-model="typeForm.role"
-                                        required
-                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                                    >
-                                        <option value="enrolled_attendance">
-                                            Asistente
-                                        </option>
-                                        <option value="instructor">
-                                            Instructor
-                                        </option>
-                                        <option value="presented_author">
-                                            Ponente presentado
-                                        </option>
-                                    </select>
-                                </div>
-                            </div>
-                            <button
-                                type="submit"
-                                :disabled="typeForm.processing"
-                                class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
-                            >
-                                <Plus class="h-4 w-4" /> Crear tipo
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- List -->
-                    <div
-                        class="rounded-xl border border-gray-200 bg-white shadow-sm lg:col-span-3 dark:border-zinc-800 dark:bg-zinc-900"
-                    >
-                        <div class="overflow-x-auto">
-                            <table
-                                class="min-w-full divide-y divide-gray-200 dark:divide-zinc-800"
-                            >
-                                <thead class="bg-gray-50 dark:bg-zinc-800/50">
-                                    <tr>
-                                        <th
-                                            class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300"
-                                        >
-                                            Tipo
-                                        </th>
-                                        <th
-                                            class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300"
-                                        >
-                                            Evento
-                                        </th>
-                                        <th
-                                            class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300"
-                                        >
-                                            Plantillas
-                                        </th>
-                                        <th
-                                            class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300"
-                                        >
-                                            Estado
-                                        </th>
-                                        <th class="relative px-5 py-3">
-                                            <span class="sr-only"
-                                                >Acciones</span
-                                            >
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody
-                                    class="divide-y divide-gray-100 dark:divide-zinc-800"
-                                >
-                                    <tr
-                                        v-for="type in participationTypes"
-                                        :key="type.id"
-                                    >
-                                        <td class="px-5 py-3">
-                                            <div
-                                                class="text-sm font-medium text-gray-900 dark:text-white"
-                                            >
-                                                {{ type.label }}
-                                            </div>
-                                            <div
-                                                class="text-xs text-gray-400"
-                                            >
-                                                {{ type.key }}
-                                            </div>
-                                        </td>
-                                        <td
-                                            class="px-5 py-3 text-sm text-gray-600 dark:text-gray-400"
-                                        >
-                                            {{ eventKindLabel(type.event_kind) }}
-                                            ·
-                                            {{ roleLabel(type.role) }}
-                                        </td>
-                                        <td
-                                            class="px-5 py-3 text-sm text-gray-600 dark:text-gray-400"
-                                        >
-                                            {{ type.templates_count }}
-                                        </td>
-                                        <td class="px-5 py-3">
-                                            <label
-                                                class="inline-flex cursor-pointer items-center"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    :checked="type.is_active"
-                                                    @change="
-                                                        updateType({
-                                                            ...type,
-                                                            is_active: $event
-                                                                .target
-                                                                .checked,
-                                                        })
-                                                    "
-                                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                                />
-                                                <span
-                                                    class="ml-2 text-xs text-gray-500"
-                                                >
-                                                    {{
-                                                        type.is_active
-                                                            ? 'Activo'
-                                                            : 'Inactivo'
-                                                    }}
-                                                </span>
-                                            </label>
-                                        </td>
-                                        <td
-                                            class="px-5 py-3 text-right whitespace-nowrap"
-                                        >
-                                            <button
-                                                @click="deleteType(type.id)"
-                                                class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-red-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-red-400"
-                                            >
-                                                <Trash2 class="h-4 w-4" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                    Ir a Tipos
+                </Link>
+            </div>
 
             <p class="text-xs text-gray-400 dark:text-gray-600">
                 La página pública de verificación se accede en

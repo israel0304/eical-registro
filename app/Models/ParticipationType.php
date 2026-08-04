@@ -14,6 +14,7 @@ class ParticipationType extends Model
         'key',
         'label',
         'event_kind',
+        'kind',
         'role',
         'is_active',
     ];

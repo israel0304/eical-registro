@@ -1,14 +1,23 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { Download, Award, BookOpen } from 'lucide-vue-next';
+import {
+    Download,
+    Award,
+    BookOpen,
+    Mic,
+    Clock,
+    Users,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const page = usePage();
 
-defineProps<{
+const props = defineProps<{
     completedWorkshops: any[];
+    instructorWorkshops?: any[];
     presentationCertificates?: any[];
+    conferenceCertificates?: any[];
     user: any;
 }>();
 
@@ -28,6 +37,25 @@ const downloadPonencia = (presentationId: number) => {
         '_blank',
     );
 };
+
+const downloadConferencia = (conferenceId: number) => {
+    window.open(
+        '/constancias/conferencia/' + conferenceId + '/download',
+        '_blank',
+    );
+};
+
+const roleLabel = (role: string | null) =>
+    ({ speaker: 'Speaker', moderator: 'Moderador' })[role ?? ''] ?? role ?? '';
+
+const hasAnyCertificates = computed(() => {
+    return (
+        !!props.completedWorkshops?.length ||
+        !!props.instructorWorkshops?.length ||
+        (!!canSeePonencias.value && !!props.presentationCertificates?.length) ||
+        !!props.conferenceCertificates?.length
+    );
+});
 </script>
 
 <template>
@@ -44,23 +72,26 @@ const downloadPonencia = (presentationId: number) => {
             </h1>
 
             <!-- Talleres -->
-            <div
-                v-if="completedWorkshops && completedWorkshops.length > 0"
-                class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-            >
-                <div
-                    v-for="workshop in completedWorkshops"
-                    :key="workshop.id"
-                    class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+            <div v-if="completedWorkshops && completedWorkshops.length > 0">
+                <h2
+                    class="mb-4 text-xl font-normal tracking-tight text-gray-800 dark:text-gray-200"
                 >
-                    <div class="flex items-start gap-4">
-                        <div
-                            class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30"
-                        >
-                            <Award
-                                class="h-6 w-6 text-indigo-600 dark:text-indigo-400"
-                            />
-                        </div>
+                    Talleres completados
+                </h2>
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div
+                        v-for="workshop in completedWorkshops"
+                        :key="workshop.id"
+                        class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+                    >
+                        <div class="flex items-start gap-4">
+                            <div
+                                class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30"
+                            >
+                                <Award
+                                    class="h-6 w-6 text-indigo-600 dark:text-indigo-400"
+                                />
+                            </div>
                             <div class="flex-1">
                                 <h3
                                     class="text-sm font-semibold text-gray-900 dark:text-white"
@@ -74,10 +105,12 @@ const downloadPonencia = (presentationId: number) => {
                                         workshop.instructors
                                             ?.map(
                                                 (i) =>
-                                                    i.name +
-                                                    (i.institution
+                                                    [i.first_name, i.last_name]
+                                                        .filter(Boolean)
+                                                        .join(' ') +
+                                                    (i.affiliation
                                                         ? ' (' +
-                                                          i.institution +
+                                                          i.affiliation +
                                                           ')'
                                                         : ''),
                                             )
@@ -94,14 +127,65 @@ const downloadPonencia = (presentationId: number) => {
                                     Folio: {{ workshop.folio }}
                                 </p>
                             </div>
+                        </div>
+                        <div class="mt-4">
+                            <button
+                                @click="downloadCertificate(workshop.id)"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
+                            >
+                                <Download class="h-4 w-4" /> Descargar Constancia
+                            </button>
+                        </div>
                     </div>
-                    <div class="mt-4">
-                        <button
-                            @click="downloadCertificate(workshop.id)"
-                            class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
-                        >
-                            <Download class="h-4 w-4" /> Descargar Constancia
-                        </button>
+                </div>
+            </div>
+
+            <!-- Talleres impartidos -->
+            <div v-if="instructorWorkshops && instructorWorkshops.length > 0">
+                <h2
+                    class="mb-4 text-xl font-normal tracking-tight text-gray-800 dark:text-gray-200"
+                >
+                    Talleres impartidos
+                </h2>
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div
+                        v-for="workshop in instructorWorkshops"
+                        :key="'i-' + workshop.id"
+                        class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+                    >
+                        <div class="flex items-start gap-4">
+                            <div
+                                class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/30"
+                            >
+                                <Users
+                                    class="h-6 w-6 text-violet-600 dark:text-violet-400"
+                                />
+                            </div>
+                            <div class="flex-1">
+                                <h3
+                                    class="text-sm font-semibold text-gray-900 dark:text-white"
+                                >
+                                    {{ workshop.name }}
+                                </h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ workshop.day }} | {{ workshop.location }}
+                                </p>
+                                <p
+                                    v-if="workshop.folio"
+                                    class="mt-1 font-mono text-[11px] text-violet-600 dark:text-violet-400"
+                                >
+                                    Folio: {{ workshop.folio }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <button
+                                @click="downloadCertificate(workshop.id)"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-900/30 dark:text-violet-300"
+                            >
+                                <Download class="h-4 w-4" /> Descargar Constancia
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -171,11 +255,73 @@ const downloadPonencia = (presentationId: number) => {
                 </div>
             </div>
 
+            <!-- Conferencias -->
+            <div v-if="conferenceCertificates?.length">
+                <h2
+                    class="mb-4 text-xl font-normal tracking-tight text-gray-800 dark:text-gray-200"
+                >
+                    Constancias de Conferencia
+                </h2>
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div
+                        v-for="conference in conferenceCertificates"
+                        :key="conference.id"
+                        class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+                    >
+                        <div class="flex items-start gap-4">
+                            <div
+                                class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30"
+                            >
+                                <Mic
+                                    class="h-6 w-6 text-amber-600 dark:text-amber-400"
+                                />
+                            </div>
+                            <div class="flex-1">
+                                <h3
+                                    class="text-sm font-semibold text-gray-900 dark:text-white"
+                                >
+                                    {{ conference.title }}
+                                </h3>
+                                <p
+                                    class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                                >
+                                    {{
+                                        roleLabel(conference.member_role) ||
+                                        'Participante'
+                                    }}
+                                </p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ conference.day || '—' }}
+                                </p>
+                                <p
+                                    v-if="conference.folio"
+                                    class="mt-1 font-mono text-[11px] text-amber-600 dark:text-amber-400"
+                                >
+                                    Folio: {{ conference.folio }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <button
+                                v-if="conference.activated"
+                                @click="downloadConferencia(conference.id)"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                            >
+                                <Download class="h-4 w-4" /> Descargar Constancia
+                            </button>
+                            <div
+                                v-else
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-500"
+                            >
+                                <Clock class="h-4 w-4" /> Pendiente de activación
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div
-                v-if="
-                    (!completedWorkshops || completedWorkshops.length === 0) &&
-                    (!canSeePonencias || !presentationCertificates?.length)
-                "
+                v-if="!hasAnyCertificates"
                 class="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
             >
                 <Award
@@ -186,7 +332,8 @@ const downloadPonencia = (presentationId: number) => {
                 </p>
                 <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">
                     Las constancias se generan cuando completas un taller
-                    (asistencia verificada) o presentas una ponencia.
+                    (asistencia verificada), impartes un taller, presentas una
+                    ponencia o participas en una conferencia.
                 </p>
             </div>
         </div>

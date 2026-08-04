@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
+use App\Models\Conference;
 use App\Models\ParticipationType;
 use App\Models\Presentation;
 use App\Models\User;
@@ -36,25 +37,31 @@ class CertificateRenderer
     /**
      * Resolve the participation type for a given event and user.
      */
-    public function resolveParticipationType(string $eventKind, User $user, Workshop|Presentation $event): ?ParticipationType
+    public function resolveParticipationType(string $eventKind, User $user, Workshop|Presentation|Conference $event): ?ParticipationType
     {
-        $role = $this->resolveRole($eventKind, $user, $event);
+        $role = $this->resolveRole($user, $event);
 
         if ($role === null) {
             return null;
         }
 
+        $kind = $this->resolveKind($event);
+
         return ParticipationType::query()
             ->where('event_kind', $eventKind)
             ->where('role', $role)
             ->where('is_active', true)
+            ->where(function ($query) use ($kind) {
+                $query->whereNull('kind')->orWhere('kind', $kind);
+            })
+            ->orderByRaw('CASE WHEN kind IS NULL THEN 1 ELSE 0 END')
             ->first();
     }
 
     /**
      * Find or create a certificate for the user/event and return it.
      */
-    public function issue(User $user, string $eventKind, Workshop|Presentation $event): ?Certificate
+    public function issue(User $user, string $eventKind, Workshop|Presentation|Conference $event): ?Certificate
     {
         $type = $this->resolveParticipationType($eventKind, $user, $event);
 
@@ -263,21 +270,19 @@ HTML;
         return $content;
     }
 
-    private function buildMetadata(User $user, ParticipationType $type, Workshop|Presentation $event): array
+    private function buildMetadata(User $user, ParticipationType $type, Workshop|Presentation|Conference $event): array
     {
-        if ($event instanceof Presentation) {
-            $eventName = $event->title;
-            $eventDate = $event->day;
-        } else {
-            $eventName = $event->name;
-            $eventDate = $event->day;
-        }
+        $eventName = match (true) {
+            $event instanceof Presentation => $event->title,
+            $event instanceof Conference => $event->title,
+            default => $event->name,
+        };
 
         return [
             'nombre' => trim($user->first_name.' '.$user->last_name),
             'tipo_participacion' => $type->label,
             'evento' => (string) $eventName,
-            'fecha_evento' => $eventDate ? $this->formatSpanishDate($eventDate) : '',
+            'fecha_evento' => $event->day ? $this->formatSpanishDate($event->day) : '',
             'folio' => '',
         ];
     }
@@ -336,9 +341,9 @@ HTML;
         return $day.' de '.$month.' de '.$year;
     }
 
-    private function resolveRole(string $eventKind, User $user, Workshop|Presentation $event): ?string
+    private function resolveRole(User $user, Workshop|Presentation|Conference $event): ?string
     {
-        if ($eventKind === 'workshop') {
+        if ($event instanceof Workshop) {
             if ($event->instructors()->where('users.id', $user->id)->exists()) {
                 return 'instructor';
             }
@@ -350,13 +355,25 @@ HTML;
             return null;
         }
 
-        if ($eventKind === 'presentation') {
-            $presented = $event->authors()
-                ->where('users.id', $user->id)
-                ->wherePivot('presented', true)
-                ->exists();
+        if ($event instanceof Presentation) {
+            return $event->authors()->where('users.id', $user->id)->exists() ? 'presented_author' : null;
+        }
 
-            return $presented ? 'presented_author' : null;
+        if ($event instanceof Conference) {
+            return $event->members()->where('users.id', $user->id)->first()?->pivot->role;
+        }
+
+        return null;
+    }
+
+    private function resolveKind(Workshop|Presentation|Conference $event): ?string
+    {
+        if ($event instanceof Conference) {
+            return $event->kind;
+        }
+
+        if ($event instanceof Presentation) {
+            return $event->type;
         }
 
         return null;
