@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Certificate;
+use App\Models\Conference;
 use App\Models\Presentation;
 use App\Models\User;
 use App\Models\Workshop;
@@ -32,6 +33,14 @@ class ConstanciaController extends Controller
             }])
             ->get();
 
+        $instructorWorkshops = Workshop::whereHas('instructors', function ($q) use ($user) {
+            $q->where('users.id', $user->id);
+        })
+            ->with(['instructors' => function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            }])
+            ->get();
+
         $presentationCertificates = Presentation::whereHas('authors', function ($q) use ($user) {
             $q->where('users.id', $user->id)
                 ->where('presentation_authors.presented', true);
@@ -40,6 +49,15 @@ class ConstanciaController extends Controller
                 $q->where('presentation_authors.presented', true)
                     ->withPivot('presented', 'presented_at');
             }])
+            ->get();
+
+        $conferenceCertificates = Conference::whereHas('members', function ($q) use ($user) {
+            $q->where('users.id', $user->id);
+        })
+            ->with(['members' => function ($q) use ($user) {
+                $q->where('users.id', $user->id)->withPivot('role', 'activated', 'activated_at');
+            }])
+            ->orderBy('day')
             ->get();
 
         $certificates = Certificate::query()
@@ -51,13 +69,25 @@ class ConstanciaController extends Controller
             $workshop->folio = $certificates->get('workshop-'.$workshop->id)?->folio;
         }
 
+        foreach ($instructorWorkshops as $workshop) {
+            $workshop->folio = $certificates->get('workshop-'.$workshop->id)?->folio;
+        }
+
         foreach ($presentationCertificates as $presentation) {
             $presentation->folio = $certificates->get('presentation-'.$presentation->id)?->folio;
         }
 
+        foreach ($conferenceCertificates as $conference) {
+            $conference->folio = $certificates->get('conference-'.$conference->id)?->folio;
+            $conference->activated = (bool) $conference->members->first()?->pivot->activated;
+            $conference->member_role = $conference->members->first()?->pivot->role;
+        }
+
         return Inertia::render('Constancias/Index', [
             'completedWorkshops' => $completedWorkshops,
+            'instructorWorkshops' => $instructorWorkshops,
             'presentationCertificates' => $presentationCertificates,
+            'conferenceCertificates' => $conferenceCertificates,
             'user' => $user,
         ]);
     }
@@ -146,6 +176,45 @@ class ConstanciaController extends Controller
         abort_if(! request()->user()->isAdmin(), 403);
 
         $certificate = $this->renderer->issue($user, 'presentation', $presentation);
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible generar la constancia.']);
+        }
+
+        $certificate->update(['downloaded_at' => now()]);
+
+        return $this->respondWithHtml($certificate);
+    }
+
+    public function downloadConferencia(Request $request, Conference $conference)
+    {
+        $user = $request->user();
+
+        $activated = $conference->members()
+            ->where('users.id', $user->id)
+            ->wherePivot('activated', true)
+            ->exists();
+
+        if (! $activated) {
+            return back()->withErrors(['error' => 'Tu constancia aún no ha sido activada.']);
+        }
+
+        $certificate = $this->renderer->issue($user, 'conference', $conference);
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible generar la constancia.']);
+        }
+
+        $certificate->update(['downloaded_at' => now()]);
+
+        return $this->respondWithHtml($certificate);
+    }
+
+    public function adminDownloadConferencia(Conference $conference, User $user)
+    {
+        abort_if(! request()->user()->isAdmin(), 403);
+
+        $certificate = $this->renderer->issue($user, 'conference', $conference);
 
         if ($certificate === null) {
             return back()->withErrors(['error' => 'No fue posible generar la constancia.']);
