@@ -24,6 +24,11 @@ const user = usePage().props.auth.user;
 
 const hasRole = (name: string) =>
     user?.roles?.some((r: any) => r.name === name) ?? false;
+
+const can = (permission: string) =>
+    (usePage().props.auth.permissions as string[] | undefined)?.includes(
+        permission,
+    ) ?? false;
 </script>
 
 <template>
@@ -263,6 +268,7 @@ const hasRole = (name: string) =>
 
                 <div class="grid gap-4 sm:grid-cols-2">
                     <Link
+                        v-if="can('presentations.my')"
                         href="/presentations"
                         class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-indigo-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
                     >
@@ -275,6 +281,7 @@ const hasRole = (name: string) =>
                         </div>
                     </Link>
                     <Link
+                        v-if="can('workshops.my')"
                         href="/my-workshops"
                         class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-indigo-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
                     >
@@ -318,6 +325,7 @@ const hasRole = (name: string) =>
                         </div>
                     </Link>
                     <Link
+                        v-if="can('workshops.my')"
                         href="/my-workshops"
                         class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-indigo-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
                     >

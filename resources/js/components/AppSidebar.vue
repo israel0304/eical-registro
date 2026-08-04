@@ -9,6 +9,9 @@ import {
     Award,
     BarChart3,
     FileBadge,
+    Presentation,
+    Tags,
+    ShieldCheck,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
@@ -28,48 +31,76 @@ import AppLogo from './AppLogo.vue';
 
 const page = usePage();
 
-const hasRole = (name: string) =>
-    page.props.auth.user?.roles?.some((r: any) => r.name === name) ?? false;
+const can = (permission: string) =>
+    (page.props.auth.permissions as string[] | undefined)?.includes(
+        permission,
+    ) ?? false;
 
 const mainNavItems = computed<NavItem[]>(() => {
-    const items: NavItem[] = [
-        { title: 'Inicio', href: dashboard(), icon: Home },
-    ];
+    const items: NavItem[] = [];
 
-    if (hasRole('Administrator')) {
-        items.push(
-            { title: 'Usuarios', href: '/users', icon: Users },
-            { title: 'Talleres', href: '/workshops', icon: BookOpen },
-            { title: 'Ponencias', href: '/presentations', icon: Mic },
-            { title: 'Reportes', href: '/admin/reportes', icon: BarChart3 },
-            {
-                title: 'Plantillas',
-                href: '/admin/constancias/plantillas',
-                icon: FileBadge,
-            },
-        );
+    if (can('dashboard.view')) {
+        items.push({ title: 'Inicio', href: dashboard(), icon: Home });
     }
 
-    if (hasRole('Ponente')) {
+    if (can('users.view')) {
+        items.push({ title: 'Usuarios', href: '/users', icon: Users });
+    }
+
+    if (can('workshops.view')) {
+        items.push({ title: 'Talleres', href: '/workshops', icon: BookOpen });
+    }
+
+    if (can('presentations.view')) {
         items.push({
-            title: 'Mis Ponencias',
+            title: can('presentations.my') ? 'Mis Ponencias' : 'Ponencias',
             href: '/presentations',
             icon: Mic,
         });
     }
 
-    const canSeeWorkshops =
-        hasRole('Ponente') || hasRole('Asistente') || hasRole('Instructor');
-    if (canSeeWorkshops) {
-        items.push(
-            { title: 'Talleres', href: '/workshops', icon: BookOpen },
-            {
-                title: 'Mis Talleres',
-                href: '/my-workshops',
-                icon: CalendarCheck,
-            },
-            { title: 'Mis Constancias', href: '/constancias', icon: Award },
-        );
+    if (can('conferences.view')) {
+        items.push({
+            title: 'Conferencias',
+            href: '/conferences',
+            icon: Presentation,
+        });
+    }
+
+    if (can('workshops.my')) {
+        items.push({
+            title: 'Mis Talleres',
+            href: '/my-workshops',
+            icon: CalendarCheck,
+        });
+    }
+
+    if (can('reportes.view')) {
+        items.push({ title: 'Reportes', href: '/admin/reportes', icon: BarChart3 });
+    }
+
+    if (can('constancias.view')) {
+        items.push({ title: 'Mis Constancias', href: '/constancias', icon: Award });
+    }
+
+    if (can('constancias.templates.manage')) {
+        items.push({
+            title: 'Plantillas',
+            href: '/admin/constancias/plantillas',
+            icon: FileBadge,
+        });
+    }
+
+    if (can('constancias.types.manage')) {
+        items.push({
+            title: 'Tipos',
+            href: '/admin/constancias/tipos',
+            icon: Tags,
+        });
+    }
+
+    if (can('roles.manage')) {
+        items.push({ title: 'Roles', href: '/admin/roles', icon: ShieldCheck });
     }
 
     return items;
