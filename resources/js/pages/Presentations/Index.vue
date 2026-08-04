@@ -9,6 +9,7 @@ import {
     UserPlus,
     UploadCloud,
     Pencil,
+    Trash2,
 } from 'lucide-vue-next';
 import { ref, watch, computed, reactive } from 'vue';
 import DisciplineInput from '@/components/DisciplineInput.vue';
@@ -87,8 +88,8 @@ const openEditModal = (presentation: any) => {
     form.keywords = presentation.keywords || '';
     form.location = presentation.location || '';
     form.day = presentation.day || '';
-    form.start_time = presentation.start_time || '';
-    form.end_time = presentation.end_time || '';
+    form.start_time = presentation.start_time ? presentation.start_time.slice(0, 5) : '';
+    form.end_time = presentation.end_time ? presentation.end_time.slice(0, 5) : '';
     form.submission_id = presentation.submission_id || '';
     form.author_ids = presentation.authors?.map((a: any) => a.id) || [];
     selectedAuthors.value =
@@ -116,18 +117,12 @@ const savePresentation = () => {
 
 const selectedAuthors = ref<any[]>([]);
 
-const togglePresented = (
-    presentationId: number,
-    userId: number,
-    presented: boolean,
-) => {
-    router.put(
-        '/presentations/' + presentationId,
-        {
-            authors_presented: [{ user_id: userId, presented }],
-        },
-        { preserveScroll: true, preserveState: true },
-    );
+const deletePresentation = (id: number) => {
+    if (confirm('¿Estás seguro de eliminar esta ponencia?')) {
+        router.delete('/presentations/' + id, {
+            preserveScroll: true,
+        });
+    }
 };
 
 const searchQuery = ref('');
@@ -390,7 +385,7 @@ const submitImport = () => {
                                         scope="col"
                                         class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
                                     >
-                                        Presentó
+                                        Ponentes
                                     </th>
                                     <th scope="col" class="relative px-6 py-4">
                                         <span class="sr-only">Acciones</span>
@@ -443,47 +438,51 @@ const submitImport = () => {
                                         class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
                                     >
                                         <div
-                                            v-if="isAdmin"
-                                            class="flex flex-wrap gap-2"
+                                            v-if="presentation.authors?.length"
+                                            class="flex items-center -space-x-2"
                                         >
-                                            <label
-                                                v-for="author in presentation.authors"
+                                            <span
+                                                v-for="author in presentation.authors.slice(
+                                                    0,
+                                                    5,
+                                                )"
                                                 :key="author.id"
-                                                class="flex cursor-pointer items-center gap-1 text-xs"
+                                                :title="
+                                                    author.name +
+                                                    (author.affiliation
+                                                        ? ' — ' +
+                                                          author.affiliation
+                                                        : '')
+                                                "
+                                                class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-xs font-medium text-indigo-700 ring-2 ring-white dark:bg-indigo-900 dark:text-indigo-300 dark:ring-zinc-900"
                                             >
-                                                <input
-                                                    type="checkbox"
-                                                    :checked="
-                                                        author.pivot?.presented
-                                                    "
-                                                    @change="
-                                                        togglePresented(
-                                                            presentation.id,
-                                                            author.id,
-                                                            (
-                                                                $event.target as HTMLInputElement
-                                                            ).checked,
+                                                {{ author.first_name?.[0]
+                                                }}{{ author.last_name?.[0] }}
+                                            </span>
+                                            <span
+                                                v-if="
+                                                    presentation.authors
+                                                        .length > 5
+                                                "
+                                                :title="
+                                                    presentation.authors
+                                                        .map(
+                                                            (a: any) =>
+                                                                a.name,
                                                         )
-                                                    "
-                                                    class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                                />
-                                                {{ author.first_name }}
-                                                {{ author.last_name }}
-                                            </label>
+                                                        .join(', ')
+                                                "
+                                                class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600 ring-2 ring-white dark:bg-zinc-700 dark:text-gray-300 dark:ring-zinc-900"
+                                            >
+                                                +{{
+                                                    presentation.authors
+                                                        .length - 5
+                                                }}
+                                            </span>
                                         </div>
-                                        <span
-                                            v-else
-                                            class="text-xs text-gray-400"
+                                        <span v-else class="text-gray-400"
+                                            >—</span
                                         >
-                                            {{
-                                                presentation.authors?.some(
-                                                    (a: any) =>
-                                                        a.pivot?.presented,
-                                                )
-                                                    ? 'Sí'
-                                                    : '—'
-                                            }}
-                                        </span>
                                     </td>
                                     <td
                                         class="px-6 py-4 text-right text-sm font-medium whitespace-nowrap"
@@ -508,6 +507,18 @@ const submitImport = () => {
                                                 class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
                                             >
                                                 <Pencil class="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                v-if="isAdmin"
+                                                type="button"
+                                                @click="
+                                                    deletePresentation(
+                                                        presentation.id,
+                                                    )
+                                                "
+                                                class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-gray-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
+                                            >
+                                                <Trash2 class="h-4 w-4" />
                                             </button>
                                         </div>
                                     </td>
@@ -853,15 +864,6 @@ const submitImport = () => {
                                             class="text-sm font-medium text-gray-700 dark:text-gray-300"
                                             >Autores *</label
                                         >
-                                        <button
-                                            v-if="isAdmin || !isEditing"
-                                            type="button"
-                                            @click="showCreatePonente = true"
-                                            class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
-                                        >
-                                            <UserPlus class="h-3 w-3" /> Nuevo
-                                            ponente
-                                        </button>
                                     </div>
 
                                     <!-- Selected authors -->
@@ -942,9 +944,22 @@ const submitImport = () => {
                                                 searchQuery.trim() &&
                                                 !searching
                                             "
-                                            class="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500 shadow-lg dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400"
+                                            class="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
                                         >
-                                            No se encontraron ponentes.
+                                            <p
+                                                class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400"
+                                            >
+                                                No se encontraron ponentes.
+                                            </p>
+                                            <button
+                                                v-if="isAdmin || !isEditing"
+                                                type="button"
+                                                @click="showCreatePonente = true"
+                                                class="flex w-full items-center gap-2 border-t border-gray-100 px-3 py-2 text-left text-sm font-medium text-indigo-600 hover:bg-gray-50 dark:border-zinc-700 dark:text-indigo-400 dark:hover:bg-zinc-700"
+                                            >
+                                                <UserPlus class="h-3.5 w-3.5" />
+                                                Registrar nuevo ponente
+                                            </button>
                                         </div>
                                     </div>
 
