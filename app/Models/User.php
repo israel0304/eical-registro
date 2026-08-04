@@ -139,6 +139,31 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasRole('Instructor');
     }
 
+    public function isSpeaker(): bool
+    {
+        return $this->hasRole('Speaker');
+    }
+
+    public function isModerator(): bool
+    {
+        return $this->hasRole('Moderator');
+    }
+
+    public function hasPermission(string $key): bool
+    {
+        return in_array($key, $this->permissionKeys(), true);
+    }
+
+    public function permissionKeys(): array
+    {
+        return Permission::query()
+            ->whereHas('roles', fn ($q) => $q
+                ->whereIn('roles.id', $this->roles()->pluck('roles.id'))
+                ->where('is_active', true))
+            ->pluck('key')
+            ->all();
+    }
+
     public function hasSetPassword(): bool
     {
         return $this->password_set_at !== null;
