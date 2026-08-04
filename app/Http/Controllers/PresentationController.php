@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Presentation;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -14,7 +16,7 @@ class PresentationController extends Controller
 
         $query = Presentation::with('authors');
 
-        if ($user->isPonente() && ! $user->isAdmin()) {
+        if ($user->hasPermission('presentations.my') && ! $user->isAdmin()) {
             $query->whereHas('authors', function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             });
@@ -66,6 +68,7 @@ class PresentationController extends Controller
         ]);
 
         $presentation->authors()->sync($validated['author_ids']);
+        $this->syncAuthorRoles($validated['author_ids']);
 
         return to_route('presentations.index')->with('success', 'Ponencia creada correctamente.');
     }
@@ -100,6 +103,7 @@ class PresentationController extends Controller
 
             if ($request->has('author_ids')) {
                 $presentation->authors()->sync($validated['author_ids']);
+                $this->syncAuthorRoles($validated['author_ids']);
             }
 
             if ($request->has('authors_presented')) {
@@ -140,6 +144,7 @@ class PresentationController extends Controller
 
             if ($request->has('author_ids')) {
                 $presentation->authors()->sync($validated['author_ids']);
+                $this->syncAuthorRoles($validated['author_ids']);
             }
 
             if ($request->has('authors_presented')) {
@@ -161,5 +166,23 @@ class PresentationController extends Controller
         $presentation->update($validated);
 
         return to_route('presentations.index')->with('success', 'Ponencia actualizada correctamente.');
+    }
+
+    public function destroy(Request $request, Presentation $presentation)
+    {
+        abort_if(! $request->user()->isAdmin(), 403);
+
+        $presentation->delete();
+
+        return to_route('presentations.index')->with('success', 'Ponencia eliminada correctamente.');
+    }
+
+    private function syncAuthorRoles(array $authorIds): void
+    {
+        $ponenteRoleId = Role::where('name', 'Ponente')->value('id') ?? 2;
+
+        foreach ($authorIds as $authorId) {
+            User::find($authorId)?->roles()->syncWithoutDetaching([$ponenteRoleId]);
+        }
     }
 }
