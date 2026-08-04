@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { Users } from 'lucide-vue-next';
+import { Eye } from 'lucide-vue-next';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 defineProps<{
@@ -96,34 +96,31 @@ const formatDate = (dateStr: string) => {
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
                                 >
                                     <div
-                                        v-for="(
-                                            instructor, idx
-                                        ) in workshop.instructors"
-                                        :key="instructor.id"
+                                        v-if="workshop.instructors?.length"
+                                        class="flex items-center -space-x-2"
                                     >
-                                        <div>{{ instructor.name }}</div>
-                                        <div
-                                            v-if="instructor.institution"
-                                            class="text-xs text-gray-400"
-                                        >
-                                            {{ instructor.institution }}
-                                        </div>
-                                        <div
-                                            v-if="
-                                                idx <
-                                                (workshop.instructors?.length ??
-                                                    0) -
-                                                    1
+                                        <span
+                                            v-for="instructor in workshop.instructors"
+                                            :key="instructor.id"
+                                            :title="
+                                                instructor.name +
+                                                (instructor.affiliation
+                                                    ? ' — ' +
+                                                      instructor.affiliation
+                                                    : '')
                                             "
-                                            class="my-1 border-b border-gray-100 dark:border-zinc-800"
-                                        ></div>
+                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-xs font-medium text-indigo-700 ring-2 ring-white dark:bg-indigo-900 dark:text-indigo-300 dark:ring-zinc-900"
+                                        >
+                                            {{ instructor.first_name?.[0]
+                                            }}{{ instructor.last_name?.[0] }}
+                                        </span>
                                     </div>
-                                    <div
-                                        v-if="!workshop.instructors?.length"
+                                    <span
+                                        v-else
                                         class="text-gray-400"
                                     >
                                         —
-                                    </div>
+                                    </span>
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
@@ -148,7 +145,7 @@ const formatDate = (dateStr: string) => {
                                             "
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
                                         >
-                                            <Users class="h-4 w-4" />
+                                            <Eye class="h-4 w-4" />
                                         </Link>
                                     </div>
                                 </td>

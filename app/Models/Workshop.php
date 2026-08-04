@@ -33,7 +33,6 @@ class Workshop extends Model
     public function instructors(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'workshop_instructor_user')
-            ->withPivot('institution')
             ->withTimestamps();
     }
 
