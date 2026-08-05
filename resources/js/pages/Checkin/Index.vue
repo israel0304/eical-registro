@@ -41,11 +41,21 @@ const processing = ref(false);
 const readerEl = ref<HTMLDivElement | null>(null);
 
 let html5Qr: any = null;
+let lastToken = '';
+let lastScannedAt = 0;
 
 const extractToken = (text: string) => {
     const match = text.match(/[?&]token=([^&\s]+)/);
     return match ? decodeURIComponent(match[1]) : text.trim();
 };
+
+const getCookie = (name: string) =>
+    document.cookie
+        .split('; ')
+        .find((row) => row.startsWith(`${name}=`))
+        ?.split('=')
+        .slice(1)
+        .join('=') ?? '';
 
 const register = async (token: string) => {
     if (!token || processing.value) return;
@@ -57,17 +67,29 @@ const register = async (token: string) => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') ?? '',
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': getCookie('XSRF-TOKEN'),
             },
             body: JSON.stringify({ token }),
         });
 
-        const data = await response.json();
-        result.value = data;
+        if (response.status === 419) {
+            result.value = {
+                success: false,
+                message: 'Sesión expirada. Recarga la página.',
+            };
+            window.setTimeout(() => window.location.reload(), 1500);
+            return;
+        }
 
-        if (data.success) {
+        const data = await response.json().catch(() => null);
+        result.value =
+            data ?? {
+                success: false,
+                message: 'Respuesta inesperada del servidor.',
+            };
+
+        if (data?.success) {
             router.reload({ only: ['attendances'] });
         }
     } catch {
@@ -110,6 +132,13 @@ const startScanner = async () => {
 
     const onSuccess = (decodedText: string) => {
         const token = extractToken(decodedText);
+        if (!token) return;
+
+        const now = Date.now();
+        if (token === lastToken && now - lastScannedAt < 3000) return;
+        lastToken = token;
+        lastScannedAt = now;
+
         stopScanner();
         scanning.value = false;
         register(token);
