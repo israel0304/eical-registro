@@ -63,8 +63,8 @@ class CheckinController extends Controller
         if ($user === null) {
             return response()->json([
                 'success' => false,
-                'message' => 'Código de gafete no válido.',
-            ], 404);
+                'message' => 'No se encontró ningún participante con ese código. Busca por nombre, DNI o escanea el gafete.',
+            ], 200);
         }
 
         $today = now()->format('Y-m-d');
@@ -150,6 +150,7 @@ class CheckinController extends Controller
             'photo' => $user->profile_photo_path
                 ? asset('storage/'.$user->profile_photo_path)
                 : null,
+            'checkin_token' => $user->checkin_token,
             'checked_in' => Attendance::query()
                 ->where('user_id', $user->id)
                 ->whereNull('workshop_id')

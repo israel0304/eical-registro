@@ -205,7 +205,45 @@ class RegistroModuleTest extends TestCase
         $this->actingAs($staff);
 
         $this->postJson('/checkin/register', ['token' => 'GFT-INVALIDO'])
-            ->assertNotFound();
+            ->assertOk()
+            ->assertJson(['success' => false]);
+    }
+
+    public function test_staff_can_lookup_users_by_partial_name()
+    {
+        $this->enableEventCheckin();
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = User::factory()->create([
+            'first_name' => 'María',
+            'last_name' => 'García',
+        ]);
+        $this->actingAs($staff);
+
+        $this->get('/checkin/lookup?search=gar')
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $participant->id,
+                'checkin_token' => $participant->checkin_token,
+                'checked_in' => false,
+            ]);
+    }
+
+    public function test_lookup_marks_users_registered_today()
+    {
+        $this->enableEventCheckin();
+        $this->eventoType();
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = User::factory()->create([
+            'first_name' => 'Luis',
+            'last_name' => 'Ramírez',
+        ]);
+        $this->actingAs($staff);
+
+        $this->postJson('/checkin/register', ['token' => $participant->checkin_token])->assertOk();
+
+        $this->get('/checkin/lookup?search=ram')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $participant->id, 'checked_in' => true]);
     }
 
     public function test_checkin_rejects_duplicate_registration()
