@@ -83,6 +83,21 @@ class GafeteController extends Controller
         return back()->with('success', 'Foto de perfil actualizada.');
     }
 
+    public function destroyPhoto(Request $request)
+    {
+        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('gafete.view'), 403);
+
+        $user = $request->user();
+
+        if ($user->profile_photo_path) {
+            Storage::disk('public')->delete($user->profile_photo_path);
+        }
+
+        $user->update(['profile_photo_path' => null]);
+
+        return back()->with('success', 'Foto de perfil eliminada.');
+    }
+
     public function scanInfo(Request $request)
     {
         $token = $request->query('token');
