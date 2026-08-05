@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendance;
 use App\Models\Certificate;
-use App\Models\Setting;
 use App\Models\User;
 use App\Services\CertificateRenderer;
+use App\Support\EventSettings;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -18,9 +18,12 @@ class CheckinController extends Controller
     {
         abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('checkin.scan'), 403);
 
-        $today = Attendance::query()
+        $today = now()->format('Y-m-d');
+
+        $attendances = Attendance::query()
             ->whereNull('workshop_id')
             ->whereNull('presentation_id')
+            ->where('event_day', $today)
             ->with(['user:id,first_name,last_name,dni,affiliation,profile_photo_path,email'])
             ->orderByDesc('created_at')
             ->get()
@@ -31,8 +34,10 @@ class CheckinController extends Controller
             });
 
         return Inertia::render('Checkin/Index', [
-            'attendances' => $today,
-            'checkinEnabled' => (bool) Setting::query()->where('key', 'evento_checkin_enabled')->value('value'),
+            'attendances' => $attendances,
+            'checkinEnabled' => EventSettings::checkinEnabled(),
+            'dayLabel' => EventSettings::dayLabel($today) ?: $today,
+            'requiredDays' => EventSettings::minDays(),
         ]);
     }
 
@@ -46,7 +51,7 @@ class CheckinController extends Controller
 
         $token = trim($validated['token']);
 
-        if (! Setting::query()->where('key', 'evento_checkin_enabled')->value('value')) {
+        if (! EventSettings::checkinEnabled()) {
             return response()->json([
                 'success' => false,
                 'message' => 'El check-in del evento está deshabilitado.',
@@ -62,33 +67,48 @@ class CheckinController extends Controller
             ], 404);
         }
 
+        $today = now()->format('Y-m-d');
+
+        if (! $this->isWithinEventDates($today)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El check-in solo está disponible durante las fechas del evento ('.EventSettings::startDate().' a '.EventSettings::endDate().').',
+            ], 422);
+        }
+
         $existing = Attendance::query()
             ->where('user_id', $user->id)
             ->whereNull('workshop_id')
             ->whereNull('presentation_id')
+            ->where('event_day', $today)
             ->exists();
 
         if ($existing) {
             return response()->json([
                 'success' => false,
                 'already' => true,
-                'message' => 'El participante ya tenía asistencia registrada.',
+                'message' => 'El participante ya tenía asistencia registrada hoy.',
                 'user' => $this->userPayload($user),
             ], 200);
         }
 
         Attendance::create([
             'user_id' => $user->id,
-            'event_day' => now()->format('Y-m-d'),
+            'event_day' => $today,
             'registered_by' => $request->user()->id,
         ]);
 
-        $certificate = $this->renderer->issueEvent($user);
+        $qualifies = EventSettings::qualifies($user->id);
+        $certificate = $qualifies ? $this->renderer->issueEvent($user) : null;
 
         return response()->json([
             'success' => true,
             'message' => 'Asistencia registrada correctamente.',
             'user' => $this->userPayload($user),
+            'day_label' => EventSettings::dayLabel($today),
+            'days_attended' => EventSettings::attendedDays($user->id),
+            'required_days' => EventSettings::minDays(),
+            'qualifies' => $qualifies,
             'certificate_issued' => $certificate !== null,
         ], 200);
     }
@@ -119,6 +139,8 @@ class CheckinController extends Controller
 
     private function userPayload(User $user): array
     {
+        $today = now()->format('Y-m-d');
+
         return [
             'id' => $user->id,
             'name' => trim($user->first_name.' '.$user->last_name),
@@ -132,7 +154,9 @@ class CheckinController extends Controller
                 ->where('user_id', $user->id)
                 ->whereNull('workshop_id')
                 ->whereNull('presentation_id')
+                ->where('event_day', $today)
                 ->exists(),
+            'days_attended' => EventSettings::attendedDays($user->id),
         ];
     }
 
@@ -142,5 +166,17 @@ class CheckinController extends Controller
             ->where('user_id', $userId)
             ->where('event_type', 'event')
             ->exists();
+    }
+
+    private function isWithinEventDates(string $date): bool
+    {
+        $start = EventSettings::startDate();
+        $end = EventSettings::endDate();
+
+        if ($start === null || $end === null) {
+            return true;
+        }
+
+        return $date >= $start && $date <= $end;
     }
 }

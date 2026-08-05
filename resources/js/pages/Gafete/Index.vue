@@ -123,7 +123,7 @@ onMounted(generateQR);
                     class="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
                 >
                     <CheckCircle2 class="h-4 w-4" />
-                    Asistencia registrada
+                    Asistencia registrada hoy
                 </div>
             </div>
 
@@ -317,9 +317,10 @@ onMounted(generateQR);
                                 <CheckCircle2 class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
                                 <span>
                                     <template v-if="checkedIn">
-                                        Ya tienes tu asistencia registrada.
-                                        Podrás descargar tu constancia de
-                                        asistencia al evento en
+                                        Ya tienes tu asistencia registrada
+                                        hoy. Recuerda registrarte cada día del
+                                        evento. Podrás descargar tu constancia
+                                        de asistencia al evento en
                                         <a
                                             href="/constancias"
                                             class="font-medium text-indigo-600 hover:underline dark:text-indigo-400"

@@ -42,6 +42,8 @@ class DatabaseSeeder extends Seeder
             'evento_nombre' => 'EICAL 2026',
             'evento_checkin_enabled' => '1',
             'evento_min_dias' => '2',
+            'evento_fecha_inicio' => '',
+            'evento_fecha_fin' => '',
         ];
 
         foreach ($settings as $key => $value) {
