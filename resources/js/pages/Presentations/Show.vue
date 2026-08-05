@@ -9,7 +9,7 @@ import {
     Hash,
     Download,
 } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const props = defineProps<{
@@ -36,10 +36,22 @@ const formatDay = (day: string) => {
     });
 };
 
+const authors = ref(props.presentation.authors);
+const toggling = ref<number | null>(null);
+
 const togglePresented = (userId: number, presented: boolean) => {
-    axios.put('/presentations/' + props.presentation.id, {
-        authors_presented: [{ user_id: userId, presented }],
-    });
+    toggling.value = userId;
+    axios
+        .put('/presentations/' + props.presentation.id, {
+            authors_presented: [{ user_id: userId, presented }],
+        })
+        .then(() => {
+            const author = authors.value.find((a: any) => a.id === userId);
+            if (author) author.pivot = { ...(author.pivot ?? {}), presented };
+        })
+        .finally(() => {
+            toggling.value = null;
+        });
 };
 
 const downloadConstancia = (authorId: number) => {
@@ -200,7 +212,7 @@ const disciplinesList = computed(() => {
 
                 <ul class="mt-3 space-y-3">
                     <li
-                        v-for="author in presentation.authors"
+                        v-for="author in authors"
                         :key="author.id"
                         class="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
                     >
@@ -230,6 +242,7 @@ const disciplinesList = computed(() => {
                                 <input
                                     type="checkbox"
                                     :checked="author.pivot?.presented"
+                                    :disabled="toggling !== null"
                                     @change="
                                         togglePresented(
                                             author.id,
