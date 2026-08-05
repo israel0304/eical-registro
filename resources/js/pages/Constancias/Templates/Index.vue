@@ -15,7 +15,15 @@ import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 const props = defineProps<{
     templates: any[];
     participationTypes: any[];
+    kind?: string;
 }>();
+
+const isBadge = computed(() => props.kind === 'badge');
+const basePath = computed(() =>
+    isBadge.value
+        ? '/admin/gafetes/plantillas'
+        : '/admin/constancias/plantillas',
+);
 
 const showModal = ref(false);
 const backgroundPreview = ref<string | null>(null);
@@ -25,16 +33,19 @@ const form = useForm({
     description: '',
     participation_type_id: '' as number | string,
     is_default: false,
-    width: 1800,
-    height: 1200,
+    width: isBadge.value ? 1050 : 1800,
+    height: isBadge.value ? 700 : 1200,
     background: null as File | null,
 });
 
 const openCreateModal = () => {
     backgroundPreview.value = null;
     form.reset();
-    form.participation_type_id =
-        props.participationTypes.find((t) => t.is_active)?.id ?? '';
+    form.width = isBadge.value ? 1050 : 1800;
+    form.height = isBadge.value ? 700 : 1200;
+    form.participation_type_id = isBadge.value
+        ? ''
+        : props.participationTypes.find((t) => t.is_active)?.id ?? '';
     showModal.value = true;
 };
 
@@ -47,7 +58,7 @@ const onBackgroundChange = (event: Event) => {
 };
 
 const saveTemplate = () => {
-    form.post('/admin/constancias/plantillas', {
+    form.post(basePath.value, {
         onSuccess: () => {
             showModal.value = false;
             form.reset();
@@ -58,11 +69,13 @@ const saveTemplate = () => {
 
 const deleteTemplate = (id: number) => {
     if (confirm('¿Eliminar esta plantilla?')) {
-        router.delete('/admin/constancias/plantillas/' + id, {
+        router.delete(basePath.value + '/' + id, {
             preserveScroll: true,
         });
     }
 };
+
+const templateEditUrl = (id: number) => basePath.value + '/' + id + '/edit';
 
 const participationTypeLabel = (id: number | null) => {
     if (!id) return 'Sin tipo';
@@ -78,12 +91,11 @@ const activeTypes = computed(() =>
 
 <template>
     <AppLayout
-        :breadcrumbs="[
-            { title: 'Constancias', href: '/constancias' },
-            { title: 'Plantillas', href: '/admin/constancias/plantillas' },
-        ]"
+        :breadcrumbs="isBadge
+            ? [{ title: 'Gafete', href: '/gafete' }, { title: 'Plantilla del Gafete', href: basePath }]
+            : [{ title: 'Constancias', href: '/constancias' }, { title: 'Plantillas', href: basePath }]"
     >
-        <Head title="Plantillas de Certificados" />
+        <Head :title="isBadge ? 'Plantilla del Gafete' : 'Plantillas de Certificados'" />
 
         <div class="mx-auto min-h-screen w-full max-w-7xl space-y-10 px-8 py-8">
             <div
@@ -93,13 +105,20 @@ const activeTypes = computed(() =>
                     <h1
                         class="text-3xl font-normal tracking-tight text-gray-900 dark:text-white"
                     >
-                        Plantillas de Certificados
+                        {{
+                            isBadge
+                                ? 'Plantilla del Gafete'
+                                : 'Plantillas de Certificados'
+                        }}
                     </h1>
                     <p
                         class="mt-1 text-sm text-gray-500 dark:text-gray-400"
                     >
-                        Crea y personaliza los certificados que se generan para
-                        cada tipo de participación.
+                        {{
+                            isBadge
+                                ? 'Personaliza la credencial de acceso que los participantes descargan desde su perfil.'
+                                : 'Crea y personaliza los certificados que se generan para cada tipo de participación.'
+                        }}
                     </p>
                 </div>
                 <button
@@ -121,11 +140,7 @@ const activeTypes = computed(() =>
                     class="group relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
                 >
                     <Link
-                        :href="
-                            '/admin/constancias/plantillas/' +
-                            template.id +
-                            '/edit'
-                        "
+                        :href="templateEditUrl(template.id)"
                         class="block"
                     >
                         <div
@@ -174,6 +189,7 @@ const activeTypes = computed(() =>
                                 {{ template.description }}
                             </p>
                             <div
+                                v-if="!isBadge"
                                 class="mt-3 inline-flex rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
                             >
                                 {{ participationTypeLabel(template.participation_type_id) }}
@@ -184,11 +200,7 @@ const activeTypes = computed(() =>
                         class="absolute top-3 right-3 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
                     >
                         <Link
-                            :href="
-                                '/admin/constancias/plantillas/' +
-                                template.id +
-                                '/edit'
-                            "
+                            :href="templateEditUrl(template.id)"
                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
                         >
                             <Pencil class="h-4 w-4" />
@@ -216,7 +228,7 @@ const activeTypes = computed(() =>
             </div>
 
             <!-- Participation types -->
-            <div class="flex items-center justify-between gap-4 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 dark:border-zinc-800 dark:bg-zinc-900/50">
+            <div v-if="!isBadge" class="flex items-center justify-between gap-4 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 dark:border-zinc-800 dark:bg-zinc-900/50">
                 <div>
                     <h2
                         class="text-xl font-normal tracking-tight text-gray-900 dark:text-white"
@@ -237,7 +249,10 @@ const activeTypes = computed(() =>
                 </Link>
             </div>
 
-            <p class="text-xs text-gray-400 dark:text-gray-600">
+            <p
+                v-if="!isBadge"
+                class="text-xs text-gray-400 dark:text-gray-600"
+            >
                 La página pública de verificación se accede en
                 <code class="rounded bg-gray-100 px-1 py-0.5 dark:bg-zinc-800"
                     >/constancias/verificar/{folio}</code
@@ -317,7 +332,7 @@ const activeTypes = computed(() =>
                                 ></textarea>
                             </div>
                             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <div>
+                                <div v-if="!isBadge">
                                     <label
                                         class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
                                         >Tipo de participación *</label
@@ -421,7 +436,11 @@ const activeTypes = computed(() =>
                                     type="checkbox"
                                     class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 />
-                                Usar como plantilla por defecto de este tipo
+                                {{
+                                    isBadge
+                                        ? 'Usar como plantilla por defecto del gafete'
+                                        : 'Usar como plantilla por defecto de este tipo'
+                                }}
                             </label>
                         </div>
 
