@@ -16,6 +16,9 @@ use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
+use chillerlan\QRCode\Output\QRGdImagePNG;
+use chillerlan\QRCode\QRCode as ChillerlanQRCode;
+use chillerlan\QRCode\QROptions;
 use Dompdf\Dompdf;
 use Illuminate\Support\Facades\Storage;
 
@@ -112,6 +115,19 @@ class CertificateRenderer
             return null;
         }
 
+        return $this->issueType($user, $type, 'event', 0);
+    }
+
+    /**
+     * Find or create a certificate for a generic (non-activity) participation
+     * type, used by event attendance and manually generated certificates.
+     */
+    public function issueType(User $user, ParticipationType $type, string $eventType, int $eventId = 0): ?Certificate
+    {
+        if (! $type->is_active) {
+            return null;
+        }
+
         $template = $type->templates()->where('is_default', true)->first();
         $metadata = $this->buildEventMetadata($user, $type);
 
@@ -119,8 +135,8 @@ class CertificateRenderer
             [
                 'user_id' => $user->id,
                 'participation_type_id' => $type->id,
-                'event_type' => 'event',
-                'event_id' => 0,
+                'event_type' => $eventType,
+                'event_id' => $eventId,
             ],
             [
                 'template_id' => $template?->id,
@@ -658,14 +674,40 @@ HTML;
 
     private function qrDataUri(string $data, bool $png = false): string
     {
+        if ($png) {
+            return $this->pngDataUri($data);
+        }
+
         $renderer = new ImageRenderer(
             new RendererStyle(200, 4),
-            $png ? new ImagickImageBackEnd('png') : new SvgImageBackEnd,
+            new SvgImageBackEnd,
         );
         $writer = new Writer($renderer);
         $image = $writer->writeString($data);
 
-        return ($png ? 'data:image/png;base64,' : 'data:image/svg+xml;base64,').base64_encode($image);
+        return 'data:image/svg+xml;base64,'.base64_encode($image);
+    }
+
+    private function pngDataUri(string $data): string
+    {
+        if (extension_loaded('imagick')) {
+            $renderer = new ImageRenderer(
+                new RendererStyle(200, 4),
+                new ImagickImageBackEnd('png'),
+            );
+            $image = (new Writer($renderer))->writeString($data);
+
+            return 'data:image/png;base64,'.base64_encode($image);
+        }
+
+        $options = new QROptions([
+            'outputInterface' => QRGdImagePNG::class,
+            'outputBase64' => true,
+            'scale' => 4,
+            'quietzoneSize' => 4,
+        ]);
+
+        return (new ChillerlanQRCode($options))->render($data);
     }
 
     private function elementStyles(): string
