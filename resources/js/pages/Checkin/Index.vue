@@ -101,6 +101,8 @@ const register = async (token: string) => {
             };
 
         if (data?.success) {
+            searchResults.value = [];
+            searchOpen.value = false;
             router.reload({ only: ['attendances'] });
         }
     } catch {
@@ -190,7 +192,52 @@ const startScanner = async () => {
 };
 
 const submitManual = () => {
+    if (searchResults.value.length === 1) {
+        register(searchResults.value[0].checkin_token);
+        return;
+    }
     register(manualToken.value.trim());
+};
+
+const searchResults = ref<any[]>([]);
+const searching = ref(false);
+const searchOpen = ref(false);
+let searchTimer: number | undefined;
+
+const runLookup = async (search: string) => {
+    if (!search.trim() || search.trim().length < 2) {
+        searchResults.value = [];
+        searchOpen.value = false;
+        return;
+    }
+    searching.value = true;
+    try {
+        const response = await fetch(
+            '/checkin/lookup?search=' + encodeURIComponent(search.trim()),
+            { headers: { Accept: 'application/json' } },
+        );
+        if (!response.ok) {
+            searchResults.value = [];
+            return;
+        }
+        searchResults.value = await response.json();
+        searchOpen.value = true;
+    } catch {
+        searchResults.value = [];
+    } finally {
+        searching.value = false;
+    }
+};
+
+const onSearchInput = () => {
+    if (searchTimer) window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => runLookup(manualToken.value), 350);
+};
+
+const selectUser = (user: any) => {
+    searchOpen.value = false;
+    manualToken.value = user.name;
+    register(user.checkin_token);
 };
 
 const clearResult = () => {
@@ -203,6 +250,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
     stopScanner();
+    if (searchTimer) window.clearTimeout(searchTimer);
 });
 </script>
 
@@ -298,12 +346,12 @@ onBeforeUnmount(() => {
 
                         <!-- Manual fallback -->
                         <div
-                            class="mt-4 border-t border-gray-100 pt-4 dark:border-zinc-800"
+                            class="relative mt-4 border-t border-gray-100 pt-4 dark:border-zinc-800"
                         >
                             <label
                                 class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
                             >
-                                Registro manual (token del gafete)
+                                Registro manual (busca por nombre, DNI o código)
                             </label>
                             <div
                                 class="flex gap-2"
@@ -311,17 +359,91 @@ onBeforeUnmount(() => {
                                 <input
                                     v-model="manualToken"
                                     type="text"
-                                    placeholder="GFT-XXXX... o pega el código"
+                                    placeholder="Ej. García, CNV-1234... o GFT-XXXX"
                                     class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    @input="onSearchInput"
                                     @keyup.enter="submitManual"
+                                    @blur="searchOpen = false"
                                 />
                                 <button
                                     @click="submitManual"
-                                    :disabled="processing"
+                                    :disabled="processing || searching"
                                     class="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
                                 >
                                     <Search class="h-4 w-4" /> Buscar
                                 </button>
+                            </div>
+
+                            <!-- Search results -->
+                            <div
+                                v-if="searchOpen && searchResults.length"
+                                class="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+                            >
+                                <div class="max-h-64 overflow-y-auto">
+                                    <button
+                                        v-for="user in searchResults"
+                                        :key="user.id"
+                                        type="button"
+                                        :disabled="user.checked_in"
+                                        @mousedown.prevent="!user.checked_in && selectUser(user)"
+                                        class="flex w-full items-center gap-3 border-b border-gray-100 px-3 py-2.5 text-left transition-colors last:border-b-0 dark:border-zinc-800"
+                                        :class="
+                                            user.checked_in
+                                                ? 'cursor-not-allowed opacity-60'
+                                                : 'hover:bg-gray-50 dark:hover:bg-zinc-800'
+                                        "
+                                    >
+                                        <div
+                                            class="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700"
+                                        >
+                                            <img
+                                                v-if="user.photo"
+                                                :src="user.photo"
+                                                class="h-full w-full object-cover"
+                                            />
+                                            <UserRound
+                                                v-else
+                                                class="h-full w-full p-1.5 text-gray-400"
+                                            />
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p
+                                                class="truncate text-sm font-medium text-gray-900 dark:text-white"
+                                            >
+                                                {{ user.name }}
+                                            </p>
+                                            <p
+                                                class="truncate text-xs text-gray-500 dark:text-gray-400"
+                                            >
+                                                {{ user.dni }}
+                                                <span
+                                                    v-if="user.affiliation"
+                                                    class="text-gray-400 dark:text-gray-500"
+                                                >
+                                                    · {{ user.affiliation }}
+                                                </span>
+                                            </p>
+                                        </div>
+                                        <span
+                                            v-if="user.checked_in"
+                                            class="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+                                        >
+                                            Ya registrado hoy
+                                        </span>
+                                        <span
+                                            v-else
+                                            class="shrink-0 rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300"
+                                        >
+                                            Registrar
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div
+                                v-else-if="searching"
+                                class="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500 shadow-lg dark:border-zinc-700 dark:bg-zinc-900 dark:text-gray-400"
+                            >
+                                Buscando...
                             </div>
                         </div>
                     </div>
