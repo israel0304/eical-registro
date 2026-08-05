@@ -32,6 +32,14 @@ return [
         'constancias.templates.manage' => 'Gestionar plantillas de constancias',
         'constancias.types.manage' => 'Gestionar tipos de participación',
         'constancias.download' => 'Descargar constancias',
+        'constancias.evento.manage' => 'Gestionar constancias de asistencia al evento',
+    ],
+    'Gafete' => [
+        'gafete.view' => 'Ver mi gafete',
+        'gafete.templates.manage' => 'Gestionar plantilla del gafete',
+    ],
+    'Check-in' => [
+        'checkin.scan' => 'Escanear gafetes para registro de asistencia',
     ],
     'Reportes' => [
         'reportes.view' => 'Ver reportes',

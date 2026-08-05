@@ -14,45 +14,70 @@ class CertificateTemplateController extends Controller
 {
     public function index(Request $request)
     {
+        return $this->indexFor($request, 'certificate');
+    }
+
+    public function badgeIndex(Request $request)
+    {
+        return $this->indexFor($request, 'badge');
+    }
+
+    private function indexFor(Request $request, string $kind)
+    {
         abort_if(! $request->user()->isAdmin(), 403);
 
         $templates = CertificateTemplate::query()
+            ->kind($kind)
             ->with('participationType')
             ->withCount('elements')
             ->orderBy('participation_type_id')
             ->orderBy('is_default', 'desc')
             ->get();
 
-        $participationTypes = ParticipationType::query()
-            ->withCount('templates')
-            ->orderBy('event_kind')
-            ->orderBy('role')
-            ->get();
+        $participationTypes = $kind === 'badge'
+            ? collect()
+            : ParticipationType::query()
+                ->withCount('templates')
+                ->orderBy('event_kind')
+                ->orderBy('role')
+                ->get();
 
         return Inertia::render('Constancias/Templates/Index', [
             'templates' => $templates,
             'participationTypes' => $participationTypes,
+            'kind' => $kind,
         ]);
     }
 
     public function store(Request $request)
     {
+        return $this->storeFor($request, 'certificate');
+    }
+
+    public function badgeStore(Request $request)
+    {
+        return $this->storeFor($request, 'badge');
+    }
+
+    private function storeFor(Request $request, string $kind)
+    {
         abort_if(! $request->user()->isAdmin(), 403);
 
-        $validated = $this->validateTemplate($request);
+        $validated = $this->validateTemplate($request, $kind);
 
         if ($validated['is_default'] ?? false) {
-            $this->clearDefault($validated['participation_type_id']);
+            $this->clearDefault($kind, $validated['participation_type_id'] ?? null);
         }
 
         $template = CertificateTemplate::create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'participation_type_id' => $validated['participation_type_id'],
+            'kind' => $kind,
+            'participation_type_id' => $validated['participation_type_id'] ?? null,
             'is_default' => (bool) ($validated['is_default'] ?? false),
             'width' => $validated['width'] ?? 1800,
             'height' => $validated['height'] ?? 1200,
-            'background_path' => $this->storeBackground($request),
+            'background_path' => $this->storeBackground($request, null, $kind),
         ]);
 
         return back()->with('success', 'Plantilla creada.');
@@ -60,41 +85,67 @@ class CertificateTemplateController extends Controller
 
     public function edit(Request $request, CertificateTemplate $template)
     {
+        return $this->editFor($request, $template);
+    }
+
+    public function badgeEdit(Request $request, CertificateTemplate $template)
+    {
+        return $this->editFor($request, $template);
+    }
+
+    private function editFor(Request $request, CertificateTemplate $template)
+    {
         abort_if(! $request->user()->isAdmin(), 403);
 
+        $kind = $template->kind ?? 'certificate';
         $template->load('elements', 'participationType');
 
-        $participationTypes = ParticipationType::query()
-            ->where('is_active', true)
-            ->orderBy('event_kind')
-            ->orderBy('role')
-            ->get();
+        $participationTypes = $kind === 'badge'
+            ? collect()
+            : ParticipationType::query()
+                ->where('is_active', true)
+                ->orderBy('event_kind')
+                ->orderBy('role')
+                ->get();
 
         return Inertia::render('Constancias/Templates/Edit', [
             'template' => $template,
-            'variables' => $this->availableVariables(),
+            'variables' => $this->availableVariables($kind),
             'participationTypes' => $participationTypes,
+            'kind' => $kind,
         ]);
     }
 
     public function update(Request $request, CertificateTemplate $template)
     {
+        return $this->updateFor($request, $template);
+    }
+
+    public function badgeUpdate(Request $request, CertificateTemplate $template)
+    {
+        return $this->updateFor($request, $template);
+    }
+
+    private function updateFor(Request $request, CertificateTemplate $template)
+    {
         abort_if(! $request->user()->isAdmin(), 403);
 
-        $validated = $this->validateTemplate($request);
+        $kind = $template->kind ?? 'certificate';
+        $validated = $this->validateTemplate($request, $kind);
 
         if ($validated['is_default'] ?? false) {
-            $this->clearDefault($validated['participation_type_id'], $template->id);
+            $this->clearDefault($kind, $validated['participation_type_id'] ?? null, $template->id);
         }
 
         $template->update([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'participation_type_id' => $validated['participation_type_id'],
+            'kind' => $kind,
+            'participation_type_id' => $validated['participation_type_id'] ?? null,
             'is_default' => (bool) ($validated['is_default'] ?? false),
             'width' => $validated['width'] ?? $template->width,
             'height' => $validated['height'] ?? $template->height,
-            'background_path' => $this->storeBackground($request, $template),
+            'background_path' => $this->storeBackground($request, $template, $kind),
         ]);
 
         $template->elements()->delete();
@@ -109,9 +160,9 @@ class CertificateTemplateController extends Controller
                 'variable' => $element['variable'] ?? null,
                 'x' => (float) ($element['x'] ?? 0),
                 'y' => (float) ($element['y'] ?? 0),
-                'width' => $element['width'] ? (int) $element['width'] : null,
-                'height' => $element['height'] ? (int) $element['height'] : null,
-                'font_size' => $element['font_size'] ? (int) $element['font_size'] : null,
+                'width' => ! empty($element['width']) ? (int) $element['width'] : null,
+                'height' => ! empty($element['height']) ? (int) $element['height'] : null,
+                'font_size' => ! empty($element['font_size']) ? (int) $element['font_size'] : null,
                 'font_weight' => $element['font_weight'] ?? null,
                 'font_family' => $element['font_family'] ?? null,
                 'color' => $element['color'] ?? null,
@@ -129,6 +180,16 @@ class CertificateTemplateController extends Controller
 
     public function destroy(Request $request, CertificateTemplate $template)
     {
+        return $this->destroyFor($request, $template);
+    }
+
+    public function badgeDestroy(Request $request, CertificateTemplate $template)
+    {
+        return $this->destroyFor($request, $template);
+    }
+
+    private function destroyFor(Request $request, CertificateTemplate $template)
+    {
         abort_if(! $request->user()->isAdmin(), 403);
 
         $template->delete();
@@ -136,18 +197,22 @@ class CertificateTemplateController extends Controller
         return back()->with('success', 'Plantilla eliminada.');
     }
 
-    private function validateTemplate(Request $request): array
+    private function validateTemplate(Request $request, string $kind): array
     {
+        $elementTypes = $kind === 'badge' ? ['text', 'qr', 'image'] : ['text', 'qr'];
+
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'participation_type_id' => ['required', 'exists:participation_types,id'],
+            'participation_type_id' => $kind === 'badge'
+                ? ['nullable', 'exists:participation_types,id']
+                : ['required', 'exists:participation_types,id'],
             'is_default' => ['nullable', 'boolean'],
             'width' => ['nullable', 'integer', 'min:200', 'max:5000'],
             'height' => ['nullable', 'integer', 'min:200', 'max:5000'],
             'background' => ['nullable', 'image', 'mimes:png', 'max:5120'],
             'elements' => ['nullable', 'array'],
-            'elements.*.type' => ['nullable', Rule::in(['text', 'qr'])],
+            'elements.*.type' => ['nullable', Rule::in($elementTypes)],
             'elements.*.content' => ['nullable', 'string'],
             'elements.*.variable' => ['nullable', 'string', 'max:100'],
             'elements.*.x' => ['nullable', 'numeric'],
@@ -163,7 +228,7 @@ class CertificateTemplateController extends Controller
         ]);
     }
 
-    private function storeBackground(Request $request, ?CertificateTemplate $template = null): ?string
+    private function storeBackground(Request $request, ?CertificateTemplate $template = null, string $kind = 'certificate'): ?string
     {
         if (! $request->hasFile('background')) {
             return $template?->background_path;
@@ -171,8 +236,9 @@ class CertificateTemplateController extends Controller
 
         $file = $request->file('background');
         $name = Str::uuid().'.png';
+        $disk = $kind === 'badge' ? 'badge_backgrounds' : 'certificate_backgrounds';
 
-        $path = $file->storeAs('certificate_backgrounds', $name, 'public');
+        $path = $file->storeAs($disk, $name, 'public');
 
         if ($template && $template->background_path) {
             Storage::disk('public')->delete($template->background_path);
@@ -181,10 +247,13 @@ class CertificateTemplateController extends Controller
         return $path;
     }
 
-    private function clearDefault(?int $participationTypeId, ?int $except = null): void
+    private function clearDefault(string $kind, ?int $participationTypeId, ?int $except = null): void
     {
-        $query = CertificateTemplate::where('participation_type_id', $participationTypeId)
-            ->where('is_default', true);
+        $query = CertificateTemplate::query()->kind($kind)->where('is_default', true);
+
+        if ($kind !== 'badge') {
+            $query->where('participation_type_id', $participationTypeId);
+        }
 
         if ($except !== null) {
             $query->where('id', '!=', $except);
@@ -193,8 +262,21 @@ class CertificateTemplateController extends Controller
         $query->update(['is_default' => false]);
     }
 
-    private function availableVariables(): array
+    private function availableVariables(string $kind): array
     {
+        if ($kind === 'badge') {
+            return [
+                ['key' => '{nombre}', 'label' => 'Nombre completo'],
+                ['key' => '{dni}', 'label' => 'DNI'],
+                ['key' => '{afiliacion}', 'label' => 'Afiliación / Institución'],
+                ['key' => '{evento}', 'label' => 'Nombre del evento'],
+                ['key' => '{rol}', 'label' => 'Rol de participación'],
+                ['key' => '{iniciales}', 'label' => 'Iniciales (si no hay foto)'],
+                ['key' => '{foto}', 'label' => 'Foto de perfil (elemento Foto)'],
+                ['key' => '{qr}', 'label' => 'Código QR de check-in'],
+            ];
+        }
+
         return [
             ['key' => '{nombre}', 'label' => 'Nombre del participante'],
             ['key' => '{tipo_participacion}', 'label' => 'Tipo de participación'],

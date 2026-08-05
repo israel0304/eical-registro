@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attendance;
 use App\Models\Certificate;
 use App\Models\Conference;
 use App\Models\Presentation;
@@ -65,6 +66,17 @@ class ConstanciaController extends Controller
             ->get()
             ->keyBy(fn ($certificate) => $certificate->event_type.'-'.$certificate->event_id);
 
+        $eventCertificate = Certificate::query()
+            ->where('user_id', $user->id)
+            ->where('event_type', 'event')
+            ->first();
+
+        $eventCheckedIn = Attendance::query()
+            ->where('user_id', $user->id)
+            ->whereNull('workshop_id')
+            ->whereNull('presentation_id')
+            ->exists();
+
         foreach ($completedWorkshops as $workshop) {
             $workshop->folio = $certificates->get('workshop-'.$workshop->id)?->folio;
         }
@@ -88,8 +100,60 @@ class ConstanciaController extends Controller
             'instructorWorkshops' => $instructorWorkshops,
             'presentationCertificates' => $presentationCertificates,
             'conferenceCertificates' => $conferenceCertificates,
+            'eventCertificate' => $eventCertificate,
+            'eventCheckedIn' => $eventCheckedIn,
             'user' => $user,
         ]);
+    }
+
+    public function downloadEvento(Request $request)
+    {
+        $user = $request->user();
+
+        $hasAttendance = Attendance::query()
+            ->where('user_id', $user->id)
+            ->whereNull('workshop_id')
+            ->whereNull('presentation_id')
+            ->exists();
+
+        if (! $hasAttendance) {
+            return back()->withErrors(['error' => 'Aún no tienes asistencia registrada al evento.']);
+        }
+
+        $certificate = $this->renderer->issueEvent($user);
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible generar la constancia.']);
+        }
+
+        $certificate->update(['downloaded_at' => now()]);
+
+        return $this->respondWithHtml($certificate);
+    }
+
+    public function adminDownloadEvento(User $user)
+    {
+        abort_if(! request()->user()->isAdmin(), 403);
+
+        $hasAttendance = Attendance::query()
+            ->where('user_id', $user->id)
+            ->whereNull('workshop_id')
+            ->whereNull('presentation_id')
+            ->exists();
+
+        if (! $hasAttendance) {
+            return back()->withErrors(['error' => 'El usuario no tiene asistencia registrada al evento.']);
+        }
+
+        $certificate = $this->renderer->issueEvent($user);
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible generar la constancia.']);
+        }
+
+        $certificate->update(['downloaded_at' => now()]);
+
+        return $this->respondWithHtml($certificate);
     }
 
     public function download(Request $request, $id)

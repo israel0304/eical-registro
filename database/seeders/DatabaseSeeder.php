@@ -5,9 +5,11 @@ namespace Database\Seeders;
 use App\Models\ParticipationType;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\PermissionSync;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -29,20 +31,31 @@ class DatabaseSeeder extends Seeder
             ['key' => 'simposiasta', 'label' => 'Simposiasta', 'event_kind' => 'conference', 'kind' => 'simposio', 'role' => 'speaker'],
             ['key' => 'moderador_mesa', 'label' => 'Moderador de mesa', 'event_kind' => 'conference', 'kind' => 'mesa_dialogo', 'role' => 'moderator'],
             ['key' => 'moderador_simposio', 'label' => 'Moderador de simposio', 'event_kind' => 'conference', 'kind' => 'simposio', 'role' => 'moderator'],
+            ['key' => 'evento_asistencia', 'label' => 'Asistente al evento', 'event_kind' => 'event', 'kind' => null, 'role' => null],
         ];
 
         foreach ($types as $type) {
             ParticipationType::updateOrCreate(['key' => $type['key']], $type);
         }
 
+        $settings = [
+            'evento_nombre' => 'EICAL 2026',
+            'evento_checkin_enabled' => '1',
+            'evento_min_dias' => '2',
+        ];
+
+        foreach ($settings as $key => $value) {
+            Setting::updateOrCreate(['key' => $key], ['value' => $value]);
+        }
+
         app(PermissionSync::class)->sync();
 
         $rolePermissions = [
-            2 => ['dashboard.view', 'workshops.view', 'workshops.my', 'presentations.view', 'presentations.my', 'constancias.view', 'constancias.download'],
-            3 => ['dashboard.view', 'workshops.view', 'workshops.my', 'constancias.view', 'constancias.download'],
-            4 => ['dashboard.view', 'workshops.view', 'workshops.my', 'constancias.view', 'constancias.download'],
-            5 => ['dashboard.view', 'constancias.view', 'constancias.download'],
-            6 => ['dashboard.view', 'constancias.view', 'constancias.download'],
+            2 => ['dashboard.view', 'workshops.view', 'workshops.my', 'presentations.view', 'presentations.my', 'constancias.view', 'constancias.download', 'gafete.view'],
+            3 => ['dashboard.view', 'workshops.view', 'workshops.my', 'constancias.view', 'constancias.download', 'gafete.view'],
+            4 => ['dashboard.view', 'workshops.view', 'workshops.my', 'constancias.view', 'constancias.download', 'gafete.view'],
+            5 => ['dashboard.view', 'constancias.view', 'constancias.download', 'gafete.view'],
+            6 => ['dashboard.view', 'constancias.view', 'constancias.download', 'gafete.view'],
         ];
 
         foreach ($rolePermissions as $roleId => $keys) {
@@ -64,5 +77,11 @@ class DatabaseSeeder extends Seeder
 
         $admin->roles()->sync([1]);
         Role::where('id', 1)->first()?->permissions()->sync(Permission::pluck('id'));
+
+        User::query()
+            ->whereNull('checkin_token')
+            ->each(function (User $user) {
+                $user->update(['checkin_token' => 'GFT-'.strtoupper(Str::random(16))]);
+            });
     }
 }
