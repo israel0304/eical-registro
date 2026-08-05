@@ -281,6 +281,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('gafete/imprimir', [GafeteController::class, 'print'])->name('gafete.print');
         Route::get('gafete/imprimir/pdf', [GafeteController::class, 'printPdf'])->name('gafete.print-pdf');
         Route::post('gafete/foto', [GafeteController::class, 'uploadPhoto'])->name('gafete.photo');
+        Route::delete('gafete/foto', [GafeteController::class, 'destroyPhoto'])->name('gafete.photo.destroy');
     });
 
     // Check-in (escáner de gafetes)

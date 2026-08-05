@@ -9,6 +9,7 @@ import {
     BadgeCheck,
     Building2,
     UserRound,
+    Trash2,
 } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, ref } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
@@ -37,6 +38,15 @@ const qrCanvas = ref<HTMLCanvasElement | null>(null);
 const photoForm = useForm<{ photo: File | null }>({
     photo: null,
 });
+
+const deletePhotoForm = useForm({});
+
+const removePhoto = () => {
+    if (!window.confirm('¿Eliminar tu foto de perfil?')) return;
+    deletePhotoForm.delete('/gafete/foto', {
+        preserveScroll: true,
+    });
+};
 
 const photoUrl = computed(() =>
     props.user.profile_photo_path
@@ -262,6 +272,21 @@ onMounted(generateQR);
                         >
                             Subiendo...
                         </p>
+                        <p
+                            v-if="deletePhotoForm.processing"
+                            class="mt-2 text-xs text-indigo-500"
+                        >
+                            Eliminando...
+                        </p>
+                        <button
+                            v-if="user.has_photo && !photoForm.processing"
+                            type="button"
+                            @click="removePhoto"
+                            class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950"
+                            :disabled="deletePhotoForm.processing"
+                        >
+                            <Trash2 class="h-4 w-4" /> Eliminar foto
+                        </button>
                     </div>
 
                     <div
