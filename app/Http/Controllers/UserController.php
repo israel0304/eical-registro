@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ParticipationType;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\BienvenidaNuevoUsuario;
@@ -41,11 +42,17 @@ class UserController extends Controller
 
         $users = $query->paginate(15)->withQueryString();
         $roles = Role::all();
+        $manualConstanciaTypes = ParticipationType::query()
+            ->where('manual_generable', true)
+            ->where('is_active', true)
+            ->orderBy('label')
+            ->get(['id', 'key', 'label']);
 
         return Inertia::render('Users/Index', [
             'users' => $users,
             'roles' => $roles,
             'filters' => $request->only(['search', 'role', 'status']),
+            'manualConstanciaTypes' => $manualConstanciaTypes,
         ]);
     }
 
