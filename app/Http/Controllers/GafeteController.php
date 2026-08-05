@@ -38,6 +38,7 @@ class GafeteController extends Controller
                 ->where('user_id', $user->id)
                 ->whereNull('workshop_id')
                 ->whereNull('presentation_id')
+                ->where('event_day', now()->format('Y-m-d'))
                 ->exists(),
             'printUrl' => route('gafete.print'),
         ]);

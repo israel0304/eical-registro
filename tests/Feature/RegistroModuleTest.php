@@ -61,6 +61,7 @@ class RegistroModuleTest extends TestCase
     {
         Setting::create(['key' => 'evento_checkin_enabled', 'value' => '1']);
         Setting::create(['key' => 'evento_nombre', 'value' => 'EICAL 2026']);
+        Setting::create(['key' => 'evento_min_dias', 'value' => '1']);
     }
 
     private function badgeTemplate(): CertificateTemplate
@@ -232,6 +233,178 @@ class RegistroModuleTest extends TestCase
             ->assertStatus(422);
     }
 
+    public function test_checkin_is_per_day_and_certificate_requires_min_days()
+    {
+        $this->enableEventCheckin();
+        $this->eventoType();
+        Setting::updateOrCreate(['key' => 'evento_min_dias'], ['value' => '2']);
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => now()->format('Y-m-d')]);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => now()->addDay()->format('Y-m-d')]);
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = User::factory()->create();
+        $this->actingAs($staff);
+
+        $this->travelTo(now()->startOfDay());
+
+        $first = $this->postJson('/checkin/register', ['token' => $participant->checkin_token]);
+        $first->assertOk()
+            ->assertJson(['success' => true, 'qualifies' => false, 'certificate_issued' => false]);
+        $this->assertDatabaseMissing('certificates', ['user_id' => $participant->id, 'event_type' => 'event']);
+
+        $this->travelTo(now()->startOfDay()->addDay());
+
+        $second = $this->postJson('/checkin/register', ['token' => $participant->checkin_token]);
+        $second->assertOk()
+            ->assertJson(['success' => true, 'qualifies' => true, 'certificate_issued' => true]);
+
+        $this->assertSame(2, Attendance::query()
+            ->where('user_id', $participant->id)
+            ->whereNull('workshop_id')
+            ->whereNull('presentation_id')
+            ->distinct()
+            ->count('event_day'));
+
+        $this->travelBack();
+    }
+
+    public function test_checkin_rejects_same_day_duplicate_but_allows_next_day()
+    {
+        $this->enableEventCheckin();
+        $this->eventoType();
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => now()->format('Y-m-d')]);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => now()->addDay()->format('Y-m-d')]);
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = User::factory()->create();
+        $this->actingAs($staff);
+
+        $this->travelTo(now()->startOfDay());
+        $this->postJson('/checkin/register', ['token' => $participant->checkin_token])->assertOk();
+
+        $this->postJson('/checkin/register', ['token' => $participant->checkin_token])
+            ->assertOk()
+            ->assertJson(['already' => true]);
+
+        $this->travelTo(now()->startOfDay()->addDay());
+
+        $this->postJson('/checkin/register', ['token' => $participant->checkin_token])
+            ->assertOk()
+            ->assertJson(['success' => true]);
+
+        $this->travelBack();
+    }
+
+    public function test_checkin_rejects_outside_event_dates()
+    {
+        $this->enableEventCheckin();
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => now()->subDay()->format('Y-m-d')]);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => now()->format('Y-m-d')]);
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = User::factory()->create();
+        $this->actingAs($staff);
+
+        $this->travelTo(now()->addDay()->startOfDay());
+
+        $this->postJson('/checkin/register', ['token' => $participant->checkin_token])
+            ->assertStatus(422)
+            ->assertJson(['success' => false]);
+
+        $this->travelBack();
+    }
+
+    public function test_event_constancia_is_blocked_until_min_days_met()
+    {
+        $this->enableEventCheckin();
+        $this->eventoType();
+        Setting::updateOrCreate(['key' => 'evento_min_dias'], ['value' => '2']);
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => now()->format('Y-m-d')]);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => now()->addDay()->format('Y-m-d')]);
+        $user = $this->userWith('Asistente', ['gafete.view', 'constancias.view', 'constancias.download']);
+        $admin = $this->admin();
+
+        $this->travelTo(now()->startOfDay());
+        Attendance::create([
+            'user_id' => $user->id,
+            'event_day' => now()->format('Y-m-d'),
+            'registered_by' => $admin->id,
+        ]);
+        $this->actingAs($user);
+
+        $this->get('/constancias/evento/download')
+            ->assertRedirect()
+            ->assertSessionHasErrors('error');
+
+        $this->travelTo(now()->startOfDay()->addDay());
+        Attendance::create([
+            'user_id' => $user->id,
+            'event_day' => now()->format('Y-m-d'),
+            'registered_by' => $admin->id,
+        ]);
+
+        $response = $this->get('/constancias/evento/download');
+        $response->assertOk();
+        $this->assertStringContainsString($user->first_name, $response->getContent());
+
+        $this->travelBack();
+    }
+
+    public function test_generate_constancias_skips_users_below_min_days()
+    {
+        $this->enableEventCheckin();
+        $this->eventoType();
+        Setting::updateOrCreate(['key' => 'evento_min_dias'], ['value' => '2']);
+        $admin = $this->admin();
+        $partial = User::factory()->create();
+        $complete = User::factory()->create();
+        Attendance::create([
+            'user_id' => $partial->id,
+            'event_day' => now()->format('Y-m-d'),
+            'registered_by' => $admin->id,
+        ]);
+        Attendance::create([
+            'user_id' => $complete->id,
+            'event_day' => now()->format('Y-m-d'),
+            'registered_by' => $admin->id,
+        ]);
+        Attendance::create([
+            'user_id' => $complete->id,
+            'event_day' => now()->subDay()->format('Y-m-d'),
+            'registered_by' => $admin->id,
+        ]);
+        $this->actingAs($admin);
+
+        $this->post('/admin/evento/generar-constancias')->assertRedirect();
+
+        $this->assertDatabaseHas('certificates', ['user_id' => $complete->id, 'event_type' => 'event']);
+        $this->assertDatabaseMissing('certificates', ['user_id' => $partial->id, 'event_type' => 'event']);
+    }
+
+    public function test_evento_index_filters_attendances_by_day()
+    {
+        $this->enableEventCheckin();
+        $admin = $this->admin();
+        $today = now()->format('Y-m-d');
+        $tomorrow = now()->addDay()->format('Y-m-d');
+        $userToday = User::factory()->create();
+        $userTomorrow = User::factory()->create();
+        Attendance::create(['user_id' => $userToday->id, 'event_day' => $today, 'registered_by' => $admin->id]);
+        Attendance::create(['user_id' => $userTomorrow->id, 'event_day' => $tomorrow, 'registered_by' => $admin->id]);
+        $this->actingAs($admin);
+
+        $this->get('/admin/evento?day='.$today)
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Evento/Index')
+                ->where('selected_day', $today)
+                ->has('attendances', 1));
+
+        $this->get('/admin/evento')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Evento/Index')
+                ->where('selected_day', null)
+                ->has('attendances', 2));
+    }
+
     public function test_admin_can_access_and_update_evento_settings()
     {
         $this->enableEventCheckin();
@@ -243,10 +416,15 @@ class RegistroModuleTest extends TestCase
             'evento_nombre' => 'EICAL 2027',
             'evento_checkin_enabled' => 0,
             'evento_min_dias' => 5,
+            'evento_fecha_inicio' => '2027-03-01',
+            'evento_fecha_fin' => '2027-03-04',
         ])->assertRedirect();
 
         $this->assertDatabaseHas('settings', ['key' => 'evento_nombre', 'value' => 'EICAL 2027']);
         $this->assertDatabaseHas('settings', ['key' => 'evento_checkin_enabled', 'value' => '0']);
+        $this->assertDatabaseHas('settings', ['key' => 'evento_min_dias', 'value' => '5']);
+        $this->assertDatabaseHas('settings', ['key' => 'evento_fecha_inicio', 'value' => '2027-03-01']);
+        $this->assertDatabaseHas('settings', ['key' => 'evento_fecha_fin', 'value' => '2027-03-04']);
     }
 
     public function test_non_admin_cannot_manage_evento()

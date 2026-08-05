@@ -8,7 +8,7 @@ import {
     FileBadge,
     UserRound,
 } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const props = defineProps<{
@@ -16,8 +16,13 @@ const props = defineProps<{
         evento_nombre: string;
         evento_checkin_enabled: boolean;
         evento_min_dias: number;
+        evento_fecha_inicio: string | null;
+        evento_fecha_fin: string | null;
+        total_days: number;
     };
     attendances: any[];
+    days: { date: string; label: string; count: number }[];
+    selected_day: string | null;
     total_checked_in: number;
     constancias_issued: number;
     total_users: number;
@@ -27,9 +32,24 @@ const form = useForm({
     evento_nombre: props.settings.evento_nombre,
     evento_checkin_enabled: props.settings.evento_checkin_enabled,
     evento_min_dias: props.settings.evento_min_dias,
+    evento_fecha_inicio: props.settings.evento_fecha_inicio ?? '',
+    evento_fecha_fin: props.settings.evento_fecha_fin ?? '',
 });
 
 const saving = ref(false);
+
+const selectedDay = computed(() => props.selected_day ?? '');
+
+const applyDayFilter = (day: string) => {
+    router.get(
+        '/admin/evento',
+        day ? { day } : {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+        },
+    );
+};
 
 const save = () => {
     saving.value = true;
@@ -122,6 +142,41 @@ const downloadConstancia = (userId: number) => {
                                     class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                 />
                             </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label
+                                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    >
+                                        Fecha de inicio
+                                    </label>
+                                    <input
+                                        v-model="form.evento_fecha_inicio"
+                                        type="date"
+                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    />
+                                </div>
+                                <div>
+                                    <label
+                                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    >
+                                        Fecha de fin
+                                    </label>
+                                    <input
+                                        v-model="form.evento_fecha_fin"
+                                        type="date"
+                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    />
+                                </div>
+                            </div>
+                            <p
+                                v-if="settings.total_days > 0"
+                                class="text-xs text-gray-400 dark:text-gray-500"
+                            >
+                                El evento dura
+                                {{ settings.total_days }}
+                                {{ settings.total_days === 1 ? 'día' : 'días' }}.
+                                El check-in será por cada día del rango.
+                            </p>
                             <div>
                                 <label
                                     class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
@@ -138,8 +193,8 @@ const downloadConstancia = (userId: number) => {
                                 <p
                                     class="mt-1 text-xs text-gray-400 dark:text-gray-500"
                                 >
-                                    Límite de días para editar/registrar
-                                    asistencias pasadas.
+                                    Días de asistencia necesarios para poder
+                                    emitir la constancia del evento.
                                 </p>
                             </div>
                             <label
@@ -235,6 +290,36 @@ const downloadConstancia = (userId: number) => {
                     </h2>
 
                     <div
+                        v-if="days.length > 0"
+                        class="mb-4 flex flex-wrap items-center gap-2"
+                    >
+                        <button
+                            @click="applyDayFilter('')"
+                            :class="[
+                                'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                                selectedDay === ''
+                                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
+                                    : 'border-gray-200 bg-white text-gray-600 hover:border-indigo-300 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300',
+                            ]"
+                        >
+                            Todos ({{ total_checked_in }})
+                        </button>
+                        <button
+                            v-for="day in days"
+                            :key="day.date"
+                            @click="applyDayFilter(day.date)"
+                            :class="[
+                                'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                                selectedDay === day.date
+                                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
+                                    : 'border-gray-200 bg-white text-gray-600 hover:border-indigo-300 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300',
+                            ]"
+                        >
+                            {{ day.label }} ({{ day.count }})
+                        </button>
+                    </div>
+
+                    <div
                         v-if="attendances.length > 0"
                         class="overflow-x-auto"
                     >
@@ -254,6 +339,16 @@ const downloadConstancia = (userId: number) => {
                                         class="px-3 py-2 font-medium"
                                     >
                                         DNI
+                                    </th>
+                                    <th
+                                        class="px-3 py-2 font-medium"
+                                    >
+                                        Día
+                                    </th>
+                                    <th
+                                        class="px-3 py-2 font-medium"
+                                    >
+                                        Días
                                     </th>
                                     <th
                                         class="px-3 py-2 font-medium"
@@ -297,6 +392,27 @@ const downloadConstancia = (userId: number) => {
                                         class="px-3 py-2.5 font-mono text-xs text-gray-500 dark:text-gray-400"
                                     >
                                         {{ attendance.user?.dni }}
+                                    </td>
+                                    <td
+                                        class="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400"
+                                    >
+                                        {{ attendance.day_label }}
+                                    </td>
+                                    <td
+                                        class="px-3 py-2.5 text-xs"
+                                    >
+                                        <span
+                                            :class="[
+                                                'font-semibold',
+                                                attendance.qualifies
+                                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                                    : 'text-gray-500 dark:text-gray-400',
+                                            ]"
+                                        >
+                                            {{ attendance.days_attended }}
+                                            /
+                                            {{ settings.evento_min_dias }}
+                                        </span>
                                     </td>
                                     <td
                                         class="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400"

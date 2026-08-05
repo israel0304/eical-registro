@@ -15,6 +15,8 @@ import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 defineProps<{
     attendances: any[];
     checkinEnabled: boolean;
+    dayLabel: string;
+    requiredDays: number;
 }>();
 
 type ScanResult = {
@@ -22,6 +24,10 @@ type ScanResult = {
     message: string;
     already?: boolean;
     certificate_issued?: boolean;
+    day_label?: string;
+    days_attended?: number;
+    required_days?: number;
+    qualifies?: boolean;
     user?: {
         id: number;
         name: string;
@@ -29,6 +35,7 @@ type ScanResult = {
         affiliation: string | null;
         photo: string | null;
         checked_in: boolean;
+        days_attended?: number;
     } | null;
 };
 
@@ -217,6 +224,11 @@ onBeforeUnmount(() => {
                         Escanea el QR del gafete para registrar la asistencia
                         al evento.
                     </p>
+                    <p
+                        class="mt-1 text-sm font-medium text-indigo-600 dark:text-indigo-400"
+                    >
+                        {{ dayLabel }}
+                    </p>
                 </div>
                 <span
                     v-if="!checkinEnabled"
@@ -368,14 +380,56 @@ onBeforeUnmount(() => {
                                             >
                                                 {{ result.user.dni }}
                                             </p>
-                                            <p
+                                            <div
                                                 v-if="
-                                                    result.certificate_issued
+                                                    result.day_label ||
+                                                    result.days_attended !==
+                                                        undefined
                                                 "
-                                                class="mt-1 text-xs text-emerald-700 dark:text-emerald-300"
+                                                class="mt-2 space-y-1"
                                             >
-                                                Constancia de evento disponible.
-                                            </p>
+                                                <p
+                                                    v-if="result.day_label"
+                                                    class="text-xs font-medium text-gray-600 dark:text-gray-300"
+                                                >
+                                                    {{ result.day_label }}
+                                                </p>
+                                                <p
+                                                    class="text-xs text-gray-500 dark:text-gray-400"
+                                                >
+                                                    Asistencia:
+                                                    {{
+                                                        result.days_attended
+                                                    }}
+                                                    /
+                                                    {{
+                                                        result.required_days
+                                                    }}
+                                                    días requeridos
+                                                </p>
+                                                <p
+                                                    v-if="
+                                                        result.certificate_issued
+                                                    "
+                                                    class="text-xs text-emerald-700 dark:text-emerald-300"
+                                                >
+                                                    Constancia de evento
+                                                    disponible.
+                                                </p>
+                                                <p
+                                                    v-else-if="result.success"
+                                                    class="text-xs text-gray-500 dark:text-gray-400"
+                                                >
+                                                    Faltan
+                                                    {{
+                                                        (result.required_days ??
+                                                            0) -
+                                                        (result.days_attended ??
+                                                            0)
+                                                    }}
+                                                    día(s) para la constancia.
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

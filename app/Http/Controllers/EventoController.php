@@ -7,6 +7,7 @@ use App\Models\Certificate;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\CertificateRenderer;
+use App\Support\EventSettings;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -21,24 +22,72 @@ class EventoController extends Controller
         $attendances = Attendance::query()
             ->whereNull('workshop_id')
             ->whereNull('presentation_id')
+            ->when($request->filled('day'), function ($query) use ($request) {
+                $query->where('event_day', $request->input('day'));
+            })
             ->with(['user:id,first_name,last_name,dni,affiliation,email', 'registeredBy:id,first_name,last_name'])
+            ->orderByDesc('event_day')
             ->orderByDesc('created_at')
             ->get()
             ->map(function (Attendance $attendance) {
                 $attendance->setAttribute('certificate_issued', $this->hasEventCertificate($attendance->user_id));
+                $attendance->setAttribute('days_attended', EventSettings::attendedDays($attendance->user_id));
+                $attendance->setAttribute('qualifies', EventSettings::qualifies($attendance->user_id));
+                $attendance->setAttribute('day_label', EventSettings::dayLabel($attendance->event_day));
 
                 return $attendance;
             });
 
+        $dayCounts = Attendance::query()
+            ->whereNull('workshop_id')
+            ->whereNull('presentation_id')
+            ->selectRaw('event_day, COUNT(*) as total')
+            ->groupBy('event_day')
+            ->get()
+            ->keyBy('event_day');
+
+        $days = [];
+        foreach (EventSettings::eventDays() as $date) {
+            $days[] = [
+                'date' => $date,
+                'label' => EventSettings::dayLabel($date),
+                'count' => (int) ($dayCounts->get($date)?->total ?? 0),
+            ];
+        }
+
+        foreach ($dayCounts as $date => $row) {
+            if (! in_array($date, EventSettings::eventDays(), true)) {
+                $days[] = [
+                    'date' => $date,
+                    'label' => EventSettings::dayLabel($date) ?: $date,
+                    'count' => (int) $row->total,
+                ];
+            }
+        }
+
+        usort($days, fn ($a, $b) => strcmp($a['date'], $b['date']));
+
         return Inertia::render('Evento/Index', [
             'settings' => [
-                'evento_nombre' => Setting::query()->where('key', 'evento_nombre')->value('value') ?? '',
-                'evento_checkin_enabled' => (bool) Setting::query()->where('key', 'evento_checkin_enabled')->value('value'),
-                'evento_min_dias' => (int) (Setting::query()->where('key', 'evento_min_dias')->value('value') ?? 2),
+                'evento_nombre' => EventSettings::nombre(),
+                'evento_checkin_enabled' => EventSettings::checkinEnabled(),
+                'evento_min_dias' => EventSettings::minDays(),
+                'evento_fecha_inicio' => EventSettings::startDate(),
+                'evento_fecha_fin' => EventSettings::endDate(),
+                'total_days' => EventSettings::totalDays(),
             ],
             'attendances' => $attendances,
-            'total_checked_in' => $attendances->count(),
-            'constancias_issued' => $attendances->where('certificate_issued', true)->count(),
+            'days' => $days,
+            'selected_day' => $request->input('day'),
+            'total_checked_in' => Attendance::query()
+                ->whereNull('workshop_id')
+                ->whereNull('presentation_id')
+                ->distinct()
+                ->count('user_id'),
+            'constancias_issued' => Certificate::query()
+                ->where('event_type', 'event')
+                ->distinct()
+                ->count('user_id'),
             'total_users' => User::count(),
         ]);
     }
@@ -51,11 +100,15 @@ class EventoController extends Controller
             'evento_nombre' => ['required', 'string', 'max:255'],
             'evento_checkin_enabled' => ['nullable', 'boolean'],
             'evento_min_dias' => ['required', 'integer', 'min:1', 'max:31'],
+            'evento_fecha_inicio' => ['nullable', 'date'],
+            'evento_fecha_fin' => ['nullable', 'date', 'after_or_equal:evento_fecha_inicio'],
         ]);
 
         Setting::updateOrCreate(['key' => 'evento_nombre'], ['value' => $validated['evento_nombre']]);
         Setting::updateOrCreate(['key' => 'evento_checkin_enabled'], ['value' => (bool) ($validated['evento_checkin_enabled'] ?? false) ? '1' : '0']);
         Setting::updateOrCreate(['key' => 'evento_min_dias'], ['value' => (string) $validated['evento_min_dias']]);
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => $validated['evento_fecha_inicio'] ?? '']);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => $validated['evento_fecha_fin'] ?? '']);
 
         return back()->with('success', 'Configuración del evento actualizada.');
     }
@@ -67,14 +120,22 @@ class EventoController extends Controller
         $userIds = Attendance::query()
             ->whereNull('workshop_id')
             ->whereNull('presentation_id')
-            ->pluck('user_id')
-            ->unique();
+            ->distinct()
+            ->pluck('user_id');
 
         $generated = 0;
+        $skipped = 0;
+
         foreach ($userIds as $userId) {
             $user = User::find($userId);
 
             if ($user === null) {
+                continue;
+            }
+
+            if (! EventSettings::qualifies($user->id)) {
+                $skipped++;
+
                 continue;
             }
 
@@ -83,7 +144,7 @@ class EventoController extends Controller
             }
         }
 
-        return back()->with('success', "Constancias de evento generadas/verificadas para {$generated} asistentes.");
+        return back()->with('success', "Constancias de evento generadas/verificadas para {$generated} asistentes".($skipped > 0 ? " (se omitieron {$skipped} por no cumplir los días mínimos)." : '.'));
     }
 
     private function hasEventCertificate(int $userId): bool
