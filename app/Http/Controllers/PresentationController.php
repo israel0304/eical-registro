@@ -165,6 +165,10 @@ class PresentationController extends Controller
 
         $presentation->update($validated);
 
+        if ($request->has('authors_presented') && ! $request->inertia()) {
+            return response()->json(['ok' => true]);
+        }
+
         return to_route('presentations.index')->with('success', 'Ponencia actualizada correctamente.');
     }
 
