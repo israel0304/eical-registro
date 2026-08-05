@@ -305,6 +305,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('admin/evento', [EventoController::class, 'index'])->name('evento.index');
         Route::put('admin/evento', [EventoController::class, 'update'])->name('evento.update');
         Route::post('admin/evento/generar-constancias', [EventoController::class, 'generateConstancias'])->name('evento.generate-constancias');
+        Route::delete('admin/evento/attendance/{attendance}', [EventoController::class, 'destroyAttendance'])->name('evento.attendance-destroy');
     });
 
     // Admin: certificate templates

@@ -378,6 +378,41 @@ class RegistroModuleTest extends TestCase
         $this->assertDatabaseMissing('certificates', ['user_id' => $partial->id, 'event_type' => 'event']);
     }
 
+    public function test_admin_can_delete_event_attendance()
+    {
+        $admin = $this->admin();
+        $participant = User::factory()->create();
+        $attendance = Attendance::create([
+            'user_id' => $participant->id,
+            'event_day' => now()->format('Y-m-d'),
+            'registered_by' => $admin->id,
+        ]);
+        $this->actingAs($admin);
+
+        $this->delete('/admin/evento/attendance/'.$attendance->id)
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('attendances', ['id' => $attendance->id]);
+    }
+
+    public function test_non_admin_cannot_delete_event_attendance()
+    {
+        $admin = $this->admin();
+        $participant = User::factory()->create();
+        $attendance = Attendance::create([
+            'user_id' => $participant->id,
+            'event_day' => now()->format('Y-m-d'),
+            'registered_by' => $admin->id,
+        ]);
+        $user = $this->userWith('Asistente', ['gafete.view']);
+        $this->actingAs($user);
+
+        $this->delete('/admin/evento/attendance/'.$attendance->id)
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('attendances', ['id' => $attendance->id]);
+    }
+
     public function test_evento_index_filters_attendances_by_day()
     {
         $this->enableEventCheckin();
