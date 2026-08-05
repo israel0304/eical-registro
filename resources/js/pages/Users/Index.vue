@@ -8,6 +8,7 @@ import {
     Edit,
     Trash2,
     CheckCircle2,
+    Award,
     X,
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
@@ -46,6 +47,7 @@ const props = defineProps<{
     };
     roles: any[];
     filters: any;
+    manualConstanciaTypes?: any[];
 }>();
 
 // Filtros Reactivos
@@ -184,6 +186,13 @@ const confirmForceDelete = (user: any) => {
         });
     }
 };
+
+const constanciaUser = ref<any>(null);
+const openConstanciaModal = (user: any) => {
+    constanciaUser.value = user;
+};
+const constanciaUrl = (type: any) =>
+    `/admin/constancias/tipos/${type.id}/usuario/${constanciaUser.value.id}/generar`;
 
 // Carga CSV Múltiple
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -447,6 +456,14 @@ const handleFileUpload = (event: Event) => {
                                     <div
                                         class="flex items-center justify-end gap-2"
                                     >
+                                        <button
+                                            v-if="manualConstanciaTypes?.length"
+                                            @click="openConstanciaModal(user)"
+                                            title="Generar constancia"
+                                            class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-indigo-400"
+                                        >
+                                            <Award class="h-4 w-4" />
+                                        </button>
                                         <button
                                             @click="openEditModal(user)"
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
@@ -973,6 +990,77 @@ const handleFileUpload = (event: Event) => {
                             @click="showResetModal = false"
                         >
                             Cerrar mensaje
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div
+            v-if="constanciaUser"
+            class="fixed inset-0 z-[60] overflow-y-auto"
+            aria-labelledby="modal-title"
+            role="dialog"
+            aria-modal="true"
+        >
+            <div
+                class="flex min-h-screen items-center justify-center px-4 text-center sm:p-0"
+            >
+                <div
+                    class="fixed inset-0 bg-black/50 transition-opacity"
+                    @click="constanciaUser = null"
+                ></div>
+
+                <div
+                    class="relative z-10 inline-block transform overflow-hidden rounded-3xl border bg-white p-8 text-left shadow-2xl transition-all sm:w-full sm:max-w-md dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                    <button
+                        @click="constanciaUser = null"
+                        class="absolute top-5 right-5 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-white"
+                    >
+                        <X class="h-5 w-5" />
+                    </button>
+
+                    <div
+                        class="mx-auto mb-6 flex h-[70px] w-[70px] items-center justify-center rounded-full border border-gray-400 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800"
+                    >
+                        <Award class="h-[34px] w-[34px] text-gray-800 dark:text-gray-200" />
+                    </div>
+
+                    <h3 class="text-center text-[17px] font-medium text-gray-900 dark:text-white">
+                        Generar constancia para
+                    </h3>
+                    <p class="mt-1 text-center text-sm text-gray-500 dark:text-gray-400">
+                        {{ constanciaUser.first_name }} {{ constanciaUser.last_name }}
+                    </p>
+
+                    <div class="mt-6 space-y-2">
+                        <a
+                            v-for="type in manualConstanciaTypes"
+                            :key="type.id"
+                            :href="constanciaUrl(type)"
+                            class="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-zinc-700 dark:text-gray-300 dark:hover:border-indigo-700 dark:hover:bg-indigo-900/20"
+                        >
+                            <span>{{ type.label }}</span>
+                            <span class="text-xs text-gray-400">{{ type.key }}</span>
+                        </a>
+
+                        <p
+                            v-if="!manualConstanciaTypes?.length"
+                            class="rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-500 dark:border-zinc-700 dark:text-gray-400"
+                        >
+                            No hay tipos marcados como "Generable manualmente".
+                            Créalos en Constancias → Tipos.
+                        </p>
+                    </div>
+
+                    <div class="mt-6 flex justify-center">
+                        <button
+                            type="button"
+                            class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-6 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                            @click="constanciaUser = null"
+                        >
+                            Cerrar
                         </button>
                     </div>
                 </div>

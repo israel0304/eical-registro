@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\Certificate;
 use App\Models\Conference;
+use App\Models\ParticipationType;
 use App\Models\Presentation;
 use App\Models\User;
 use App\Models\Workshop;
@@ -277,6 +278,25 @@ class ConstanciaController extends Controller
         abort_if(! request()->user()->isAdmin(), 403);
 
         $certificate = $this->renderer->issue($user, 'conference', $conference);
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible generar la constancia.']);
+        }
+
+        $certificate->update(['downloaded_at' => now()]);
+
+        return $this->respondWithHtml($certificate);
+    }
+
+    public function adminGenerate(ParticipationType $type, User $user)
+    {
+        abort_if(! request()->user()->isAdmin(), 403);
+
+        if (! $type->manual_generable) {
+            return back()->withErrors(['error' => 'Este tipo de constancia no está marcado como generable manualmente.']);
+        }
+
+        $certificate = $this->renderer->issueType($user, $type, $type->event_kind, 0);
 
         if ($certificate === null) {
             return back()->withErrors(['error' => 'No fue posible generar la constancia.']);

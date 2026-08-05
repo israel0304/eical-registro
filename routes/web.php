@@ -280,6 +280,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('constancias/conferencia/{conference}/download', [ConstanciaController::class, 'downloadConferencia'])->middleware('can:constancias.download')->name('constancias.conferencia.download');
     Route::get('admin/constancias/conferencia/{conference}/{user}/download', [ConstanciaController::class, 'adminDownloadConferencia'])->middleware('can:constancias.download')->name('constancias.conferencia.admin-download');
 
+    // Generación manual de constancias de tipos marcados como "manuales" (ej. staff)
+    Route::get('admin/constancias/tipos/{type}/usuario/{user}/generar', [ConstanciaController::class, 'adminGenerate'])->middleware('can:constancias.download')->name('constancias.tipos.admin-generate');
+
     // Gafete
     Route::middleware('can:gafete.view')->group(function () {
         Route::get('gafete', [GafeteController::class, 'show'])->name('gafete.show');
