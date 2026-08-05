@@ -17,14 +17,21 @@ class ParticipationType extends Model
         'kind',
         'role',
         'is_active',
+        'manual_generable',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'manual_generable' => 'boolean',
     ];
 
     public function templates(): HasMany
     {
         return $this->hasMany(CertificateTemplate::class);
+    }
+
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(Certificate::class);
     }
 }
