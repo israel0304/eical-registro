@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Notifications\BienvenidaNuevoUsuario;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -95,6 +96,9 @@ class PonenteActivationController extends Controller
 
         $request->session()->forget('activating_ponente_id');
 
-        return redirect()->route('login')->with('success', 'Cuenta activada correctamente. Ya puedes iniciar sesión.');
+        Auth::login($user);
+
+        return redirect()->intended(config('fortify.home'))
+            ->with('success', 'Cuenta activada correctamente. Bienvenido.');
     }
 }
