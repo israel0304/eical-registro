@@ -49,13 +49,17 @@ const extractToken = (text: string) => {
     return match ? decodeURIComponent(match[1]) : text.trim();
 };
 
-const getCookie = (name: string) =>
-    document.cookie
-        .split('; ')
-        .find((row) => row.startsWith(`${name}=`))
-        ?.split('=')
-        .slice(1)
-        .join('=') ?? '';
+const getCookie = (name: string) => {
+    try {
+        const row = document.cookie
+            .split('; ')
+            .find((entry) => entry.startsWith(`${name}=`));
+
+        return row ? decodeURIComponent(row.slice(name.length + 1)) : '';
+    } catch {
+        return '';
+    }
+};
 
 const register = async (token: string) => {
     if (!token || processing.value) return;
