@@ -18,6 +18,8 @@ const props = defineProps<{
     instructorWorkshops?: any[];
     presentationCertificates?: any[];
     conferenceCertificates?: any[];
+    eventCertificate?: any;
+    eventCheckedIn?: boolean;
     user: any;
 }>();
 
@@ -45,6 +47,10 @@ const downloadConferencia = (conferenceId: number) => {
     );
 };
 
+const downloadEvento = () => {
+    window.open('/constancias/evento/download', '_blank');
+};
+
 const roleLabel = (role: string | null) =>
     ({ speaker: 'Speaker', moderator: 'Moderador' })[role ?? ''] ?? role ?? '';
 
@@ -53,7 +59,8 @@ const hasAnyCertificates = computed(() => {
         !!props.completedWorkshops?.length ||
         !!props.instructorWorkshops?.length ||
         (!!canSeePonencias.value && !!props.presentationCertificates?.length) ||
-        !!props.conferenceCertificates?.length
+        !!props.conferenceCertificates?.length ||
+        !!props.eventCertificate
     );
 });
 </script>
@@ -70,6 +77,47 @@ const hasAnyCertificates = computed(() => {
             >
                 Mis Constancias
             </h1>
+
+            <!-- Constancia de asistencia al evento -->
+            <div v-if="eventCheckedIn || eventCertificate">
+                <div
+                    class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                    <div class="flex items-start gap-4">
+                        <div
+                            class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-cyan-100 dark:bg-cyan-900/30"
+                        >
+                            <Users
+                                class="h-6 w-6 text-cyan-600 dark:text-cyan-400"
+                            />
+                        </div>
+                        <div class="flex-1">
+                            <h2
+                                class="text-sm font-semibold text-gray-900 dark:text-white"
+                            >
+                                Constancia de asistencia al evento
+                            </h2>
+                            <p
+                                class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                            >
+                                Por tu asistencia verificada al evento general.
+                            </p>
+                            <p
+                                v-if="eventCertificate?.folio"
+                                class="mt-1 font-mono text-[11px] text-cyan-600 dark:text-cyan-400"
+                            >
+                                Folio: {{ eventCertificate.folio }}
+                            </p>
+                        </div>
+                        <button
+                            @click="downloadEvento"
+                            class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-100 dark:border-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300"
+                        >
+                            <Download class="h-4 w-4" /> Descargar Constancia
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Talleres -->
             <div v-if="completedWorkshops && completedWorkshops.length > 0">

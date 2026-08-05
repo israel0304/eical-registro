@@ -19,7 +19,7 @@ import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 interface ElementModel {
     _uid: string;
     id: number | null;
-    type: 'text' | 'qr';
+    type: 'text' | 'qr' | 'image';
     content: string | null;
     variable: string | null;
     x: number;
@@ -54,7 +54,15 @@ const props = defineProps<{
         event_kind: string;
         role: string;
     }[];
+    kind?: string;
 }>();
+
+const isBadge = computed(() => props.kind === 'badge');
+const basePath = computed(() =>
+    isBadge.value
+        ? '/admin/gafetes/plantillas'
+        : '/admin/constancias/plantillas',
+);
 
 const form = useForm({
     name: props.template.name,
@@ -122,14 +130,25 @@ const backgroundUrl = computed(() =>
 const SAMPLE: Record<string, string> = {
     '{nombre}': 'María Fernanda López',
     '{tipo_participacion}': 'Asistente a taller',
-    '{evento}': 'Taller de Fotografía Científica',
+    '{evento}': 'EICAL 2026',
     '{fecha_evento}': '12 de agosto de 2026',
     '{folio}': 'EICAL-2026-0001',
+    '{dni}': 'CNV-ABC1234',
+    '{afiliacion}': 'Centro de Investigación y de Estudios Avanzados del IPN',
+    '{rol}': 'Asistente',
+    '{iniciales}': 'ML',
+    '{foto}': '',
 };
+
+const SAMPLE_PHOTO =
+    'data:image/svg+xml;base64,' +
+    btoa(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="100%" height="100%" fill="#e2e8f0"/><text x="50%" y="50%" font-family="Arial, sans-serif" font-size="160" fill="#94a3b8" text-anchor="middle" dominant-baseline="central">ML</text></svg>',
+    );
 
 const previewText = (content: string | null) =>
     (content ?? '').replace(
-        /\{nombre\}|\{tipo_participacion\}|\{evento\}|\{fecha_evento\}|\{folio\}/g,
+        /\{nombre\}|\{tipo_participacion\}|\{evento\}|\{fecha_evento\}|\{folio\}|\{dni\}|\{afiliacion\}|\{rol\}|\{iniciales\}/g,
         (m) => SAMPLE[m] ?? m,
     );
 
@@ -147,7 +166,7 @@ const qrFor = (el: ElementModel) => {
     return qrPreviews[el._uid];
 };
 
-const addElement = (type: 'text' | 'qr') => {
+const addElement = (type: 'text' | 'qr' | 'image') => {
     const maxZ = elements.value.reduce(
         (max, el) => Math.max(max, el.z_index),
         0,
@@ -160,8 +179,8 @@ const addElement = (type: 'text' | 'qr') => {
         variable: null,
         x: Math.round(designWidth.value / 2 - 200),
         y: Math.round(designHeight.value / 2 - 30),
-        width: 400,
-        height: 60,
+        width: type === 'text' ? 400 : 200,
+        height: type === 'text' ? 60 : 200,
         font_size: type === 'text' ? 42 : null,
         font_weight: type === 'text' ? 'bold' : null,
         font_family: type === 'text' ? 'Georgia, serif' : null,
@@ -289,7 +308,7 @@ const save = () => {
     }));
 
     form.elements = serverElements;
-    form.put('/admin/constancias/plantillas/' + props.template.id, {
+    form.put(basePath.value + '/' + props.template.id, {
         preserveScroll: true,
     });
 };
@@ -342,7 +361,7 @@ onMounted(() => {
 <template>
     <AppLayout
         :breadcrumbs="[
-            { title: 'Plantillas', href: '/admin/constancias/plantillas' },
+            { title: isBadge ? 'Plantilla del Gafete' : 'Plantillas', href: basePath },
             { title: form.name || 'Editor', href: '#' },
         ]"
     >
@@ -355,7 +374,7 @@ onMounted(() => {
             >
                 <div class="flex items-center gap-3">
                     <Link
-                        href="/admin/constancias/plantillas"
+                        :href="basePath"
                         class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
                     >
                         <ChevronLeft class="h-4 w-4" />
@@ -430,6 +449,13 @@ onMounted(() => {
                         >
                             <QrCode class="h-4 w-4" /> Agregar QR
                         </button>
+                        <button
+                            v-if="isBadge"
+                            @click="addElement('image')"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:border-indigo-400 hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:text-indigo-400"
+                        >
+                            <Image class="h-4 w-4" /> Agregar foto
+                        </button>
                     </div>
 
                     <div class="mt-4">
@@ -451,15 +477,23 @@ onMounted(() => {
                                 @click="selectedUid = el._uid"
                             >
                                 <component
-                                    :is="el.type === 'qr' ? QrCode : Type"
+                                    :is="
+                                        el.type === 'qr'
+                                            ? QrCode
+                                            : el.type === 'image'
+                                              ? Image
+                                              : Type
+                                    "
                                     class="h-4 w-4 shrink-0"
                                 />
                                 <span class="flex-1 truncate">
                                     {{
                                         el.type === 'qr'
                                             ? 'QR'
-                                            : previewText(el.content) ||
-                                              '(vacío)'
+                                            : el.type === 'image'
+                                              ? 'Foto'
+                                              : previewText(el.content) ||
+                                                '(vacío)'
                                     }}
                                 </span>
                                 <span
@@ -511,7 +545,7 @@ onMounted(() => {
                                     class="w-full rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                 ></textarea>
                             </div>
-                            <div>
+                            <div v-if="!isBadge">
                                 <label
                                     class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
                                 >
@@ -580,6 +614,12 @@ onMounted(() => {
                                     class="pointer-events-none h-full w-full"
                                     draggable="false"
                                 />
+                                <img
+                                    v-else-if="el.type === 'image'"
+                                    :src="SAMPLE_PHOTO"
+                                    class="pointer-events-none h-full w-full rounded-lg object-cover"
+                                    draggable="false"
+                                />
                                 <div
                                     v-else
                                     class="pointer-events-none min-h-full whitespace-pre-line"
@@ -609,7 +649,9 @@ onMounted(() => {
                                 {{
                                     selected.type === 'qr'
                                         ? 'Código QR'
-                                        : 'Texto'
+                                        : selected.type === 'image'
+                                          ? 'Foto'
+                                          : 'Texto'
                                 }}
                             </h3>
                             <div class="flex items-center gap-1">
@@ -630,35 +672,37 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <template v-if="selected.type === 'text'">
-                            <label
-                                class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
-                            >
-                                Contenido
-                            </label>
-                            <textarea
-                                v-model="selected.content"
-                                rows="4"
-                                class="mb-2 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                            ></textarea>
+                                <template v-if="selected.type === 'text'">
+                                    <label
+                                        class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
+                                    >
+                                        Contenido
+                                    </label>
+                                    <textarea
+                                        v-model="selected.content"
+                                        rows="4"
+                                        class="mb-2 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    ></textarea>
 
-                            <label
-                                class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
-                            >
-                                Insertar variable
-                            </label>
-                            <div class="mb-3 flex flex-wrap gap-1">
-                                <button
-                                    v-for="variable in variables"
-                                    :key="variable.key"
-                                    @click="insertVariable(variable.key)"
-                                    class="rounded bg-indigo-50 px-2 py-1 font-mono text-[11px] text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300"
-                                    :title="variable.label"
-                                >
-                                    {{ variable.key }}
-                                </button>
-                            </div>
-                        </template>
+                                    <label
+                                        class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
+                                    >
+                                        Insertar variable
+                                    </label>
+                                    <div class="mb-3 flex flex-wrap gap-1">
+                                        <button
+                                            v-for="variable in variables.filter(
+                                                (v) => v.key !== '{foto}',
+                                            )"
+                                            :key="variable.key"
+                                            @click="insertVariable(variable.key)"
+                                            class="rounded bg-indigo-50 px-2 py-1 font-mono text-[11px] text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300"
+                                            :title="variable.label"
+                                        >
+                                            {{ variable.key }}
+                                        </button>
+                                    </div>
+                                </template>
 
                         <div
                             class="grid grid-cols-2 gap-2"
@@ -803,7 +847,7 @@ onMounted(() => {
                             </div>
                         </template>
 
-                        <template v-else>
+                        <template v-else-if="selected.type === 'qr'">
                             <div class="mt-3">
                                 <label
                                     class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
@@ -818,6 +862,47 @@ onMounted(() => {
                                     class="w-full rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                 />
                             </div>
+                        </template>
+
+                        <template v-else-if="selected.type === 'image'">
+                            <div
+                                class="mt-3 grid grid-cols-2 gap-2"
+                            >
+                                <div>
+                                    <label
+                                        class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
+                                    >
+                                        Ancho
+                                    </label>
+                                    <input
+                                        v-model.number="selected.width"
+                                        type="number"
+                                        min="40"
+                                        max="1200"
+                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    />
+                                </div>
+                                <div>
+                                    <label
+                                        class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
+                                    >
+                                        Alto
+                                    </label>
+                                    <input
+                                        v-model.number="selected.height"
+                                        type="number"
+                                        min="40"
+                                        max="1200"
+                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    />
+                                </div>
+                            </div>
+                            <p
+                                class="mt-2 text-xs text-gray-400 dark:text-gray-500"
+                            >
+                                Muestra la foto de perfil del participante, o
+                                sus iniciales si no tiene foto.
+                            </p>
                         </template>
                     </template>
 

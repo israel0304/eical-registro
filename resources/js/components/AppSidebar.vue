@@ -12,6 +12,10 @@ import {
     Presentation,
     Tags,
     ShieldCheck,
+    BadgeCheck,
+    ScanLine,
+    CreditCard,
+    CalendarDays,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
@@ -81,6 +85,26 @@ const mainNavItems = computed<NavItem[]>(() => {
 
     if (can('constancias.view')) {
         items.push({ title: 'Mis Constancias', href: '/constancias', icon: Award });
+    }
+
+    if (can('gafete.view')) {
+        items.push({ title: 'Mi Gafete', href: '/gafete', icon: BadgeCheck });
+    }
+
+    if (can('checkin.scan')) {
+        items.push({ title: 'Check-in', href: '/checkin', icon: ScanLine });
+    }
+
+    if (can('constancias.evento.manage')) {
+        items.push({ title: 'Evento', href: '/admin/evento', icon: CalendarDays });
+    }
+
+    if (can('gafete.templates.manage')) {
+        items.push({
+            title: 'Plantilla Gafete',
+            href: '/admin/gafetes/plantillas',
+            icon: CreditCard,
+        });
     }
 
     if (can('constancias.templates.manage')) {
