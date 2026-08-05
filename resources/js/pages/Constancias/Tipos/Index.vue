@@ -1,29 +1,39 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Plus, Trash2 } from 'lucide-vue-next';
+import { Pencil, Plus, Trash2, X } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
-defineProps<{
+const props = defineProps<{
     participationTypes: any[];
+    catalog: {
+        event_kinds: Record<string, string>;
+        roles: Record<string, string>;
+        kinds: Record<string, Record<string, string>>;
+        role_rules: Record<string, string[]>;
+    };
 }>();
 
-const eventKindLabel = (kind: string) =>
-    ({ workshop: 'Taller', presentation: 'Ponencia', conference: 'Conferencia' })[kind] ??
-    kind;
+const eventKindLabel = (kind: string) => props.catalog.event_kinds[kind] ?? kind;
 
-const roleLabel = (role: string) =>
-    ({
-        enrolled_attendance: 'Asistente',
-        instructor: 'Instructor',
-        presented_author: 'Ponente presentado',
-        speaker: 'Speaker',
-        moderator: 'Moderador',
-    })[role] ?? role;
+const roleLabel = (role: string | null) =>
+    role ? (props.catalog.roles[role] ?? role) : '—';
 
-const kindLabel = (kind: string | null) =>
-    ({ magistral: 'Magistral', especial: 'Especial', simposio: 'Simposio', mesa_dialogo: 'Mesa de diálogo' })[
-        kind ?? ''
-    ] ?? kind ?? '—';
+const kindLabel = (kind: string | null) => {
+    if (!kind) return '—';
+    for (const group of Object.values(props.catalog.kinds)) {
+        if (group[kind]) return group[kind];
+    }
+    return kind;
+};
+
+const kindsFor = (eventKind: string) => Object.entries(props.catalog.kinds[eventKind] ?? {});
+
+const allowedRolesFor = (eventKind: string) => props.catalog.role_rules[eventKind] ?? [];
+
+const roleOptions = computed(() =>
+    Object.entries(props.catalog.roles).filter(([value]) => allowedRolesFor(typeForm.event_kind).includes(value)),
+);
 
 const typeForm = useForm({
     key: '',
@@ -32,16 +42,71 @@ const typeForm = useForm({
     kind: '',
     role: 'enrolled_attendance',
     is_active: true,
+    manual_generable: false,
 });
 
-const saveType = () => {
-    typeForm.post('/admin/constancias/tipos', {
-        preserveScroll: true,
-        onSuccess: () => typeForm.reset(),
-    });
+const editingId = ref<number | null>(null);
+const editing = computed(() => editingId.value !== null);
+const keyTouched = ref(false);
+
+const slugify = (s: string) =>
+    s
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+
+watch(
+    () => typeForm.label,
+    (label) => {
+        if (!keyTouched.value && !editing.value) {
+            typeForm.key = slugify(label);
+        }
+    },
+);
+
+const onKeyInput = () => {
+    keyTouched.value = true;
 };
 
-const updateType = (type: any) => {
+const saveType = () => {
+    const options = {
+        preserveScroll: true,
+        onSuccess: () => {
+            typeForm.reset();
+            editingId.value = null;
+            keyTouched.value = false;
+        },
+    };
+    if (editing.value) {
+        typeForm.put('/admin/constancias/tipos/' + editingId.value, options);
+    } else {
+        typeForm.post('/admin/constancias/tipos', options);
+    }
+};
+
+const editType = (type: any) => {
+    editingId.value = type.id;
+    typeForm.clearErrors();
+    typeForm.key = type.key;
+    typeForm.label = type.label;
+    typeForm.event_kind = type.event_kind;
+    typeForm.kind = type.kind ?? '';
+    typeForm.role = type.role ?? '';
+    typeForm.is_active = type.is_active;
+    typeForm.manual_generable = type.manual_generable;
+    keyTouched.value = true;
+};
+
+const cancelEdit = () => {
+    editingId.value = null;
+    typeForm.reset();
+    typeForm.clearErrors();
+    keyTouched.value = false;
+};
+
+const toggleActive = (type: any, checked: boolean) => {
     router.put(
         '/admin/constancias/tipos/' + type.id,
         {
@@ -50,15 +115,22 @@ const updateType = (type: any) => {
             event_kind: type.event_kind,
             kind: type.kind ?? null,
             role: type.role,
-            is_active: type.is_active,
+            is_active: checked,
         },
         { preserveScroll: true },
     );
 };
 
-const deleteType = (id: number) => {
+const deleteType = (type: any) => {
+    const refs = type.templates_count + type.certificates_count;
+    if (refs > 0) {
+        alert(
+            `No se puede eliminar este tipo: tiene ${type.templates_count} plantilla(s) y ${type.certificates_count} constancia(s) asociadas.`,
+        );
+        return;
+    }
     if (confirm('¿Eliminar este tipo de participación?')) {
-        router.delete('/admin/constancias/tipos/' + id, {
+        router.delete('/admin/constancias/tipos/' + type.id, {
             preserveScroll: true,
         });
     }
@@ -91,9 +163,19 @@ const deleteType = (id: number) => {
                 <div
                     class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2 dark:border-zinc-800 dark:bg-zinc-900"
                 >
-                    <h3 class="mb-4 text-sm font-semibold text-gray-900 dark:text-white">
-                        Nuevo tipo
-                    </h3>
+                    <div class="mb-4 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                            {{ editing ? 'Editar tipo' : 'Nuevo tipo' }}
+                        </h3>
+                        <button
+                            v-if="editing"
+                            @click="cancelEdit"
+                            type="button"
+                            class="rounded-md px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
                     <form @submit.prevent="saveType" class="space-y-3">
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
@@ -101,6 +183,7 @@ const deleteType = (id: number) => {
                             </label>
                             <input
                                 v-model="typeForm.key"
+                                @input="onKeyInput"
                                 type="text"
                                 required
                                 placeholder="ej. conferencia_magistral"
@@ -135,10 +218,17 @@ const deleteType = (id: number) => {
                                     required
                                     class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                 >
-                                    <option value="workshop">Taller</option>
-                                    <option value="presentation">Ponencia</option>
-                                    <option value="conference">Conferencia</option>
+                                    <option
+                                        v-for="[value, label] in Object.entries(catalog.event_kinds)"
+                                        :key="value"
+                                        :value="value"
+                                    >
+                                        {{ label }}
+                                    </option>
                                 </select>
+                                <p v-if="typeForm.errors.event_kind" class="mt-1 text-xs text-red-500">
+                                    {{ typeForm.errors.event_kind }}
+                                </p>
                             </div>
                             <div>
                                 <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
@@ -146,38 +236,85 @@ const deleteType = (id: number) => {
                                 </label>
                                 <select
                                     v-model="typeForm.role"
-                                    required
+                                    :required="allowedRolesFor(typeForm.event_kind).length > 0"
                                     class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                 >
-                                    <option value="enrolled_attendance">Asistente</option>
-                                    <option value="instructor">Instructor</option>
-                                    <option value="presented_author">Ponente presentado</option>
-                                    <option value="speaker">Speaker</option>
-                                    <option value="moderator">Moderador</option>
+                                    <option
+                                        v-if="allowedRolesFor(typeForm.event_kind).length === 0"
+                                        value=""
+                                    >
+                                        Sin rol
+                                    </option>
+                                    <option v-else value="" disabled>Selecciona un rol</option>
+                                    <option
+                                        v-for="[value, label] in roleOptions"
+                                        :key="value"
+                                        :value="value"
+                                    >
+                                        {{ label }}
+                                    </option>
                                 </select>
+                                <p v-if="typeForm.errors.role" class="mt-1 text-xs text-red-500">
+                                    {{ typeForm.errors.role }}
+                                </p>
                             </div>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
                                 Sub-tipo (kind) <span class="text-gray-400">— opcional</span>
                             </label>
-                            <input
+                            <select
                                 v-model="typeForm.kind"
-                                type="text"
-                                placeholder="ej. magistral, especial, simposio, mesa_dialogo"
                                 class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                            />
+                            >
+                                <option value="">Ninguno (aplica a todos)</option>
+                                <option
+                                    v-if="
+                                        typeForm.kind &&
+                                        !kindsFor(typeForm.event_kind).some(([value]) => value === typeForm.kind)
+                                    "
+                                    :value="typeForm.kind"
+                                >
+                                    {{ kindLabel(typeForm.kind) }}
+                                </option>
+                                <option
+                                    v-for="[value, label] in kindsFor(typeForm.event_kind)"
+                                    :key="value"
+                                    :value="value"
+                                >
+                                    {{ label }}
+                                </option>
+                            </select>
+                            <p v-if="typeForm.errors.kind" class="mt-1 text-xs text-red-500">
+                                {{ typeForm.errors.kind }}
+                            </p>
                             <p class="mt-1 text-[11px] text-gray-400">
                                 Si se deja vacío aplica a cualquier sub-tipo del
                                 evento.
                             </p>
                         </div>
+                        <label class="flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+                            <input
+                                type="checkbox"
+                                v-model="typeForm.manual_generable"
+                                class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                Generable manualmente (admin)
+                            </span>
+                        </label>
+                        <p class="text-[11px] text-gray-400">
+                            Los tipos marcados aparecen en el botón "Constancia"
+                            de la sección de usuarios para generarse a mano.
+                        </p>
                         <button
                             type="submit"
                             :disabled="typeForm.processing"
                             class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
                         >
-                            <Plus class="h-4 w-4" /> Crear tipo
+                            <X v-if="editing" class="h-4 w-4" />
+                            <Plus v-else class="h-4 w-4" />
+                            {{ editing ? 'Guardar cambios' : 'Crear tipo' }}
                         </button>
                     </form>
                 </div>
@@ -197,6 +334,12 @@ const deleteType = (id: number) => {
                                     </th>
                                     <th class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300">
                                         Plantillas
+                                    </th>
+                                    <th class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300">
+                                        Constancias
+                                    </th>
+                                    <th class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300">
+                                        Manual
                                     </th>
                                     <th class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300">
                                         Estado
@@ -225,17 +368,24 @@ const deleteType = (id: number) => {
                                     <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">
                                         {{ type.templates_count }}
                                     </td>
+                                    <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                        {{ type.certificates_count }}
+                                    </td>
+                                    <td class="px-5 py-3">
+                                        <span
+                                            v-if="type.manual_generable"
+                                            class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
+                                        >
+                                            Sí
+                                        </span>
+                                        <span v-else class="text-xs text-gray-400">—</span>
+                                    </td>
                                     <td class="px-5 py-3">
                                         <label class="inline-flex cursor-pointer items-center">
                                             <input
                                                 type="checkbox"
                                                 :checked="type.is_active"
-                                                @change="
-                                                    updateType({
-                                                        ...type,
-                                                        is_active: $event.target.checked,
-                                                    })
-                                                "
+                                                @change="toggleActive(type, $event.target.checked)"
                                                 class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                             />
                                             <span class="ml-2 text-xs text-gray-500">
@@ -245,7 +395,13 @@ const deleteType = (id: number) => {
                                     </td>
                                     <td class="px-5 py-3 text-right whitespace-nowrap">
                                         <button
-                                            @click="deleteType(type.id)"
+                                            @click="editType(type)"
+                                            class="mr-1 rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-indigo-400"
+                                        >
+                                            <Pencil class="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            @click="deleteType(type)"
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-red-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-red-400"
                                         >
                                             <Trash2 class="h-4 w-4" />

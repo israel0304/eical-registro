@@ -31,7 +31,8 @@ class DatabaseSeeder extends Seeder
             ['key' => 'simposiasta', 'label' => 'Simposiasta', 'event_kind' => 'conference', 'kind' => 'simposio', 'role' => 'speaker'],
             ['key' => 'moderador_mesa', 'label' => 'Moderador de mesa', 'event_kind' => 'conference', 'kind' => 'mesa_dialogo', 'role' => 'moderator'],
             ['key' => 'moderador_simposio', 'label' => 'Moderador de simposio', 'event_kind' => 'conference', 'kind' => 'simposio', 'role' => 'moderator'],
-            ['key' => 'evento_asistencia', 'label' => 'Asistente al evento', 'event_kind' => 'event', 'kind' => null, 'role' => null],
+            ['key' => 'evento_asistencia', 'label' => 'Asistente al evento', 'event_kind' => 'event', 'kind' => null, 'role' => null, 'manual_generable' => false],
+            ['key' => 'staff', 'label' => 'Personal de apoyo', 'event_kind' => 'staff', 'kind' => null, 'role' => null, 'manual_generable' => true],
         ];
 
         foreach ($types as $type) {
@@ -74,6 +75,7 @@ class DatabaseSeeder extends Seeder
                 'last_name' => 'Sistema',
                 'dni' => 'ADMIN001',
                 'is_active' => true,
+                'email_verified_at' => now(),
                 'password' => 'password',
             ]
         );
