@@ -15,6 +15,7 @@ class CertificateTemplate extends Model
     protected $fillable = [
         'name',
         'description',
+        'kind',
         'participation_type_id',
         'is_default',
         'background_path',
@@ -31,6 +32,11 @@ class CertificateTemplate extends Model
     public function participationType(): BelongsTo
     {
         return $this->belongsTo(ParticipationType::class);
+    }
+
+    public function scopeKind($query, string $kind)
+    {
+        return $query->where('kind', $kind);
     }
 
     public function elements(): HasMany

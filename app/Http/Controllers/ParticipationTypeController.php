@@ -58,9 +58,9 @@ class ParticipationTypeController extends Controller
         return $request->validate([
             'key' => ['required', 'string', 'max:100', Rule::unique('participation_types', 'key')->ignore($type?->id)],
             'label' => ['required', 'string', 'max:255'],
-            'event_kind' => ['required', Rule::in(['workshop', 'presentation', 'conference'])],
+            'event_kind' => ['required', Rule::in(['workshop', 'presentation', 'conference', 'event'])],
             'kind' => ['nullable', 'string', 'max:100'],
-            'role' => ['required', Rule::in(['enrolled_attendance', 'instructor', 'presented_author', 'speaker', 'moderator'])],
+            'role' => ['nullable', Rule::in(['enrolled_attendance', 'instructor', 'presented_author', 'speaker', 'moderator'])],
             'is_active' => ['nullable', 'boolean'],
         ]);
     }

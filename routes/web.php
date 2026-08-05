@@ -3,8 +3,11 @@
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CertificateTemplateController;
 use App\Http\Controllers\CertificateVerificationController;
+use App\Http\Controllers\CheckinController;
 use App\Http\Controllers\ConferenceController;
 use App\Http\Controllers\ConstanciaController;
+use App\Http\Controllers\EventoController;
+use App\Http\Controllers\GafeteController;
 use App\Http\Controllers\ParticipationTypeController;
 use App\Http\Controllers\PonenteActivationController;
 use App\Http\Controllers\PresentationController;
@@ -38,6 +41,8 @@ Route::get('/ponente/activar/{token}', [PonenteActivationController::class, 'sho
 Route::post('/ponente/establecer-contrasena', [PonenteActivationController::class, 'setPassword'])->name('ponente.set-password');
 
 Route::get('constancias/verificar/{folio}', [CertificateVerificationController::class, 'show'])->name('constancias.verificar');
+
+Route::get('gafete/escaneo', [GafeteController::class, 'scanInfo'])->name('gafete.scan-info');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
@@ -253,6 +258,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Constancias
     Route::get('constancias', [ConstanciaController::class, 'myCertificates'])->middleware('can:constancias.view')->name('constancias.my');
+
+    // Constancia de asistencia al evento (antes de rutas genéricas)
+    Route::get('constancias/evento/download', [ConstanciaController::class, 'downloadEvento'])->middleware('can:constancias.download')->name('constancias.evento.download');
+    Route::get('admin/constancias/evento/{user}/download', [ConstanciaController::class, 'adminDownloadEvento'])->middleware('can:constancias.download')->name('constancias.evento.admin-download');
+
     Route::get('constancias/{id}/download', [ConstanciaController::class, 'download'])->middleware('can:constancias.download')->name('constancias.download');
     Route::get('constancias/{certificate}/pdf', [ConstanciaController::class, 'downloadPdf'])->middleware('can:constancias.download')->name('constancias.pdf');
     Route::get('admin/constancias/{workshopId}/{userId}/download', [ConstanciaController::class, 'adminDownload'])->middleware('can:constancias.download')->name('constancias.admin.download');
@@ -264,6 +274,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Constancias de conferencia
     Route::get('constancias/conferencia/{conference}/download', [ConstanciaController::class, 'downloadConferencia'])->middleware('can:constancias.download')->name('constancias.conferencia.download');
     Route::get('admin/constancias/conferencia/{conference}/{user}/download', [ConstanciaController::class, 'adminDownloadConferencia'])->middleware('can:constancias.download')->name('constancias.conferencia.admin-download');
+
+    // Gafete
+    Route::middleware('can:gafete.view')->group(function () {
+        Route::get('gafete', [GafeteController::class, 'show'])->name('gafete.show');
+        Route::get('gafete/imprimir', [GafeteController::class, 'print'])->name('gafete.print');
+        Route::get('gafete/imprimir/pdf', [GafeteController::class, 'printPdf'])->name('gafete.print-pdf');
+        Route::post('gafete/foto', [GafeteController::class, 'uploadPhoto'])->name('gafete.photo');
+    });
+
+    // Check-in (escáner de gafetes)
+    Route::middleware('can:checkin.scan')->group(function () {
+        Route::get('checkin', [CheckinController::class, 'index'])->name('checkin.index');
+        Route::post('checkin/register', [CheckinController::class, 'register'])->name('checkin.register');
+        Route::get('checkin/lookup', [CheckinController::class, 'lookup'])->name('checkin.lookup');
+    });
+
+    // Admin: badge templates
+    Route::middleware('can:gafete.templates.manage')->group(function () {
+        Route::get('admin/gafetes/plantillas', [CertificateTemplateController::class, 'badgeIndex'])->name('gafete.templates.index');
+        Route::post('admin/gafetes/plantillas', [CertificateTemplateController::class, 'badgeStore'])->name('gafete.templates.store');
+        Route::get('admin/gafetes/plantillas/{template}/edit', [CertificateTemplateController::class, 'badgeEdit'])->name('gafete.templates.edit');
+        Route::put('admin/gafetes/plantillas/{template}', [CertificateTemplateController::class, 'badgeUpdate'])->name('gafete.templates.update');
+        Route::delete('admin/gafetes/plantillas/{template}', [CertificateTemplateController::class, 'badgeDestroy'])->name('gafete.templates.destroy');
+    });
+
+    // Admin: evento (check-in + constancias)
+    Route::middleware('can:constancias.evento.manage')->group(function () {
+        Route::get('admin/evento', [EventoController::class, 'index'])->name('evento.index');
+        Route::put('admin/evento', [EventoController::class, 'update'])->name('evento.update');
+        Route::post('admin/evento/generar-constancias', [EventoController::class, 'generateConstancias'])->name('evento.generate-constancias');
+    });
 
     // Admin: certificate templates
     Route::middleware('can:constancias.templates.manage')->group(function () {

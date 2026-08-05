@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable implements MustVerifyEmail
@@ -45,6 +46,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'dni',
+        'checkin_token',
         'affiliation',
         'country',
         'state',
@@ -76,6 +78,26 @@ class User extends Authenticatable implements MustVerifyEmail
             'two_factor_confirmed_at' => 'datetime',
             'password_set_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            if (empty($user->checkin_token)) {
+                $user->checkin_token = 'GFT-'.strtoupper(Str::random(16));
+            }
+        });
+    }
+
+    public function ensureCheckinToken(): string
+    {
+        if (! empty($this->checkin_token)) {
+            return $this->checkin_token;
+        }
+
+        $this->update(['checkin_token' => 'GFT-'.strtoupper(Str::random(16))]);
+
+        return $this->checkin_token;
     }
 
     public function roles(): BelongsToMany
