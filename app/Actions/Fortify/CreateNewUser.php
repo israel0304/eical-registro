@@ -34,6 +34,7 @@ class CreateNewUser implements CreatesNewUsers
             'country' => $input['country'],
             'state' => $input['state'],
             'password' => $input['password'],
+            'password_set_at' => now(),
         ]);
 
         $user->roles()->sync([3]); // Asistente

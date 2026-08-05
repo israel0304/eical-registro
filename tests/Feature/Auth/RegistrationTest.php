@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -32,5 +33,13 @@ class RegistrationTest extends TestCase
 
         $response->assertSessionHasNoErrors();
         $response->assertRedirect(route('dashboard', absolute: false));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'test@example.com',
+            'email_verified_at' => null,
+        ]);
+
+        $user = User::where('email', 'test@example.com')->first();
+        $this->assertNotNull($user->password_set_at);
     }
 }

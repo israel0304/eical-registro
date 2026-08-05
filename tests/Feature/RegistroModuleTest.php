@@ -737,4 +737,35 @@ class RegistroModuleTest extends TestCase
         $this->assertNotNull($existing->activation_token);
         Notification::assertSentTo($existing, BienvenidaNuevoUsuario::class);
     }
+
+    public function test_csv_import_preserves_existing_user_account_and_gains_role()
+    {
+        Notification::fake();
+        $this->actingAs($this->admin());
+
+        $asistenteRole = Role::firstOrCreate(['name' => 'Asistente']);
+        $ponenteRole = Role::firstOrCreate(['name' => 'Ponente']);
+
+        $asistente = User::factory()->create([
+            'email' => 'carla@correo.mx',
+            'password_set_at' => now(),
+            'activation_token' => null,
+        ]);
+        $asistente->roles()->sync([$asistenteRole->id]);
+        $password = $asistente->password;
+        $dni = $asistente->dni;
+
+        $csv = "nombre,apellido,email,,,,rol\nCarla,Lopez,carla@correo.mx,,,,Ponente\n";
+        $file = UploadedFile::fake()->createWithContent('users.csv', $csv);
+
+        $this->post(route('users.import'), ['csv_file' => $file])
+            ->assertSessionHas('success');
+
+        $asistente->refresh();
+        $this->assertSame($password, $asistente->password);
+        $this->assertSame($dni, $asistente->dni);
+        $this->assertTrue($asistente->roles()->where('roles.id', $asistenteRole->id)->exists());
+        $this->assertTrue($asistente->roles()->where('roles.id', $ponenteRole->id)->exists());
+        Notification::assertNotSentTo($asistente, BienvenidaNuevoUsuario::class);
+    }
 }

@@ -213,16 +213,18 @@ class UserController extends Controller
                 }
             }
 
-            $user = User::updateOrCreate(
-                ['email' => $row[2] ?? ''],
-                [
+            $user = User::where('email', $row[2] ?? '')->first();
+
+            if ($user === null) {
+                $user = User::create([
                     'first_name' => $row[0] ?? 'CSV',
                     'last_name' => $row[1] ?? 'User',
+                    'email' => $row[2] ?? '',
                     'dni' => 'CNV-'.strtoupper(Str::random(7)),
                     'is_active' => true,
                     'password' => Hash::make(Str::random(12)),
-                ]
-            );
+                ]);
+            }
 
             if ($user->wasRecentlyCreated || (! $user->hasSetPassword() && is_null($user->activation_token))) {
                 $activationToken = Str::random(60);
