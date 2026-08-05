@@ -16,6 +16,7 @@ const props = defineProps<{
     settings: {
         evento_nombre: string;
         evento_checkin_enabled: boolean;
+        evento_checkin_time_restricted: boolean;
         evento_min_dias: number;
         evento_fecha_inicio: string | null;
         evento_fecha_fin: string | null;
@@ -32,6 +33,8 @@ const props = defineProps<{
 const form = useForm({
     evento_nombre: props.settings.evento_nombre,
     evento_checkin_enabled: props.settings.evento_checkin_enabled,
+    evento_checkin_time_restricted:
+        props.settings.evento_checkin_time_restricted,
     evento_min_dias: props.settings.evento_min_dias,
     evento_fecha_inicio: props.settings.evento_fecha_inicio ?? '',
     evento_fecha_fin: props.settings.evento_fecha_fin ?? '',
@@ -277,6 +280,22 @@ const deleteAttendance = (attendance: any) => {
                                 />
                                 Check-in habilitado
                             </label>
+                            <label
+                                class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+                            >
+                                <input
+                                    v-model="form.evento_checkin_time_restricted"
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                Restricción horaria
+                            </label>
+                            <p
+                                class="text-xs text-gray-400 dark:text-gray-500"
+                            >
+                                Desactiva para permitir registrar asistencias
+                                fuera de las fechas del evento (pruebas).
+                            </p>
                             <button
                                 type="submit"
                                 :disabled="saving"

@@ -352,6 +352,26 @@ class RegistroModuleTest extends TestCase
         $this->travelBack();
     }
 
+    public function test_checkin_allows_outside_event_dates_when_time_restriction_disabled()
+    {
+        $this->enableEventCheckin();
+        $this->eventoType();
+        Setting::updateOrCreate(['key' => 'evento_checkin_time_restricted'], ['value' => '0']);
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => now()->subDay()->format('Y-m-d')]);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => now()->format('Y-m-d')]);
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = User::factory()->create();
+        $this->actingAs($staff);
+
+        $this->travelTo(now()->addDay()->startOfDay());
+
+        $this->postJson('/checkin/register', ['token' => $participant->checkin_token])
+            ->assertOk()
+            ->assertJson(['success' => true]);
+
+        $this->travelBack();
+    }
+
     public function test_event_constancia_is_blocked_until_min_days_met()
     {
         $this->enableEventCheckin();
