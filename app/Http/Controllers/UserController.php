@@ -224,6 +224,13 @@ class UserController extends Controller
                 ]
             );
 
+            if ($user->wasRecentlyCreated || (! $user->hasSetPassword() && is_null($user->activation_token))) {
+                $activationToken = Str::random(60);
+                $user->update(['activation_token' => $activationToken]);
+                $url = url('/ponente/activar/'.$activationToken);
+                $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
+            }
+
             $user->roles()->syncWithoutDetaching($roleIds);
             $imported++;
         }

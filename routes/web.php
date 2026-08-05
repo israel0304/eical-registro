@@ -6,6 +6,7 @@ use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\CheckinController;
 use App\Http\Controllers\ConferenceController;
 use App\Http\Controllers\ConstanciaController;
+use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\EventoController;
 use App\Http\Controllers\GafeteController;
 use App\Http\Controllers\ParticipationTypeController;
@@ -36,6 +37,10 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/ponente/activar', [PonenteActivationController::class, 'showForm'])->name('ponente.activate');
+
+Route::get('/email/verify/{id}/{hash}', EmailVerificationController::class)
+    ->middleware(['signed', 'throttle:6,1'])
+    ->name('verification.verify');
 Route::post('/ponente/activar', [PonenteActivationController::class, 'verify'])->name('ponente.verify');
 Route::get('/ponente/activar/{token}', [PonenteActivationController::class, 'showSetPasswordForm'])->name('ponente.activate-token');
 Route::post('/ponente/establecer-contrasena', [PonenteActivationController::class, 'setPassword'])->name('ponente.set-password');

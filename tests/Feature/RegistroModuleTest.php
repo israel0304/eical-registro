@@ -9,8 +9,11 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
+use App\Notifications\BienvenidaNuevoUsuario;
 use App\Services\CertificateRenderer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class RegistroModuleTest extends TestCase
@@ -694,5 +697,44 @@ class RegistroModuleTest extends TestCase
         $this->assertSame('event', $certificate->event_type);
         $this->assertNotNull($certificate->folio);
         $this->assertStringStartsWith('EICAL-', $certificate->folio);
+    }
+
+    public function test_csv_import_creates_users_with_activation_link()
+    {
+        Notification::fake();
+        $this->actingAs($this->admin());
+
+        $csv = "nombre,apellido,email,rol\nMaria,Garcia,maria@correo.mx,Asistente\n";
+        $file = UploadedFile::fake()->createWithContent('users.csv', $csv);
+
+        $this->post(route('users.import'), ['csv_file' => $file])
+            ->assertSessionHas('success');
+
+        $user = User::where('email', 'maria@correo.mx')->first();
+        $this->assertNotNull($user);
+        $this->assertNotNull($user->activation_token);
+        Notification::assertSentTo($user, BienvenidaNuevoUsuario::class);
+    }
+
+    public function test_csv_import_reactivates_existing_users_without_password()
+    {
+        Notification::fake();
+        $this->actingAs($this->admin());
+
+        $existing = User::factory()->create([
+            'email' => 'maria@correo.mx',
+            'password_set_at' => null,
+            'activation_token' => null,
+        ]);
+
+        $csv = "nombre,apellido,email,rol\nMaria,Garcia,maria@correo.mx,Asistente\n";
+        $file = UploadedFile::fake()->createWithContent('users.csv', $csv);
+
+        $this->post(route('users.import'), ['csv_file' => $file])
+            ->assertSessionHas('success');
+
+        $existing->refresh();
+        $this->assertNotNull($existing->activation_token);
+        Notification::assertSentTo($existing, BienvenidaNuevoUsuario::class);
     }
 }
