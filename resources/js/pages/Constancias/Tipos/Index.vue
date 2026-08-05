@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Pencil, Plus, Trash2, X } from 'lucide-vue-next';
+import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const props = defineProps<{
@@ -48,6 +57,7 @@ const typeForm = useForm({
 const editingId = ref<number | null>(null);
 const editing = computed(() => editingId.value !== null);
 const keyTouched = ref(false);
+const modalOpen = ref(false);
 
 const slugify = (s: string) =>
     s
@@ -77,6 +87,7 @@ const saveType = () => {
             typeForm.reset();
             editingId.value = null;
             keyTouched.value = false;
+            modalOpen.value = false;
         },
     };
     if (editing.value) {
@@ -84,6 +95,14 @@ const saveType = () => {
     } else {
         typeForm.post('/admin/constancias/tipos', options);
     }
+};
+
+const openCreate = () => {
+    editingId.value = null;
+    typeForm.reset();
+    typeForm.clearErrors();
+    keyTouched.value = false;
+    modalOpen.value = true;
 };
 
 const editType = (type: any) => {
@@ -97,9 +116,11 @@ const editType = (type: any) => {
     typeForm.is_active = type.is_active;
     typeForm.manual_generable = type.manual_generable;
     keyTouched.value = true;
+    modalOpen.value = true;
 };
 
 const cancelEdit = () => {
+    modalOpen.value = false;
     editingId.value = null;
     typeForm.reset();
     typeForm.clearErrors();
@@ -157,172 +178,16 @@ const deleteType = (type: any) => {
                         tipo nuevo no requiere cambios de código.
                     </p>
                 </div>
+                <Button variant="default" size="sm" @click="openCreate">
+                    <Plus class="h-4 w-4" />
+                    Nuevo tipo
+                </Button>
             </div>
 
-            <div class="grid gap-5 lg:grid-cols-5">
-                <div
-                    class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2 dark:border-zinc-800 dark:bg-zinc-900"
-                >
-                    <div class="mb-4 flex items-center justify-between">
-                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
-                            {{ editing ? 'Editar tipo' : 'Nuevo tipo' }}
-                        </h3>
-                        <button
-                            v-if="editing"
-                            @click="cancelEdit"
-                            type="button"
-                            class="rounded-md px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800"
-                        >
-                            Cancelar
-                        </button>
-                    </div>
-                    <form @submit.prevent="saveType" class="space-y-3">
-                        <div>
-                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                                Clave (key) *
-                            </label>
-                            <input
-                                v-model="typeForm.key"
-                                @input="onKeyInput"
-                                type="text"
-                                required
-                                placeholder="ej. conferencia_magistral"
-                                class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                            />
-                            <p v-if="typeForm.errors.key" class="mt-1 text-xs text-red-500">
-                                {{ typeForm.errors.key }}
-                            </p>
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                                Etiqueta *
-                            </label>
-                            <input
-                                v-model="typeForm.label"
-                                type="text"
-                                required
-                                placeholder="ej. Conferencista magistral"
-                                class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                            />
-                            <p v-if="typeForm.errors.label" class="mt-1 text-xs text-red-500">
-                                {{ typeForm.errors.label }}
-                            </p>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                                    Tipo de evento *
-                                </label>
-                                <select
-                                    v-model="typeForm.event_kind"
-                                    required
-                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                                >
-                                    <option
-                                        v-for="[value, label] in Object.entries(catalog.event_kinds)"
-                                        :key="value"
-                                        :value="value"
-                                    >
-                                        {{ label }}
-                                    </option>
-                                </select>
-                                <p v-if="typeForm.errors.event_kind" class="mt-1 text-xs text-red-500">
-                                    {{ typeForm.errors.event_kind }}
-                                </p>
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                                    Rol *
-                                </label>
-                                <select
-                                    v-model="typeForm.role"
-                                    :required="allowedRolesFor(typeForm.event_kind).length > 0"
-                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                                >
-                                    <option
-                                        v-if="allowedRolesFor(typeForm.event_kind).length === 0"
-                                        value=""
-                                    >
-                                        Sin rol
-                                    </option>
-                                    <option v-else value="" disabled>Selecciona un rol</option>
-                                    <option
-                                        v-for="[value, label] in roleOptions"
-                                        :key="value"
-                                        :value="value"
-                                    >
-                                        {{ label }}
-                                    </option>
-                                </select>
-                                <p v-if="typeForm.errors.role" class="mt-1 text-xs text-red-500">
-                                    {{ typeForm.errors.role }}
-                                </p>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                                Sub-tipo (kind) <span class="text-gray-400">— opcional</span>
-                            </label>
-                            <select
-                                v-model="typeForm.kind"
-                                class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                            >
-                                <option value="">Ninguno (aplica a todos)</option>
-                                <option
-                                    v-if="
-                                        typeForm.kind &&
-                                        !kindsFor(typeForm.event_kind).some(([value]) => value === typeForm.kind)
-                                    "
-                                    :value="typeForm.kind"
-                                >
-                                    {{ kindLabel(typeForm.kind) }}
-                                </option>
-                                <option
-                                    v-for="[value, label] in kindsFor(typeForm.event_kind)"
-                                    :key="value"
-                                    :value="value"
-                                >
-                                    {{ label }}
-                                </option>
-                            </select>
-                            <p v-if="typeForm.errors.kind" class="mt-1 text-xs text-red-500">
-                                {{ typeForm.errors.kind }}
-                            </p>
-                            <p class="mt-1 text-[11px] text-gray-400">
-                                Si se deja vacío aplica a cualquier sub-tipo del
-                                evento.
-                            </p>
-                        </div>
-                        <label class="flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
-                            <input
-                                type="checkbox"
-                                v-model="typeForm.manual_generable"
-                                class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            <span class="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                Generable manualmente (admin)
-                            </span>
-                        </label>
-                        <p class="text-[11px] text-gray-400">
-                            Los tipos marcados aparecen en el botón "Constancia"
-                            de la sección de usuarios para generarse a mano.
-                        </p>
-                        <button
-                            type="submit"
-                            :disabled="typeForm.processing"
-                            class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
-                        >
-                            <X v-if="editing" class="h-4 w-4" />
-                            <Plus v-else class="h-4 w-4" />
-                            {{ editing ? 'Guardar cambios' : 'Crear tipo' }}
-                        </button>
-                    </form>
-                </div>
-
-                <div
-                    class="rounded-xl border border-gray-200 bg-white shadow-sm lg:col-span-3 dark:border-zinc-800 dark:bg-zinc-900"
-                >
-                    <div class="overflow-x-auto">
+            <div
+                class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+            >
+                <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 dark:divide-zinc-800">
                             <thead class="bg-gray-50 dark:bg-zinc-800/50">
                                 <tr>
@@ -412,7 +277,164 @@ const deleteType = (type: any) => {
                         </table>
                     </div>
                 </div>
-            </div>
+
+                <Dialog :open="modalOpen" @update:open="(open) => (open ? null : cancelEdit())">
+                    <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle>{{ editing ? 'Editar tipo' : 'Nuevo tipo' }}</DialogTitle>
+                            <DialogDescription>
+                                {{
+                                    editing
+                                        ? 'Modifica los datos del tipo de participación.'
+                                        : 'Crea un nuevo tipo de participación.'
+                                }}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <form @submit.prevent="saveType" class="mt-4 space-y-3">
+                            <div>
+                                <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                                    Clave (key) *
+                                </label>
+                                <input
+                                    v-model="typeForm.key"
+                                    @input="onKeyInput"
+                                    type="text"
+                                    required
+                                    placeholder="ej. conferencia_magistral"
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                />
+                                <p v-if="typeForm.errors.key" class="mt-1 text-xs text-red-500">
+                                    {{ typeForm.errors.key }}
+                                </p>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                                    Etiqueta *
+                                </label>
+                                <input
+                                    v-model="typeForm.label"
+                                    type="text"
+                                    required
+                                    placeholder="ej. Conferencista magistral"
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                />
+                                <p v-if="typeForm.errors.label" class="mt-1 text-xs text-red-500">
+                                    {{ typeForm.errors.label }}
+                                </p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                                        Tipo de evento *
+                                    </label>
+                                    <select
+                                        v-model="typeForm.event_kind"
+                                        required
+                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    >
+                                        <option
+                                            v-for="[value, label] in Object.entries(catalog.event_kinds)"
+                                            :key="value"
+                                            :value="value"
+                                        >
+                                            {{ label }}
+                                        </option>
+                                    </select>
+                                    <p v-if="typeForm.errors.event_kind" class="mt-1 text-xs text-red-500">
+                                        {{ typeForm.errors.event_kind }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                                        Rol *
+                                    </label>
+                                    <select
+                                        v-model="typeForm.role"
+                                        :required="allowedRolesFor(typeForm.event_kind).length > 0"
+                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    >
+                                        <option
+                                            v-if="allowedRolesFor(typeForm.event_kind).length === 0"
+                                            value=""
+                                        >
+                                            Sin rol
+                                        </option>
+                                        <option v-else value="" disabled>Selecciona un rol</option>
+                                        <option
+                                            v-for="[value, label] in roleOptions"
+                                            :key="value"
+                                            :value="value"
+                                        >
+                                            {{ label }}
+                                        </option>
+                                    </select>
+                                    <p v-if="typeForm.errors.role" class="mt-1 text-xs text-red-500">
+                                        {{ typeForm.errors.role }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                                    Sub-tipo (kind) <span class="text-gray-400">— opcional</span>
+                                </label>
+                                <select
+                                    v-model="typeForm.kind"
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                >
+                                    <option value="">Ninguno (aplica a todos)</option>
+                                    <option
+                                        v-if="
+                                            typeForm.kind &&
+                                            !kindsFor(typeForm.event_kind).some(([value]) => value === typeForm.kind)
+                                        "
+                                        :value="typeForm.kind"
+                                    >
+                                        {{ kindLabel(typeForm.kind) }}
+                                    </option>
+                                    <option
+                                        v-for="[value, label] in kindsFor(typeForm.event_kind)"
+                                        :key="value"
+                                        :value="value"
+                                    >
+                                        {{ label }}
+                                    </option>
+                                </select>
+                                <p v-if="typeForm.errors.kind" class="mt-1 text-xs text-red-500">
+                                    {{ typeForm.errors.kind }}
+                                </p>
+                                <p class="mt-1 text-[11px] text-gray-400">
+                                    Si se deja vacío aplica a cualquier sub-tipo del evento.
+                                </p>
+                            </div>
+                            <label class="flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+                                <input
+                                    type="checkbox"
+                                    v-model="typeForm.manual_generable"
+                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                    Generable manualmente (admin)
+                                </span>
+                            </label>
+                            <p class="text-[11px] text-gray-400">
+                                Los tipos marcados aparecen en el botón "Constancia" de la
+                                sección de usuarios para generarse a mano.
+                            </p>
+
+                            <div class="mt-6 flex justify-end gap-3 pt-2">
+                                <DialogClose as-child>
+                                    <Button type="button" variant="outline">
+                                        Cancelar
+                                    </Button>
+                                </DialogClose>
+                                <Button type="submit" :disabled="typeForm.processing">
+                                    {{ editing ? 'Guardar cambios' : 'Crear tipo' }}
+                                </Button>
+                            </div>
+                        </form>
+                    </DialogContent>
+                </Dialog>
         </div>
     </AppLayout>
 </template>
