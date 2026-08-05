@@ -147,6 +147,19 @@ class EventoController extends Controller
         return back()->with('success', "Constancias de evento generadas/verificadas para {$generated} asistentes".($skipped > 0 ? " (se omitieron {$skipped} por no cumplir los días mínimos)." : '.'));
     }
 
+    public function destroyAttendance(Request $request, Attendance $attendance)
+    {
+        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('constancias.evento.manage'), 403);
+
+        if ($attendance->workshop_id !== null || $attendance->presentation_id !== null) {
+            abort(404);
+        }
+
+        $attendance->delete();
+
+        return back()->with('success', 'Registro de asistencia eliminado.');
+    }
+
     private function hasEventCertificate(int $userId): bool
     {
         return Certificate::query()

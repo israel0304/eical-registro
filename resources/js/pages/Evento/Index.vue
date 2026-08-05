@@ -6,6 +6,7 @@ import {
     XCircle,
     Download,
     FileBadge,
+    Trash2,
     UserRound,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -75,6 +76,25 @@ const generateConstancias = () => {
 
 const downloadConstancia = (userId: number) => {
     window.open('/admin/constancias/evento/' + userId + '/download', '_blank');
+};
+
+const deleteAttendance = (attendance: any) => {
+    if (
+        !confirm(
+            '¿Eliminar el registro de asistencia de ' +
+                (attendance.user?.first_name ?? '') +
+                ' ' +
+                (attendance.user?.last_name ?? '') +
+                ' del día ' +
+                (attendance.day_label || attendance.event_day) +
+                '?',
+        )
+    ) {
+        return;
+    }
+    router.delete('/admin/evento/attendance/' + attendance.id, {
+        preserveScroll: true,
+    });
 };
 </script>
 
@@ -458,6 +478,13 @@ const downloadConstancia = (userId: number) => {
                                         >
                                             <Download class="h-3.5 w-3.5" />
                                             Constancia
+                                        </button>
+                                        <button
+                                            @click="deleteAttendance(attendance)"
+                                            title="Eliminar registro"
+                                            class="ml-2 inline-flex items-center rounded-md border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 dark:border-red-900/50 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-950"
+                                        >
+                                            <Trash2 class="h-3.5 w-3.5" />
                                         </button>
                                     </td>
                                 </tr>
