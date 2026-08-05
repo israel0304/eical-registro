@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Services\CertificateRenderer;
 use App\Support\EventSettings;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -99,7 +100,24 @@ class EventoController extends Controller
         $validated = $request->validate([
             'evento_nombre' => ['required', 'string', 'max:255'],
             'evento_checkin_enabled' => ['nullable', 'boolean'],
-            'evento_min_dias' => ['required', 'integer', 'min:1', 'max:31'],
+            'evento_min_dias' => ['required', 'integer', 'min:1', 'max:31', function ($attribute, $value, $fail) use ($request) {
+                $start = $request->input('evento_fecha_inicio');
+                $end = $request->input('evento_fecha_fin');
+
+                if ($start === null || $start === '' || $end === null || $end === '') {
+                    return;
+                }
+
+                try {
+                    $totalDays = CarbonImmutable::parse($start)->diffInDays(CarbonImmutable::parse($end)) + 1;
+                } catch (\Throwable) {
+                    return;
+                }
+
+                if ($value > $totalDays) {
+                    $fail("El número de días mínimos no puede ser mayor al total de días del evento ({$totalDays}).");
+                }
+            }],
             'evento_fecha_inicio' => ['nullable', 'date'],
             'evento_fecha_fin' => ['nullable', 'date', 'after_or_equal:evento_fecha_inicio'],
         ]);

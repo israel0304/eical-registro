@@ -450,16 +450,49 @@ class RegistroModuleTest extends TestCase
         $this->put('/admin/evento', [
             'evento_nombre' => 'EICAL 2027',
             'evento_checkin_enabled' => 0,
-            'evento_min_dias' => 5,
+            'evento_min_dias' => 4,
             'evento_fecha_inicio' => '2027-03-01',
             'evento_fecha_fin' => '2027-03-04',
         ])->assertRedirect();
 
         $this->assertDatabaseHas('settings', ['key' => 'evento_nombre', 'value' => 'EICAL 2027']);
         $this->assertDatabaseHas('settings', ['key' => 'evento_checkin_enabled', 'value' => '0']);
-        $this->assertDatabaseHas('settings', ['key' => 'evento_min_dias', 'value' => '5']);
+        $this->assertDatabaseHas('settings', ['key' => 'evento_min_dias', 'value' => '4']);
         $this->assertDatabaseHas('settings', ['key' => 'evento_fecha_inicio', 'value' => '2027-03-01']);
         $this->assertDatabaseHas('settings', ['key' => 'evento_fecha_fin', 'value' => '2027-03-04']);
+    }
+
+    public function test_evento_settings_reject_min_days_greater_than_total_days()
+    {
+        $this->enableEventCheckin();
+        $this->actingAs($this->admin());
+
+        $response = $this->put('/admin/evento', [
+            'evento_nombre' => 'EICAL 2028',
+            'evento_checkin_enabled' => 1,
+            'evento_min_dias' => 5,
+            'evento_fecha_inicio' => '2028-03-01',
+            'evento_fecha_fin' => '2028-03-04',
+        ]);
+
+        $response->assertSessionHasErrors('evento_min_dias');
+        $this->assertDatabaseMissing('settings', ['key' => 'evento_min_dias', 'value' => '5']);
+    }
+
+    public function test_evento_settings_accept_min_days_equal_to_total_days()
+    {
+        $this->enableEventCheckin();
+        $this->actingAs($this->admin());
+
+        $this->put('/admin/evento', [
+            'evento_nombre' => 'EICAL 2028',
+            'evento_checkin_enabled' => 1,
+            'evento_min_dias' => 4,
+            'evento_fecha_inicio' => '2028-03-01',
+            'evento_fecha_fin' => '2028-03-04',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('settings', ['key' => 'evento_min_dias', 'value' => '4']);
     }
 
     public function test_non_admin_cannot_manage_evento()

@@ -41,6 +41,31 @@ const saving = ref(false);
 
 const selectedDay = computed(() => props.selected_day ?? '');
 
+const formTotalDays = computed(() => {
+    const start = form.evento_fecha_inicio;
+    const end = form.evento_fecha_fin;
+    if (!start || !end) return 0;
+    const startDate = new Date(start + 'T00:00:00');
+    const endDate = new Date(end + 'T00:00:00');
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return 0;
+    const diff = Math.round(
+        (endDate.getTime() - startDate.getTime()) / 86_400_000,
+    );
+    return diff >= 0 ? diff + 1 : 0;
+});
+
+const daysError = computed(() => {
+    if (formTotalDays.value <= 0) return null;
+    if (form.evento_min_dias > formTotalDays.value) {
+        return (
+            'El número de días mínimos no puede ser mayor a ' +
+            formTotalDays.value +
+            ' días del evento.'
+        );
+    }
+    return null;
+});
+
 const applyDayFilter = (day: string) => {
     router.get(
         '/admin/evento',
@@ -53,6 +78,11 @@ const applyDayFilter = (day: string) => {
 };
 
 const save = () => {
+    if (daysError.value) {
+        form.setError('evento_min_dias', daysError.value);
+        return;
+    }
+    form.clearErrors('evento_min_dias');
     saving.value = true;
     form.put('/admin/evento', {
         preserveScroll: true,
@@ -207,10 +237,30 @@ const deleteAttendance = (attendance: any) => {
                                     v-model.number="form.evento_min_dias"
                                     type="number"
                                     min="1"
-                                    max="31"
+                                    :max="
+                                        formTotalDays > 0
+                                            ? formTotalDays
+                                            : 31
+                                    "
                                     class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                 />
                                 <p
+                                    v-if="daysError"
+                                    class="mt-1 text-xs text-red-500 dark:text-red-400"
+                                >
+                                    {{ daysError }}
+                                </p>
+                                <p
+                                    v-else-if="formTotalDays > 0"
+                                    class="mt-1 text-xs text-gray-400 dark:text-gray-500"
+                                >
+                                    No puede ser mayor a
+                                    {{ formTotalDays }}
+                                    {{ formTotalDays === 1 ? 'día' : 'días' }}
+                                    del evento.
+                                </p>
+                                <p
+                                    v-else
                                     class="mt-1 text-xs text-gray-400 dark:text-gray-500"
                                 >
                                     Días de asistencia necesarios para poder
