@@ -100,12 +100,13 @@ const stopScanner = async () => {
 const startScanner = async () => {
     scannerError.value = null;
     result.value = null;
+    scannerActive.value = true;
 
     await nextTick();
     if (!readerEl.value) return;
 
     const { Html5Qrcode } = await import('html5-qrcode');
-    html5Qr = new Html5Qrcode('qr-reader');
+    html5Qr = new Html5Qrcode('qr-reader', { verbose: false });
 
     const onSuccess = (decodedText: string) => {
         const token = extractToken(decodedText);
@@ -122,15 +123,29 @@ const startScanner = async () => {
     };
 
     try {
+        let cameraId: string | null = null;
+        try {
+            const cameras = await Html5Qrcode.getCameras();
+            const preferred =
+                cameras.find((camera: any) => /back|environment|rear/i.test(camera.label ?? '')) ??
+                cameras[0];
+            cameraId = preferred?.id ?? null;
+        } catch {
+            // Sin acceso a la lista de cámaras; usamos facingMode.
+        }
+
         await html5Qr.start(
-            { facingMode: 'environment' },
+            cameraId
+                ? { deviceId: { exact: cameraId } }
+                : { facingMode: 'environment' },
             { fps: 10, qrbox: { width: 260, height: 260 } },
             onSuccess,
             onError,
         );
-        scannerActive.value = true;
     } catch {
-        scannerError.value = 'No se pudo acceder a la cámara.';
+        scannerActive.value = false;
+        scannerError.value =
+            'No se pudo acceder a la cámara. Verifica que el navegador tenga permiso y que el sitio use HTTPS o localhost.';
     }
 };
 
