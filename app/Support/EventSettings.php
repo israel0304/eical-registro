@@ -19,6 +19,11 @@ class EventSettings
         return (bool) self::get('evento_checkin_enabled', false);
     }
 
+    public static function checkinTimeRestricted(): bool
+    {
+        return (bool) self::get('evento_checkin_time_restricted', true);
+    }
+
     public static function minDays(): int
     {
         return max(1, (int) self::get('evento_min_dias', 2));

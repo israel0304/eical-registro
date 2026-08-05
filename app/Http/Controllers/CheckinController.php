@@ -69,7 +69,7 @@ class CheckinController extends Controller
 
         $today = now()->format('Y-m-d');
 
-        if (! $this->isWithinEventDates($today)) {
+        if (EventSettings::checkinTimeRestricted() && ! $this->isWithinEventDates($today)) {
             return response()->json([
                 'success' => false,
                 'message' => 'El check-in solo está disponible durante las fechas del evento ('.EventSettings::startDate().' a '.EventSettings::endDate().').',
