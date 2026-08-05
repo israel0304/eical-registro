@@ -9,6 +9,7 @@ use App\Models\Presentation;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Services\CertificateRenderer;
+use App\Support\EventSettings;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -71,11 +72,20 @@ class ConstanciaController extends Controller
             ->where('event_type', 'event')
             ->first();
 
-        $eventCheckedIn = Attendance::query()
-            ->where('user_id', $user->id)
-            ->whereNull('workshop_id')
-            ->whereNull('presentation_id')
-            ->exists();
+        $eventAttendance = [
+            'has' => Attendance::query()
+                ->where('user_id', $user->id)
+                ->whereNull('workshop_id')
+                ->whereNull('presentation_id')
+                ->exists(),
+            'days_attended' => EventSettings::attendedDays($user->id),
+            'required_days' => EventSettings::minDays(),
+            'total_days' => EventSettings::totalDays(),
+            'qualifies' => EventSettings::qualifies($user->id),
+            'evento_nombre' => EventSettings::nombre(),
+            'fecha_inicio' => EventSettings::startDate(),
+            'fecha_fin' => EventSettings::endDate(),
+        ];
 
         foreach ($completedWorkshops as $workshop) {
             $workshop->folio = $certificates->get('workshop-'.$workshop->id)?->folio;
@@ -101,7 +111,7 @@ class ConstanciaController extends Controller
             'presentationCertificates' => $presentationCertificates,
             'conferenceCertificates' => $conferenceCertificates,
             'eventCertificate' => $eventCertificate,
-            'eventCheckedIn' => $eventCheckedIn,
+            'eventAttendance' => $eventAttendance,
             'user' => $user,
         ]);
     }
@@ -110,14 +120,8 @@ class ConstanciaController extends Controller
     {
         $user = $request->user();
 
-        $hasAttendance = Attendance::query()
-            ->where('user_id', $user->id)
-            ->whereNull('workshop_id')
-            ->whereNull('presentation_id')
-            ->exists();
-
-        if (! $hasAttendance) {
-            return back()->withErrors(['error' => 'Aún no tienes asistencia registrada al evento.']);
+        if (! EventSettings::qualifies($user->id)) {
+            return back()->withErrors(['error' => 'Aún no cumples los días mínimos de asistencia al evento (llevas '.EventSettings::attendedDays($user->id).' de '.EventSettings::minDays().').']);
         }
 
         $certificate = $this->renderer->issueEvent($user);
@@ -135,14 +139,8 @@ class ConstanciaController extends Controller
     {
         abort_if(! request()->user()->isAdmin(), 403);
 
-        $hasAttendance = Attendance::query()
-            ->where('user_id', $user->id)
-            ->whereNull('workshop_id')
-            ->whereNull('presentation_id')
-            ->exists();
-
-        if (! $hasAttendance) {
-            return back()->withErrors(['error' => 'El usuario no tiene asistencia registrada al evento.']);
+        if (! EventSettings::qualifies($user->id)) {
+            return back()->withErrors(['error' => 'El usuario no cumple los días mínimos de asistencia al evento (lleva '.EventSettings::attendedDays($user->id).' de '.EventSettings::minDays().').']);
         }
 
         $certificate = $this->renderer->issueEvent($user);

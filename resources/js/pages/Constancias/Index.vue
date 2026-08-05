@@ -19,7 +19,16 @@ const props = defineProps<{
     presentationCertificates?: any[];
     conferenceCertificates?: any[];
     eventCertificate?: any;
-    eventCheckedIn?: boolean;
+    eventAttendance?: {
+        has: boolean;
+        days_attended: number;
+        required_days: number;
+        total_days: number;
+        qualifies: boolean;
+        evento_nombre: string;
+        fecha_inicio: string | null;
+        fecha_fin: string | null;
+    };
     user: any;
 }>();
 
@@ -60,7 +69,27 @@ const hasAnyCertificates = computed(() => {
         !!props.instructorWorkshops?.length ||
         (!!canSeePonencias.value && !!props.presentationCertificates?.length) ||
         !!props.conferenceCertificates?.length ||
-        !!props.eventCertificate
+        !!props.eventCertificate ||
+        !!props.eventAttendance?.has
+    );
+});
+
+const eventProgress = computed(() => {
+    const attendance = props.eventAttendance;
+    if (!attendance) return 0;
+    if (attendance.required_days <= 0) return 0;
+    return Math.min(
+        100,
+        Math.round((attendance.days_attended / attendance.required_days) * 100),
+    );
+});
+
+const missingDays = computed(() => {
+    const attendance = props.eventAttendance;
+    if (!attendance) return 0;
+    return Math.max(
+        0,
+        attendance.required_days - attendance.days_attended,
     );
 });
 </script>
@@ -79,7 +108,7 @@ const hasAnyCertificates = computed(() => {
             </h1>
 
             <!-- Constancia de asistencia al evento -->
-            <div v-if="eventCheckedIn || eventCertificate">
+            <div v-if="eventAttendance?.has || eventCertificate">
                 <div
                     class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
                 >
@@ -108,12 +137,80 @@ const hasAnyCertificates = computed(() => {
                             >
                                 Folio: {{ eventCertificate.folio }}
                             </p>
+
+                            <div
+                                v-if="eventAttendance"
+                                class="mt-4"
+                            >
+                                <div
+                                    class="flex items-center justify-between text-xs"
+                                >
+                                    <span
+                                        class="font-medium text-gray-700 dark:text-gray-300"
+                                    >
+                                        {{
+                                            eventAttendance.days_attended
+                                        }}
+                                        de
+                                        {{
+                                            eventAttendance.required_days
+                                        }}
+                                        días requeridos
+                                    </span>
+                                    <span
+                                        class="text-gray-400 dark:text-gray-500"
+                                    >
+                                        {{
+                                            eventAttendance.total_days > 0
+                                                ? eventAttendance.total_days +
+                                                  ' días de evento'
+                                                : 'Evento: ' +
+                                                  eventAttendance.evento_nombre
+                                        }}
+                                    </span>
+                                </div>
+                                <div
+                                    class="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-zinc-800"
+                                >
+                                    <div
+                                        class="h-full rounded-full bg-cyan-500 transition-all"
+                                        :style="{
+                                            width: eventProgress + '%',
+                                        }"
+                                    ></div>
+                                </div>
+                                <p
+                                    class="mt-2 text-xs text-gray-500 dark:text-gray-400"
+                                >
+                                    {{
+                                        eventAttendance.qualifies
+                                            ? '¡Cumples con los días mínimos! Puedes descargar tu constancia.'
+                                            : 'Te faltan ' +
+                                              missingDays +
+                                              (missingDays === 1
+                                                  ? ' día'
+                                                  : ' días') +
+                                              ' de asistencia para poder emitir tu constancia.'
+                                    }}
+                                </p>
+                            </div>
                         </div>
                         <button
+                            v-if="
+                                eventAttendance?.qualifies ||
+                                eventCertificate
+                            "
                             @click="downloadEvento"
                             class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-100 dark:border-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300"
                         >
                             <Download class="h-4 w-4" /> Descargar Constancia
+                        </button>
+                        <button
+                            v-else
+                            disabled
+                            class="inline-flex shrink-0 cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-500"
+                        >
+                            <Clock class="h-4 w-4" /> Pendiente
                         </button>
                     </div>
                 </div>
