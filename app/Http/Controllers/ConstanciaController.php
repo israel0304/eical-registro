@@ -68,6 +68,25 @@ class ConstanciaController extends Controller
             ->get()
             ->keyBy(fn ($certificate) => $certificate->event_type.'-'.$certificate->event_id);
 
+        $invitationLetter = null;
+        if ($user->hasPermission('constancias.invitaciones.download')) {
+            $cartaType = ParticipationType::where('key', 'carta_invitacion')->first();
+            $cartaCertificate = $cartaType
+                ? Certificate::where('user_id', $user->id)
+                    ->where('participation_type_id', $cartaType->id)
+                    ->where('event_type', 'event')
+                    ->where('event_id', 0)
+                    ->first()
+                : null;
+
+            $invitationLetter = [
+                'rol' => $this->renderer->cartaRolLabel($user),
+                'tipo_participacion' => $cartaType?->label ?? 'Carta de Invitación',
+                'folio' => $cartaCertificate?->folio,
+                'downloaded' => $cartaCertificate?->downloaded_at !== null,
+            ];
+        }
+
         $eventCertificate = Certificate::query()
             ->where('user_id', $user->id)
             ->where('event_type', 'event')
@@ -113,8 +132,34 @@ class ConstanciaController extends Controller
             'conferenceCertificates' => $conferenceCertificates,
             'eventCertificate' => $eventCertificate,
             'eventAttendance' => $eventAttendance,
+            'invitationLetter' => $invitationLetter,
             'user' => $user,
         ]);
+    }
+
+    public function downloadInvitacion(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user->hasPermission('constancias.invitaciones.download')) {
+            return back()->withErrors(['error' => 'No tienes autorización para descargar una carta de invitación.']);
+        }
+
+        $type = ParticipationType::where('key', 'carta_invitacion')->where('is_active', true)->first();
+
+        if ($type === null) {
+            return back()->withErrors(['error' => 'El tipo de carta de invitación no está configurado.']);
+        }
+
+        $certificate = $this->renderer->issueCarta($user, $type, $this->renderer->cartaRolLabel($user));
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible generar la carta de invitación.']);
+        }
+
+        $certificate->update(['downloaded_at' => now()]);
+
+        return $this->respondWithHtml($certificate);
     }
 
     public function downloadEvento(Request $request)
