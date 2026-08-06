@@ -9,6 +9,7 @@ use App\Http\Controllers\ConstanciaController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\EventoController;
 use App\Http\Controllers\GafeteController;
+use App\Http\Controllers\InvitationTemplateController;
 use App\Http\Controllers\ParticipationTypeController;
 use App\Http\Controllers\PonenteActivationController;
 use App\Http\Controllers\PresentationController;
@@ -266,6 +267,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Constancia de asistencia al evento (antes de rutas genéricas)
     Route::get('constancias/evento/download', [ConstanciaController::class, 'downloadEvento'])->middleware('can:constancias.download')->name('constancias.evento.download');
+    Route::get('constancias/invitacion/descargar', [ConstanciaController::class, 'downloadInvitacion'])->middleware('can:constancias.download')->name('constancias.invitacion.download');
     Route::get('admin/constancias/evento/{user}/download', [ConstanciaController::class, 'adminDownloadEvento'])->middleware('can:constancias.download')->name('constancias.evento.admin-download');
 
     Route::get('constancias/{id}/download', [ConstanciaController::class, 'download'])->middleware('can:constancias.download')->name('constancias.download');
@@ -323,6 +325,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('admin/constancias/plantillas/{template}/edit', [CertificateTemplateController::class, 'edit'])->name('constancias.templates.edit');
         Route::put('admin/constancias/plantillas/{template}', [CertificateTemplateController::class, 'update'])->name('constancias.templates.update');
         Route::delete('admin/constancias/plantillas/{template}', [CertificateTemplateController::class, 'destroy'])->name('constancias.templates.destroy');
+
+        // Admin: invitation letter templates
+        Route::get('admin/constancias/invitaciones/plantillas', [InvitationTemplateController::class, 'index'])->name('constancias.invitaciones.templates.index');
+        Route::post('admin/constancias/invitaciones/plantillas', [InvitationTemplateController::class, 'store'])->name('constancias.invitaciones.templates.store');
+        Route::get('admin/constancias/invitaciones/plantillas/{template}/edit', [InvitationTemplateController::class, 'edit'])->name('constancias.invitaciones.templates.edit');
+        Route::put('admin/constancias/invitaciones/plantillas/{template}', [InvitationTemplateController::class, 'update'])->name('constancias.invitaciones.templates.update');
+        Route::delete('admin/constancias/invitaciones/plantillas/{template}', [InvitationTemplateController::class, 'destroy'])->name('constancias.invitaciones.templates.destroy');
     });
 
     // Admin: participation types

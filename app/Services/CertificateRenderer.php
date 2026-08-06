@@ -11,6 +11,7 @@ use App\Models\Presentation;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\Workshop;
+use App\Support\EventSettings;
 use BaconQrCode\Renderer\Image\ImagickImageBackEnd;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
@@ -145,6 +146,53 @@ class CertificateRenderer
         );
 
         return $this->finalize($certificate, $template, $metadata);
+    }
+
+    /**
+     * Find or create a generic invitation letter certificate for the user.
+     */
+    public function issueCarta(User $user, ParticipationType $type, string $rolLabel): ?Certificate
+    {
+        if (! $type->is_active) {
+            return null;
+        }
+
+        $template = $type->templates()
+            ->where('kind', 'invitation')
+            ->where('is_default', true)
+            ->first();
+
+        $metadata = $this->buildCartaMetadata($user, $type, $rolLabel);
+
+        $certificate = Certificate::query()->firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'participation_type_id' => $type->id,
+                'event_type' => 'event',
+                'event_id' => 0,
+            ],
+            [
+                'template_id' => $template?->id,
+                'metadata' => $metadata,
+            ],
+        );
+
+        return $this->finalize($certificate, $template, $metadata);
+    }
+
+    /**
+     * Role label shown in the invitation letter, resolved from the first
+     * role of the user that holds the invitation-letter permission.
+     */
+    public function cartaRolLabel(User $user): string
+    {
+        foreach ($user->roles as $role) {
+            if ($role->permissions->contains('key', 'constancias.invitaciones.download')) {
+                return self::ROLE_LABELS[$role->name] ?? $role->name;
+            }
+        }
+
+        return 'Participante';
     }
 
     private function finalize(Certificate $certificate, ?CertificateTemplate $template, array $metadata): Certificate
@@ -479,7 +527,7 @@ HTML;
 
         $content = $element['content'] ?? '';
         $content = $this->replaceVariables($content, $metadata);
-        $content = str_replace('{qr}', $qr, $content);
+        $content = str_replace(['{qr}', '{qr_activacion}'], $qr, $content);
 
         return '<div style="'.$style.'">'.$content.'</div>';
     }
@@ -488,12 +536,16 @@ HTML;
     {
         $replacements = [
             '{nombre}' => $metadata['nombre'] ?? '',
+            '{nombre_completo}' => $metadata['nombre_completo'] ?? $metadata['nombre'] ?? '',
             '{tipo_participacion}' => $metadata['tipo_participacion'] ?? '',
             '{evento}' => $metadata['evento'] ?? '',
+            '{nombre_evento}' => $metadata['nombre_evento'] ?? $metadata['evento'] ?? '',
             '{fecha_evento}' => $metadata['fecha_evento'] ?? '',
             '{folio}' => $metadata['folio'] ?? '',
             '{dni}' => $metadata['dni'] ?? '',
             '{afiliacion}' => $metadata['afiliacion'] ?? '',
+            '{institucion}' => $metadata['institucion'] ?? $metadata['afiliacion'] ?? '',
+            '{pais}' => $metadata['pais'] ?? '',
             '{rol}' => $metadata['rol'] ?? '',
             '{iniciales}' => $metadata['iniciales'] ?? '',
         ];
@@ -531,6 +583,42 @@ HTML;
             'fecha_evento' => '',
             'folio' => '',
         ];
+    }
+
+    private function buildCartaMetadata(User $user, ParticipationType $type, string $rolLabel): array
+    {
+        $nombre = trim($user->first_name.' '.$user->last_name);
+
+        return [
+            'nombre' => $nombre,
+            'nombre_completo' => $nombre,
+            'rol' => $rolLabel,
+            'tipo_participacion' => $type->label,
+            'evento' => $this->eventName(),
+            'nombre_evento' => $this->eventName(),
+            'fecha_evento' => $this->eventDateRange(),
+            'institucion' => (string) ($user->affiliation ?? ''),
+            'pais' => (string) ($user->country ?? ''),
+            'folio' => '',
+        ];
+    }
+
+    private function eventDateRange(): string
+    {
+        $start = EventSettings::startDate();
+        $end = EventSettings::endDate();
+
+        if ($start === null) {
+            return '';
+        }
+
+        $startText = $this->formatSpanishDate($start);
+
+        if ($end === null || $end === $start) {
+            return $startText;
+        }
+
+        return $startText.' – '.$this->formatSpanishDate($end);
     }
 
     private function buildBadgeMetadata(User $user): array
