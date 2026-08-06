@@ -16,6 +16,7 @@ import {
     ScanLine,
     CreditCard,
     CalendarDays,
+    Mail,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
@@ -112,6 +113,11 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: 'Plantillas',
             href: '/admin/constancias/plantillas',
             icon: FileBadge,
+        });
+        items.push({
+            title: 'Cartas',
+            href: '/admin/constancias/invitaciones/plantillas',
+            icon: Mail,
         });
     }
 

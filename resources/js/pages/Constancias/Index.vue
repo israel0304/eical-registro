@@ -7,6 +7,7 @@ import {
     Mic,
     Clock,
     Users,
+    Mail,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
@@ -29,6 +30,12 @@ const props = defineProps<{
         fecha_inicio: string | null;
         fecha_fin: string | null;
     };
+    invitationLetter?: {
+        rol: string;
+        tipo_participacion: string;
+        folio: string | null;
+        downloaded: boolean;
+    } | null;
     user: any;
 }>();
 
@@ -60,6 +67,10 @@ const downloadEvento = () => {
     window.open('/constancias/evento/download', '_blank');
 };
 
+const downloadInvitacion = () => {
+    window.open('/constancias/invitacion/descargar', '_blank');
+};
+
 const roleLabel = (role: string | null) =>
     ({ speaker: 'Speaker', moderator: 'Moderador' })[role ?? ''] ?? role ?? '';
 
@@ -70,7 +81,8 @@ const hasAnyCertificates = computed(() => {
         (!!canSeePonencias.value && !!props.presentationCertificates?.length) ||
         !!props.conferenceCertificates?.length ||
         !!props.eventCertificate ||
-        !!props.eventAttendance?.has
+        !!props.eventAttendance?.has ||
+        !!props.invitationLetter
     );
 });
 
@@ -106,6 +118,51 @@ const missingDays = computed(() => {
             >
                 Mis Constancias
             </h1>
+
+            <!-- Carta de Invitación -->
+            <div v-if="invitationLetter">
+                <div
+                    class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                    <div class="flex items-start gap-4">
+                        <div
+                            class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/30"
+                        >
+                            <Mail
+                                class="h-6 w-6 text-sky-600 dark:text-sky-400"
+                            />
+                        </div>
+                        <div class="flex-1">
+                            <h2
+                                class="text-sm font-semibold text-gray-900 dark:text-white"
+                            >
+                                Carta de Invitación
+                            </h2>
+                            <p
+                                class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                            >
+                                {{
+                                    invitationLetter.tipo_participacion
+                                }}
+                                como
+                                {{ invitationLetter.rol }}.
+                            </p>
+                            <p
+                                v-if="invitationLetter.folio"
+                                class="mt-1 font-mono text-[11px] text-sky-600 dark:text-sky-400"
+                            >
+                                Folio: {{ invitationLetter.folio }}
+                            </p>
+                        </div>
+                        <button
+                            @click="downloadInvitacion"
+                            class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-900/30 dark:text-sky-300"
+                        >
+                            <Download class="h-4 w-4" /> Descargar Carta
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Constancia de asistencia al evento -->
             <div v-if="eventAttendance?.has || eventCertificate">
