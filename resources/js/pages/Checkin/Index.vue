@@ -267,11 +267,11 @@ onBeforeUnmount(() => {
     <AppLayout :breadcrumbs="[{ title: 'Check-in', href: '/checkin' }]">
         <Head title="Check-in de Gafetes" />
 
-        <div class="mx-auto min-h-screen w-full max-w-7xl space-y-8 px-8 py-8">
-            <div class="flex items-center justify-between">
-                <div>
+        <div class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-8 sm:py-8">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="min-w-0">
                     <h1
-                        class="text-3xl font-normal tracking-tight text-gray-900 dark:text-white"
+                        class="text-2xl font-normal tracking-tight text-gray-900 sm:text-3xl dark:text-white"
                     >
                         Check-in de Gafetes
                     </h1>
@@ -296,9 +296,9 @@ onBeforeUnmount(() => {
                 </span>
             </div>
 
-            <div class="grid gap-8 lg:grid-cols-2">
+            <div class="grid gap-6 lg:grid-cols-2 lg:gap-8">
                 <!-- Scanner -->
-                <div class="space-y-4">
+                <div class="min-w-0 space-y-4">
                     <div
                         class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
                     >
@@ -468,7 +468,7 @@ onBeforeUnmount(() => {
                         ]"
                     >
                         <div class="flex items-start justify-between gap-4">
-                            <div class="flex items-start gap-4">
+                            <div class="flex min-w-0 items-start gap-4">
                                 <CheckCircle2
                                     v-if="result.success"
                                     class="mt-1 h-10 w-10 shrink-0 text-emerald-600 dark:text-emerald-400"
@@ -477,7 +477,7 @@ onBeforeUnmount(() => {
                                     v-else
                                     class="mt-1 h-10 w-10 shrink-0 text-red-600 dark:text-red-400"
                                 />
-                                <div>
+                                <div class="min-w-0 flex-1">
                                     <h3
                                         class="font-semibold text-gray-900 dark:text-white"
                                     >
@@ -485,10 +485,10 @@ onBeforeUnmount(() => {
                                     </h3>
                                     <div
                                         v-if="result.user"
-                                        class="mt-3 flex items-center gap-4"
+                                        class="mt-3 flex min-w-0 items-center gap-4"
                                     >
                                         <div
-                                            class="h-14 w-14 overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700"
+                                            class="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700"
                                         >
                                             <img
                                                 v-if="result.user.photo"
@@ -500,7 +500,7 @@ onBeforeUnmount(() => {
                                                 class="h-full w-full p-2 text-gray-400"
                                             />
                                         </div>
-                                        <div>
+                                        <div class="min-w-0 flex-1">
                                             <p
                                                 class="text-sm font-semibold text-gray-900 dark:text-white"
                                             >
@@ -575,18 +575,18 @@ onBeforeUnmount(() => {
 
                         <div
                             v-if="result.user"
-                            class="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-200 pt-4 dark:border-zinc-700"
+                            class="mt-4 flex flex-col gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:flex-wrap sm:items-center dark:border-zinc-700"
                         >
                             <button
                                 @click="openBadgePrint(result.user.id)"
-                                class="inline-flex items-center gap-1.5 rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+                                class="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-black px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-gray-800 sm:w-auto dark:bg-white dark:text-black dark:hover:bg-gray-200"
                             >
                                 <Printer class="h-3.5 w-3.5" />
                                 Imprimir gafete
                             </button>
                             <button
                                 @click="openBadgePdf(result.user.id)"
-                                class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-200 dark:hover:bg-zinc-700"
+                                class="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-200 dark:hover:bg-zinc-700"
                             >
                                 Descargar PDF
                             </button>
@@ -596,7 +596,7 @@ onBeforeUnmount(() => {
 
                 <!-- Today's list -->
                 <div
-                    class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                    class="min-w-0 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
                 >
                     <div
                         class="mb-4 flex items-center justify-between border-b border-gray-100 pb-4 dark:border-zinc-800"

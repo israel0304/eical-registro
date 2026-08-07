@@ -135,11 +135,11 @@ const deleteAttendance = (attendance: any) => {
     <AppLayout :breadcrumbs="[{ title: 'Evento', href: '/admin/evento' }]">
         <Head title="Gestión del Evento" />
 
-        <div class="mx-auto min-h-screen w-full max-w-7xl space-y-8 px-8 py-8">
-            <div class="flex items-center justify-between">
-                <div>
+        <div class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-8 sm:py-8">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="min-w-0">
                     <h1
-                        class="text-3xl font-normal tracking-tight text-gray-900 dark:text-white"
+                        class="text-2xl font-normal tracking-tight text-gray-900 sm:text-3xl dark:text-white"
                     >
                         Gestión del Evento
                     </h1>
@@ -155,9 +155,9 @@ const deleteAttendance = (attendance: any) => {
                 />
             </div>
 
-            <div class="grid gap-8 lg:grid-cols-3">
+            <div class="grid gap-6 lg:grid-cols-3 lg:gap-8">
                 <!-- Settings -->
-                <div class="space-y-6 lg:col-span-1">
+                <div class="space-y-6 min-w-0 lg:col-span-1">
                     <div
                         class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
                     >
@@ -195,7 +195,7 @@ const deleteAttendance = (attendance: any) => {
                                     class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                 />
                             </div>
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <div>
                                     <label
                                         class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
@@ -370,7 +370,7 @@ const deleteAttendance = (attendance: any) => {
 
                 <!-- Attendance list -->
                 <div
-                    class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 lg:col-span-2"
+                    class="min-w-0 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 lg:col-span-2"
                 >
                     <h2
                         class="mb-4 text-lg font-semibold text-gray-900 dark:text-white"
@@ -413,7 +413,7 @@ const deleteAttendance = (attendance: any) => {
                         class="overflow-x-auto"
                     >
                         <table
-                            class="w-full text-left text-sm"
+                            class="w-full min-w-[760px] text-left text-sm"
                         >
                             <thead>
                                 <tr
@@ -463,32 +463,38 @@ const deleteAttendance = (attendance: any) => {
                                     class="border-b border-gray-50 dark:border-zinc-800/60"
                                 >
                                     <td
-                                        class="flex items-center gap-2 px-3 py-2.5"
+                                        class="px-3 py-2.5 whitespace-nowrap"
                                     >
-                                        <UserRound
-                                            class="h-4 w-4 text-gray-400"
-                                        />
-                                        <span
-                                            class="font-medium text-gray-900 dark:text-white"
+                                        <div
+                                            class="flex items-center gap-2"
                                         >
-                                            {{ attendance.user?.first_name }}
-                                            {{
-                                                attendance.user?.last_name
-                                            }}
-                                        </span>
+                                            <UserRound
+                                                class="h-4 w-4 shrink-0 text-gray-400"
+                                            />
+                                            <span
+                                                class="font-medium text-gray-900 dark:text-white"
+                                            >
+                                                {{
+                                                    attendance.user?.first_name
+                                                }}
+                                                {{
+                                                    attendance.user?.last_name
+                                                }}
+                                            </span>
+                                        </div>
                                     </td>
                                     <td
-                                        class="px-3 py-2.5 font-mono text-xs text-gray-500 dark:text-gray-400"
+                                        class="px-3 py-2.5 font-mono text-xs whitespace-nowrap text-gray-500 dark:text-gray-400"
                                     >
                                         {{ attendance.user?.dni }}
                                     </td>
                                     <td
-                                        class="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400"
+                                        class="px-3 py-2.5 text-xs whitespace-nowrap text-gray-500 dark:text-gray-400"
                                     >
                                         {{ attendance.day_label }}
                                     </td>
                                     <td
-                                        class="px-3 py-2.5 text-xs"
+                                        class="px-3 py-2.5 text-xs whitespace-nowrap"
                                     >
                                         <span
                                             :class="[
@@ -504,7 +510,7 @@ const deleteAttendance = (attendance: any) => {
                                         </span>
                                     </td>
                                     <td
-                                        class="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400"
+                                        class="px-3 py-2.5 text-xs whitespace-nowrap text-gray-500 dark:text-gray-400"
                                     >
                                         {{
                                             attendance.registered_by?.first_name
@@ -514,7 +520,7 @@ const deleteAttendance = (attendance: any) => {
                                         }}
                                     </td>
                                     <td
-                                        class="px-3 py-2.5"
+                                        class="px-3 py-2.5 whitespace-nowrap"
                                     >
                                         <span
                                             v-if="attendance.certificate_issued"
@@ -534,7 +540,7 @@ const deleteAttendance = (attendance: any) => {
                                         </span>
                                     </td>
                                     <td
-                                        class="px-3 py-2.5"
+                                        class="px-3 py-2.5 whitespace-nowrap"
                                     >
                                         <button
                                             @click="
