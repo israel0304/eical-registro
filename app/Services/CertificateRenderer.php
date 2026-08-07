@@ -288,8 +288,8 @@ HTML;
         $qr = $this->qrDataUri($this->badgeUrl($user), png: true);
         $photo = $this->photoDataUri($user);
 
-        $width = $template->width ?? 1050;
-        $height = $template->height ?? 700;
+        $width = $template->width ?? 384;
+        $height = $template->height ?? 816;
 
         $dompdf = new Dompdf;
         $dompdf->loadHtml($template === null
@@ -678,8 +678,8 @@ HTML;
 
     private function fallbackBadgeHtml(User $user, array $metadata, string $qr, string $photo, bool $forPdf = false): string
     {
-        $width = 1050;
-        $height = 700;
+        $width = 384;
+        $height = 816;
         $pageRule = $forPdf ? "@page { size: {$width}px {$height}px; margin: 0; }" : '';
         $printButton = $forPdf ? '' : '<button class="print-btn" onclick="window.print()">Imprimir gafete</button>';
 
@@ -692,17 +692,18 @@ HTML;
     <style>
         html, body { margin: 0; padding: 0; }
         .badge { position: relative; width: {$width}px; height: {$height}px; background: #ffffff; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; }
-        .badge-header { position: absolute; top: 0; left: 0; right: 0; height: 90px; background: #0f172a; color: #ffffff; display: flex; align-items: center; padding: 0 48px; }
-        .badge-header .title { font-size: 34px; font-weight: 700; letter-spacing: 1px; }
-        .badge-header .subtitle { font-size: 18px; color: #94a3b8; margin-left: 16px; }
-        .badge-photo { position: absolute; top: 150px; left: 60px; width: 230px; height: 230px; border-radius: 12px; object-fit: cover; border: 3px solid #e2e8f0; }
-        .badge-name { position: absolute; top: 150px; left: 340px; font-size: 40px; font-weight: 700; color: #0f172a; }
-        .badge-dni { position: absolute; top: 220px; left: 340px; font-size: 22px; color: #475569; }
-        .badge-role { position: absolute; top: 265px; left: 340px; display: inline-block; padding: 6px 18px; border-radius: 999px; background: #6366f1; color: #ffffff; font-size: 20px; font-weight: 600; }
-        .badge-aff { position: absolute; top: 330px; left: 340px; font-size: 20px; color: #475569; max-width: 520px; }
-        .badge-event { position: absolute; top: 380px; left: 340px; font-size: 18px; color: #94a3b8; }
-        .badge-qr { position: absolute; right: 60px; bottom: 60px; width: 220px; height: 220px; }
-        .badge-qr-caption { position: absolute; right: 60px; bottom: 20px; width: 220px; text-align: center; font-size: 15px; color: #64748b; }
+        .badge-header { position: absolute; top: 0; left: 0; right: 0; height: 64px; background: #0f172a; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 16px; }
+        .badge-header .title { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+        .badge-header .subtitle { font-size: 11px; color: #94a3b8; }
+        .badge-photo { position: absolute; top: 96px; left: 117px; width: 150px; height: 150px; border-radius: 12px; object-fit: cover; border: 3px solid #e2e8f0; }
+        .badge-name { position: absolute; top: 268px; left: 0; right: 0; text-align: center; padding: 0 12px; font-size: 24px; font-weight: 700; color: #0f172a; }
+        .badge-dni { position: absolute; top: 314px; left: 0; right: 0; text-align: center; font-size: 13px; color: #475569; }
+        .badge-role { position: absolute; top: 352px; left: 0; right: 0; text-align: center; }
+        .badge-role span { display: inline-block; padding: 5px 14px; border-radius: 999px; background: #6366f1; color: #ffffff; font-size: 14px; font-weight: 600; }
+        .badge-aff { position: absolute; top: 408px; left: 0; right: 0; text-align: center; padding: 0 12px; font-size: 13px; color: #475569; }
+        .badge-event { position: absolute; top: 470px; left: 0; right: 0; text-align: center; font-size: 12px; color: #94a3b8; }
+        .badge-qr { position: absolute; left: 102px; bottom: 120px; width: 180px; height: 180px; }
+        .badge-qr-caption { position: absolute; left: 0; right: 0; bottom: 40px; text-align: center; font-size: 12px; color: #64748b; }
         {$pageRule}
         {$this->badgeStyles()}
     </style>
@@ -717,7 +718,7 @@ HTML;
         <img class="badge-photo" src="{$photo}" alt="Foto" />
         <div class="badge-name">{$metadata['nombre']}</div>
         <div class="badge-dni">{$metadata['dni']}</div>
-        <div class="badge-role">{$metadata['rol']}</div>
+        <div class="badge-role"><span>{$metadata['rol']}</span></div>
         <div class="badge-aff">{$metadata['afiliacion']}</div>
         <div class="badge-event">Asistente al evento</div>
         <img class="badge-qr" src="{$qr}" alt="QR" />

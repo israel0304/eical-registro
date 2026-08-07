@@ -389,11 +389,33 @@ onMounted(() => {
                             @change="onBackgroundChange"
                         />
                     </label>
-                    <span
-                        class="rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-600 dark:bg-zinc-800 dark:text-gray-400"
-                    >
-                        {{ designWidth }} × {{ designHeight }} px
-                    </span>
+                    <div class="flex items-center gap-2">
+                        <label
+                            class="text-xs font-medium text-gray-600 dark:text-gray-400"
+                        >
+                            Ancho
+                        </label>
+                        <input
+                            v-model.number="form.width"
+                            type="number"
+                            min="200"
+                            max="5000"
+                            class="w-24 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                        />
+                        <label
+                            class="text-xs font-medium text-gray-600 dark:text-gray-400"
+                        >
+                            Alto
+                        </label>
+                        <input
+                            v-model.number="form.height"
+                            type="number"
+                            min="200"
+                            max="5000"
+                            class="w-24 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                        />
+                        <span class="text-xs text-gray-400">px</span>
+                    </div>
                     <button
                         @click="save"
                         :disabled="form.processing"
