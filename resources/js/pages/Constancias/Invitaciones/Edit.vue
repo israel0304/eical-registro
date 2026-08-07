@@ -167,7 +167,7 @@ const fittedFontSize = (el: ElementModel): number => {
     measureCtx.font = `${el.font_weight || 'normal'} ${base}px ${el.font_family || 'sans-serif'}`;
     const measured = measureCtx.measureText(text).width;
     if (!measured) return base;
-    return (base * el.width * 0.96) / measured;
+    return Math.min(base, (base * el.width * 0.96) / measured);
 };
 
 // QR previews (client-side, for live editing)

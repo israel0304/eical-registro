@@ -454,7 +454,8 @@ CSS;
             ctx.font = (style.fontWeight === 'normal' ? '' : style.fontWeight + ' ') + size + 'px ' + style.fontFamily;
             var measured = ctx.measureText(el.textContent).width;
             if (!measured) return;
-            el.style.fontSize = size * (el.clientWidth * 0.96 / measured) + 'px';
+            var maxSize = parseFloat(el.getAttribute('data-max-font-size')) || size;
+            el.style.fontSize = Math.min(size * (el.clientWidth * 0.96 / measured), maxSize) + 'px';
         });
     }
     document.addEventListener('DOMContentLoaded', fit);
@@ -623,6 +624,7 @@ HTML;
         $content = str_replace(['{qr}', '{qr_activacion}'], $qr, $content);
 
         $fontSize = ! empty($element['font_size']) ? (float) $element['font_size'] * $scale : 0.0;
+        $maxFontSize = $fontSize;
 
         if ($fontSize > 0 && ! empty($element['auto_fit']) && ! empty($element['width']) && $content !== '') {
             $boxWidth = (float) $element['width'] * $scale;
@@ -631,6 +633,10 @@ HTML;
             if ($measured > 0) {
                 $fontSize = $fontSize * (($boxWidth * 0.75 * 0.96) / $measured);
             }
+        }
+
+        if ($maxFontSize > 0) {
+            $fontSize = min($fontSize, $maxFontSize);
         }
 
         $style = "position:absolute;left:{$left}px;top:{$top}px;width:{$width};height:{$height};z-index:{$z};";
@@ -652,7 +658,13 @@ HTML;
         $textAlign = $element['text_align'] ?? 'center';
         $style .= "text-align:{$textAlign};";
 
-        $attributes = ! empty($element['auto_fit']) ? ' data-auto-fit="1"' : '';
+        $attributes = '';
+        if (! empty($element['auto_fit'])) {
+            $attributes .= ' data-auto-fit="1"';
+            if ($maxFontSize > 0) {
+                $attributes .= ' data-max-font-size="'.$maxFontSize.'"';
+            }
+        }
 
         return '<div style="'.$style.'"'.$attributes.'>'.$content.'</div>';
     }
