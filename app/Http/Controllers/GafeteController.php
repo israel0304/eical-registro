@@ -65,6 +65,25 @@ class GafeteController extends Controller
         ]);
     }
 
+    public function staffPrint(Request $request, User $user)
+    {
+        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('checkin.scan'), 403);
+
+        return response($this->renderer->renderBadge($user), 200, [
+            'Content-Type' => 'text/html',
+        ]);
+    }
+
+    public function staffPrintPdf(Request $request, User $user)
+    {
+        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('checkin.scan'), 403);
+
+        return response($this->renderer->renderBadgePdf($user), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename=gafete_'.$user->dni.'.pdf',
+        ]);
+    }
+
     public function uploadPhoto(Request $request)
     {
         abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('gafete.view'), 403);

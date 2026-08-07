@@ -250,6 +250,48 @@ class RegistroModuleTest extends TestCase
         $this->get('/checkin')->assertForbidden();
     }
 
+    public function test_staff_can_print_participant_badge_html()
+    {
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = $this->userWith('Asistente', ['gafete.view'], [
+            'first_name' => 'María Fernanda',
+            'last_name' => 'Hernández González',
+        ]);
+        $this->actingAs($staff);
+
+        $response = $this->get("/checkin/gafete/{$participant->id}/imprimir");
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'text/html; charset=utf-8');
+        $content = $response->getContent();
+        $this->assertStringContainsString('María Fernanda Hernández González', $content);
+        $this->assertStringContainsString($participant->dni, $content);
+    }
+
+    public function test_staff_can_download_participant_badge_pdf()
+    {
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = $this->userWith('Asistente', ['gafete.view']);
+        $this->actingAs($staff);
+
+        $response = $this->get("/checkin/gafete/{$participant->id}/imprimir/pdf");
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', $response->getContent());
+    }
+
+    public function test_non_staff_cannot_print_other_participant_badge()
+    {
+        $participant = $this->userWith('Asistente', ['gafete.view']);
+
+        $user = $this->userWith('Asistente', ['gafete.view']);
+        $this->actingAs($user);
+
+        $this->get("/checkin/gafete/{$participant->id}/imprimir")->assertForbidden();
+        $this->get("/checkin/gafete/{$participant->id}/imprimir/pdf")->assertForbidden();
+    }
+
     public function test_checkin_registers_attendance_and_issues_event_certificate()
     {
         $this->enableEventCheckin();

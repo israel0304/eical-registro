@@ -299,6 +299,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('checkin', [CheckinController::class, 'index'])->name('checkin.index');
         Route::post('checkin/register', [CheckinController::class, 'register'])->name('checkin.register');
         Route::get('checkin/lookup', [CheckinController::class, 'lookup'])->name('checkin.lookup');
+        Route::get('checkin/gafete/{user}/imprimir', [GafeteController::class, 'staffPrint'])->name('checkin.gafete.print');
+        Route::get('checkin/gafete/{user}/imprimir/pdf', [GafeteController::class, 'staffPrintPdf'])->name('checkin.gafete.print-pdf');
     });
 
     // Admin: plantillas (unificado)
