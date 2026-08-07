@@ -431,6 +431,31 @@ HTML;
 
         $styles = $this->elementStyles();
 
+        $fitScript = $forPdf ? '' : <<<'JS'
+
+<script>
+(function () {
+    function fit() {
+        document.querySelectorAll('[data-auto-fit]').forEach(function (el) {
+            if (!el.textContent || !el.clientWidth) return;
+            var style = getComputedStyle(el);
+            var size = parseFloat(style.fontSize);
+            if (!size || !style.fontFamily) return;
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d');
+            ctx.font = (style.fontWeight === 'normal' ? '' : style.fontWeight + ' ') + size + 'px ' + style.fontFamily;
+            var measured = ctx.measureText(el.textContent).width;
+            if (!measured) return;
+            el.style.fontSize = size * (el.clientWidth * 0.96 / measured) + 'px';
+        });
+    }
+    document.addEventListener('DOMContentLoaded', fit);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+    window.addEventListener('beforeprint', fit);
+})();
+</script>
+JS;
+
         return <<<HTML
 <!DOCTYPE html>
 <html lang="es">
@@ -455,6 +480,7 @@ HTML;
         {$elementHtml}
     </div>
     {$previewClose}
+    {$fitScript}
 </body>
 </html>
 HTML;
@@ -618,7 +644,9 @@ HTML;
         $textAlign = $element['text_align'] ?? 'center';
         $style .= "text-align:{$textAlign};";
 
-        return '<div style="'.$style.'">'.$content.'</div>';
+        $attributes = ! empty($element['auto_fit']) ? ' data-auto-fit="1"' : '';
+
+        return '<div style="'.$style.'"'.$attributes.'>'.$content.'</div>';
     }
 
     private function measuredTextWidth(string $text, ?string $fontFamily, ?string $fontWeight, float $sizePx): float

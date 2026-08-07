@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Presentation;
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\BienvenidaNuevoUsuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -127,6 +129,15 @@ class PresentationImportController extends Controller
                 );
 
                 $user->roles()->syncWithoutDetaching([2]); // Ponente
+
+                // Enviar email de activación
+                try {
+                    $user->update(['activation_token' => Str::random(60)]);
+                    $activationUrl = url('/ponente/activar/'.$user->activation_token);
+                    $user->notify(new BienvenidaNuevoUsuario($activationUrl, $user->first_name));
+                } catch (\Throwable $e) {
+                    Log::error("Error enviando invitación a {$user->email}: ".$e->getMessage());
+                }
 
                 $presentation->authors()->attach($user->id, ['author_order' => $i]);
             }
