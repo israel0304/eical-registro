@@ -301,6 +301,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('checkin/lookup', [CheckinController::class, 'lookup'])->name('checkin.lookup');
     });
 
+    // Admin: plantillas (unificado)
+    Route::get('admin/plantillas', [CertificateTemplateController::class, 'plantillas'])->name('plantillas.index');
+
     // Admin: badge templates
     Route::middleware('can:gafete.templates.manage')->group(function () {
         Route::get('admin/gafetes/plantillas', [CertificateTemplateController::class, 'badgeIndex'])->name('gafete.templates.index');
