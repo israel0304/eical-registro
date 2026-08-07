@@ -49,9 +49,9 @@ class CertificateRenderer
         'Moderator' => 'Moderador',
     ];
 
-    private const BADGE_PRINT_WIDTH_PT = 153.07086614173;
+    private const BADGE_PRINT_WIDTH_PT = 212.59842519685;
 
-    private const BADGE_PRINT_HEIGHT_PT = 240.94488188976;
+    private const BADGE_PRINT_HEIGHT_PT = 354.33070866142;
 
     /**
      * Resolve the participation type for a given event and user.
@@ -257,9 +257,9 @@ class CertificateRenderer
         $qr = $this->qrDataUri($this->badgeUrl($user));
         $photo = $this->photoDataUri($user);
 
-        if ($template === null) {
-            return $this->fallbackBadgeHtml($user, $metadata, $qr, $photo);
-        }
+        $layout = $this->badgePrintLayout($template);
+        $printPage = '7.5cm 12.5cm';
+        $previewScale = 1 / $layout['scale'];
 
         $printButton = <<<'HTML'
 <button class="print-btn" onclick="window.print()">
@@ -267,6 +267,23 @@ class CertificateRenderer
     Imprimir gafete
 </button>
 HTML;
+
+        if ($template === null) {
+            return $this->fallbackBadgeHtml(
+                $user,
+                $metadata,
+                $qr,
+                $photo,
+                forPdf: false,
+                scale: $layout['scale'],
+                offsetX: $layout['offsetX'],
+                offsetY: $layout['offsetY'],
+                pageWidth: $layout['targetWidth'],
+                pageHeight: $layout['targetHeight'],
+                printPage: $printPage,
+                previewScale: $previewScale,
+            );
+        }
 
         return $this->buildTemplateHtml(
             $template,
@@ -278,6 +295,11 @@ HTML;
                 'title' => 'Gafete de '.$user->name,
                 'pdfButton' => $printButton,
                 'styles' => $this->badgeStyles(),
+                'scale' => $layout['scale'],
+                'offsetX' => $layout['offsetX'],
+                'offsetY' => $layout['offsetY'],
+                'printPage' => $printPage,
+                'previewScale' => $previewScale,
             ],
         );
     }
@@ -292,6 +314,27 @@ HTML;
         $qr = $this->qrDataUri($this->badgeUrl($user), png: true);
         $photo = $this->photoDataUri($user);
 
+        $layout = $this->badgePrintLayout($template);
+
+        $dompdf = new Dompdf;
+        $dompdf->loadHtml($template === null
+            ? $this->fallbackBadgeHtml($user, $metadata, $qr, $photo, forPdf: true, scale: $layout['scale'], offsetX: $layout['offsetX'], offsetY: $layout['offsetY'], pageWidth: $layout['targetWidth'], pageHeight: $layout['targetHeight'])
+            : $this->buildTemplateHtml($template, $metadata, $qr, $photo, forPdf: true, options: [
+                'title' => 'Gafete de '.$user->name,
+                'scale' => $layout['scale'],
+                'offsetX' => $layout['offsetX'],
+                'offsetY' => $layout['offsetY'],
+                'pageWidth' => $layout['targetWidth'],
+                'pageHeight' => $layout['targetHeight'],
+            ]));
+        $dompdf->setPaper([0, 0, self::BADGE_PRINT_WIDTH_PT, self::BADGE_PRINT_HEIGHT_PT]);
+        $dompdf->render();
+
+        return $dompdf->output();
+    }
+
+    private function badgePrintLayout(?CertificateTemplate $template): array
+    {
         $designWidth = $template->width ?? 384;
         $designHeight = $template->height ?? 816;
 
@@ -302,21 +345,13 @@ HTML;
         $offsetX = ($targetWidth - $designWidth * $scale) / 2;
         $offsetY = ($targetHeight - $designHeight * $scale) / 2;
 
-        $dompdf = new Dompdf;
-        $dompdf->loadHtml($template === null
-            ? $this->fallbackBadgeHtml($user, $metadata, $qr, $photo, forPdf: true, scale: $scale, offsetX: $offsetX, offsetY: $offsetY, pageWidth: $targetWidth, pageHeight: $targetHeight)
-            : $this->buildTemplateHtml($template, $metadata, $qr, $photo, forPdf: true, options: [
-                'title' => 'Gafete de '.$user->name,
-                'scale' => $scale,
-                'offsetX' => $offsetX,
-                'offsetY' => $offsetY,
-                'pageWidth' => $targetWidth,
-                'pageHeight' => $targetHeight,
-            ]));
-        $dompdf->setPaper([0, 0, self::BADGE_PRINT_WIDTH_PT, self::BADGE_PRINT_HEIGHT_PT]);
-        $dompdf->render();
-
-        return $dompdf->output();
+        return [
+            'scale' => $scale,
+            'offsetX' => $offsetX,
+            'offsetY' => $offsetY,
+            'targetWidth' => $targetWidth,
+            'targetHeight' => $targetHeight,
+        ];
     }
 
     private function buildCertificateHtml(Certificate $certificate, bool $forPdf): string
@@ -377,7 +412,18 @@ HTML;
         $extraStyles = $options['styles'] ?? '';
         $pageWidth = $options['pageWidth'] ?? $width;
         $pageHeight = $options['pageHeight'] ?? $height;
-        $pageRule = $forPdf ? "@page { size: {$pageWidth}px {$pageHeight}px; margin: 0; }" : '';
+        $printPage = $options['printPage'] ?? null;
+        $previewScale = $options['previewScale'] ?? 0;
+        $pageRule = $forPdf
+            ? "@page { size: {$pageWidth}px {$pageHeight}px; margin: 0; }"
+            : ($printPage ? "@page { size: {$printPage}; margin: 0; }" : '');
+        $previewW = round($width * $previewScale);
+        $previewH = round($height * $previewScale);
+        $previewRule = $previewScale > 0
+            ? "@media screen { .preview { transform: scale({$previewScale}); transform-origin: top left; width: {$previewW}px; height: {$previewH}px; } }"
+            : '';
+        $previewOpen = $previewScale > 0 ? '<div class="preview">' : '';
+        $previewClose = $previewScale > 0 ? '</div>' : '';
         $bgStyle = $forPdf
             ? '.certificate .bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }'
             : '.certificate .bg { position: absolute; inset: 0; width: 100%; height: 100%; }';
@@ -395,16 +441,19 @@ HTML;
         .certificate { position: relative; width: {$width}px; height: {$height}px; margin-left: {$offsetX}px; margin-top: {$offsetY}px; overflow: hidden; }
         {$bgStyle}
         {$pageRule}
+        {$previewRule}
         {$styles}
         {$extraStyles}
     </style>
 </head>
 <body>
     {$pdfButton}
+    {$previewOpen}
     <div class="certificate">
         {$background}
         {$elementHtml}
     </div>
+    {$previewClose}
 </body>
 </html>
 HTML;
@@ -701,14 +750,23 @@ HTML;
         return 'data:image/svg+xml;base64,'.base64_encode($svg);
     }
 
-    private function fallbackBadgeHtml(User $user, array $metadata, string $qr, string $photo, bool $forPdf = false, float $scale = 1.0, float $offsetX = 0.0, float $offsetY = 0.0, float $pageWidth = 0.0, float $pageHeight = 0.0): string
+    private function fallbackBadgeHtml(User $user, array $metadata, string $qr, string $photo, bool $forPdf = false, float $scale = 1.0, float $offsetX = 0.0, float $offsetY = 0.0, float $pageWidth = 0.0, float $pageHeight = 0.0, string $printPage = '', float $previewScale = 0.0): string
     {
         $s = $scale;
         $width = 384 * $s;
         $height = 816 * $s;
         $pw = $pageWidth ?: $width;
         $ph = $pageHeight ?: $height;
-        $pageRule = $forPdf ? "@page { size: {$pw}px {$ph}px; margin: 0; }" : '';
+        $pageRule = $forPdf
+            ? "@page { size: {$pw}px {$ph}px; margin: 0; }"
+            : ($printPage ? "@page { size: {$printPage}; margin: 0; }" : '');
+        $previewW = round($width * $previewScale);
+        $previewH = round($height * $previewScale);
+        $previewRule = $previewScale > 0
+            ? "@media screen { .preview { transform: scale({$previewScale}); transform-origin: top left; width: {$previewW}px; height: {$previewH}px; } }"
+            : '';
+        $previewOpen = $previewScale > 0 ? '<div class="preview">' : '';
+        $previewClose = $previewScale > 0 ? '</div>' : '';
         $printButton = $forPdf ? '' : '<button class="print-btn" onclick="window.print()">Imprimir gafete</button>';
 
         return <<<HTML
@@ -733,11 +791,13 @@ HTML;
         .badge-qr { position: absolute; left: {102 * $s}px; bottom: {120 * $s}px; width: {180 * $s}px; height: {180 * $s}px; }
         .badge-qr-caption { position: absolute; left: 0; right: 0; bottom: {40 * $s}px; text-align: center; font-size: {12 * $s}px; color: #64748b; }
         {$pageRule}
+        {$previewRule}
         {$this->badgeStyles()}
     </style>
 </head>
 <body>
     {$printButton}
+    {$previewOpen}
     <div class="badge">
         <div class="badge-header">
             <span class="title">{$metadata['evento']}</span>
@@ -752,6 +812,7 @@ HTML;
         <img class="badge-qr" src="{$qr}" alt="QR" />
         <div class="badge-qr-caption">Escanear en acceso</div>
     </div>
+    {$previewClose}
 </body>
 </html>
 HTML;
@@ -760,6 +821,7 @@ HTML;
     private function badgeStyles(): string
     {
         return '
+        html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .print-btn {
             position: fixed;
             top: 16px;

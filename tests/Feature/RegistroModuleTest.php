@@ -129,6 +129,8 @@ class RegistroModuleTest extends TestCase
         $this->assertStringContainsString($user->first_name, $response->getContent());
         $this->assertStringContainsString('EICAL 2026', $response->getContent());
         $this->assertStringContainsString('data:image/svg+xml;base64', $response->getContent());
+        $this->assertStringContainsString('@page { size: 7.5cm 12.5cm; margin: 0; }', $response->getContent());
+        $this->assertStringContainsString('print-color-adjust: exact', $response->getContent());
     }
 
     public function test_user_can_download_badge_pdf()
@@ -143,7 +145,7 @@ class RegistroModuleTest extends TestCase
         $this->assertStringStartsWith('%PDF', $response->getContent());
     }
 
-    public function test_badge_pdf_prints_on_54x85_mm_paper()
+    public function test_badge_pdf_prints_on_75x125_mm_paper()
     {
         $user = $this->userWith('Asistente', ['gafete.view']);
         $this->actingAs($user);
@@ -153,8 +155,8 @@ class RegistroModuleTest extends TestCase
         preg_match('/MediaBox\s*\[\s*[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)\s*\]/', $content, $matches);
 
         $this->assertNotEmpty($matches, 'No se encontró MediaBox en el PDF del gafete');
-        $this->assertEqualsWithDelta(153.07, (float) $matches[1], 0.2);
-        $this->assertEqualsWithDelta(240.94, (float) $matches[2], 0.2);
+        $this->assertEqualsWithDelta(212.6, (float) $matches[1], 0.2);
+        $this->assertEqualsWithDelta(354.33, (float) $matches[2], 0.2);
     }
 
     public function test_badge_template_is_used_when_available()
