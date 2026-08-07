@@ -210,6 +210,7 @@ class RegistroModuleTest extends TestCase
         );
         $this->assertStringContainsString('data-auto-fit="1"', $content);
         $this->assertStringContainsString('measureText', $content);
+        $this->assertStringContainsString('data-max-font-size="', $content);
 
         $this->badgeTemplate(autoFit: true);
         $shortUser = $this->userWith('Asistente', ['gafete.view']);
@@ -217,6 +218,22 @@ class RegistroModuleTest extends TestCase
         $shortSize = $this->badgeFontSize();
 
         $this->assertLessThan($shortSize, $longSize);
+    }
+
+    public function test_auto_fit_never_grows_beyond_configured_font_size()
+    {
+        $template = $this->badgeTemplate(autoFit: true);
+        $shortUser = $this->userWith('Asistente', ['gafete.view'], [
+            'first_name' => 'Ana',
+            'last_name' => 'Li',
+        ]);
+        $this->actingAs($shortUser);
+        $fitSize = $this->badgeFontSize();
+
+        $template->elements()->update(['auto_fit' => false]);
+        $baseSize = $this->badgeFontSize();
+
+        $this->assertEqualsWithDelta($baseSize, $fitSize, 0.01);
     }
 
     public function test_auto_fit_is_opt_in()
