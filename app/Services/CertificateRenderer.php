@@ -595,15 +595,16 @@ HTML;
             $measured = $this->measuredTextWidth($content, $element['font_family'] ?? null, $element['font_weight'] ?? null, $fontSize);
 
             if ($measured > 0) {
-                $fitted = $fontSize * (($boxWidth * 0.75 * 0.96) / $measured);
-                $minFont = 8 * $scale;
-                $fontSize = max($fitted, $minFont);
+                $fontSize = $fontSize * (($boxWidth * 0.75 * 0.96) / $measured);
             }
         }
 
         $style = "position:absolute;left:{$left}px;top:{$top}px;width:{$width};height:{$height};z-index:{$z};";
         if ($fontSize > 0) {
             $style .= 'font-size:'.$fontSize.'px;';
+            if (! empty($element['auto_fit'])) {
+                $style .= 'white-space:nowrap;';
+            }
         }
         if (! empty($element['font_weight'])) {
             $style .= "font-weight:{$element['font_weight']};";
