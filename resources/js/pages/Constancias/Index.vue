@@ -112,7 +112,7 @@ const missingDays = computed(() => {
     >
         <Head title="Mis Constancias" />
 
-        <div class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-8 py-8">
+        <div class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-8 sm:py-8">
             <h1
                 class="mb-8 text-3xl font-normal tracking-tight text-gray-900 dark:text-white"
             >
@@ -132,7 +132,7 @@ const missingDays = computed(() => {
                                 class="h-6 w-6 text-sky-600 dark:text-sky-400"
                             />
                         </div>
-                        <div class="flex-1">
+                        <div class="min-w-0 flex-1">
                             <h2
                                 class="text-sm font-semibold text-gray-900 dark:text-white"
                             >
@@ -154,9 +154,11 @@ const missingDays = computed(() => {
                                 Folio: {{ invitationLetter.folio }}
                             </p>
                         </div>
+                    </div>
+                    <div class="mt-4">
                         <button
                             @click="downloadInvitacion"
-                            class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-900/30 dark:text-sky-300"
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100 sm:w-auto dark:border-sky-800 dark:bg-sky-900/30 dark:text-sky-300"
                         >
                             <Download class="h-4 w-4" /> Descargar Carta
                         </button>
@@ -177,7 +179,7 @@ const missingDays = computed(() => {
                                 class="h-6 w-6 text-cyan-600 dark:text-cyan-400"
                             />
                         </div>
-                        <div class="flex-1">
+                        <div class="min-w-0 flex-1">
                             <h2
                                 class="text-sm font-semibold text-gray-900 dark:text-white"
                             >
@@ -200,7 +202,7 @@ const missingDays = computed(() => {
                                 class="mt-4"
                             >
                                 <div
-                                    class="flex items-center justify-between text-xs"
+                                    class="flex flex-wrap items-center justify-between gap-2 text-xs"
                                 >
                                     <span
                                         class="font-medium text-gray-700 dark:text-gray-300"
@@ -215,7 +217,7 @@ const missingDays = computed(() => {
                                         días requeridos
                                     </span>
                                     <span
-                                        class="text-gray-400 dark:text-gray-500"
+                                        class="min-w-0 text-right text-gray-400 dark:text-gray-500"
                                     >
                                         {{
                                             eventAttendance.total_days > 0
@@ -252,20 +254,22 @@ const missingDays = computed(() => {
                                 </p>
                             </div>
                         </div>
+                    </div>
+                    <div class="mt-4">
                         <button
                             v-if="
                                 eventAttendance?.qualifies ||
                                 eventCertificate
                             "
                             @click="downloadEvento"
-                            class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-100 dark:border-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300"
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-100 sm:w-auto dark:border-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300"
                         >
                             <Download class="h-4 w-4" /> Descargar Constancia
                         </button>
                         <button
                             v-else
                             disabled
-                            class="inline-flex shrink-0 cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-500"
+                            class="inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400 sm:w-auto dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-500"
                         >
                             <Clock class="h-4 w-4" /> Pendiente
                         </button>
