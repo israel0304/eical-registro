@@ -143,6 +143,20 @@ class RegistroModuleTest extends TestCase
         $this->assertStringStartsWith('%PDF', $response->getContent());
     }
 
+    public function test_badge_pdf_prints_on_54x85_mm_paper()
+    {
+        $user = $this->userWith('Asistente', ['gafete.view']);
+        $this->actingAs($user);
+
+        $content = $this->get('/gafete/imprimir/pdf')->getContent();
+
+        preg_match('/MediaBox\s*\[\s*[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)\s*\]/', $content, $matches);
+
+        $this->assertNotEmpty($matches, 'No se encontró MediaBox en el PDF del gafete');
+        $this->assertEqualsWithDelta(153.07, (float) $matches[1], 0.2);
+        $this->assertEqualsWithDelta(240.94, (float) $matches[2], 0.2);
+    }
+
     public function test_badge_template_is_used_when_available()
     {
         $this->badgeTemplate();

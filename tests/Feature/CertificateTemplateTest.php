@@ -239,6 +239,11 @@ class CertificateTemplateTest extends TestCase
         $response->assertHeader('Content-Type', 'application/pdf');
         $response->assertHeader('Content-Disposition', 'attachment; filename=constancia_'.$certificate->folio.'.pdf');
         $this->assertStringStartsWith('%PDF', $response->getContent());
+
+        preg_match('/MediaBox\s*\[\s*[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)\s*\]/', $response->getContent(), $matches);
+        $this->assertNotEmpty($matches, 'No se encontró MediaBox en el PDF de la constancia');
+        $this->assertEqualsWithDelta(1350, (float) $matches[1], 0.2);
+        $this->assertEqualsWithDelta(900, (float) $matches[2], 0.2);
     }
 
     public function test_non_owner_cannot_download_certificate_pdf()

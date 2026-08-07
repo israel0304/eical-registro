@@ -49,6 +49,10 @@ class CertificateRenderer
         'Moderator' => 'Moderador',
     ];
 
+    private const BADGE_PRINT_WIDTH_PT = 153.07086614173;
+
+    private const BADGE_PRINT_HEIGHT_PT = 240.94488188976;
+
     /**
      * Resolve the participation type for a given event and user.
      */
@@ -288,14 +292,28 @@ HTML;
         $qr = $this->qrDataUri($this->badgeUrl($user), png: true);
         $photo = $this->photoDataUri($user);
 
-        $width = $template->width ?? 384;
-        $height = $template->height ?? 816;
+        $designWidth = $template->width ?? 384;
+        $designHeight = $template->height ?? 816;
+
+        $targetWidth = self::BADGE_PRINT_WIDTH_PT * 96 / 72;
+        $targetHeight = self::BADGE_PRINT_HEIGHT_PT * 96 / 72;
+
+        $scale = min($targetWidth / $designWidth, $targetHeight / $designHeight);
+        $offsetX = ($targetWidth - $designWidth * $scale) / 2;
+        $offsetY = ($targetHeight - $designHeight * $scale) / 2;
 
         $dompdf = new Dompdf;
         $dompdf->loadHtml($template === null
-            ? $this->fallbackBadgeHtml($user, $metadata, $qr, $photo, forPdf: true)
-            : $this->buildTemplateHtml($template, $metadata, $qr, $photo, forPdf: true));
-        $dompdf->setPaper([0, 0, $width * 0.75, $height * 0.75]);
+            ? $this->fallbackBadgeHtml($user, $metadata, $qr, $photo, forPdf: true, scale: $scale, offsetX: $offsetX, offsetY: $offsetY, pageWidth: $targetWidth, pageHeight: $targetHeight)
+            : $this->buildTemplateHtml($template, $metadata, $qr, $photo, forPdf: true, options: [
+                'title' => 'Gafete de '.$user->name,
+                'scale' => $scale,
+                'offsetX' => $offsetX,
+                'offsetY' => $offsetY,
+                'pageWidth' => $targetWidth,
+                'pageHeight' => $targetHeight,
+            ]));
+        $dompdf->setPaper([0, 0, self::BADGE_PRINT_WIDTH_PT, self::BADGE_PRINT_HEIGHT_PT]);
         $dompdf->render();
 
         return $dompdf->output();
@@ -335,8 +353,12 @@ HTML;
     ): string {
         $template->loadMissing('elements');
 
-        $width = $template->width ?: 1800;
-        $height = $template->height ?: 1200;
+        $scale = $options['scale'] ?? 1;
+        $offsetX = $options['offsetX'] ?? 0;
+        $offsetY = $options['offsetY'] ?? 0;
+
+        $width = ($template->width ?: 1800) * $scale;
+        $height = ($template->height ?: 1200) * $scale;
 
         $background = '';
         if ($template->background_path && Storage::disk('public')->exists($template->background_path)) {
@@ -347,13 +369,15 @@ HTML;
 
         $elementHtml = '';
         foreach ($template->elements as $element) {
-            $elementHtml .= $this->renderElement($element->toArray(), $metadata, $qr, $photo);
+            $elementHtml .= $this->renderElement($element->toArray(), $metadata, $qr, $photo, $scale);
         }
 
         $title = $options['title'] ?? 'Documento';
         $pdfButton = $options['pdfButton'] ?? '';
         $extraStyles = $options['styles'] ?? '';
-        $pageRule = $forPdf ? "@page { size: {$width}px {$height}px; margin: 0; }" : '';
+        $pageWidth = $options['pageWidth'] ?? $width;
+        $pageHeight = $options['pageHeight'] ?? $height;
+        $pageRule = $forPdf ? "@page { size: {$pageWidth}px {$pageHeight}px; margin: 0; }" : '';
         $bgStyle = $forPdf
             ? '.certificate .bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }'
             : '.certificate .bg { position: absolute; inset: 0; width: 100%; height: 100%; }';
@@ -368,7 +392,7 @@ HTML;
     <title>{$title}</title>
     <style>
         html, body { margin: 0; padding: 0; }
-        .certificate { position: relative; width: {$width}px; height: {$height}px; overflow: hidden; }
+        .certificate { position: relative; width: {$width}px; height: {$height}px; margin-left: {$offsetX}px; margin-top: {$offsetY}px; overflow: hidden; }
         {$bgStyle}
         {$pageRule}
         {$styles}
@@ -485,33 +509,34 @@ HTML;
 HTML;
     }
 
-    private function renderElement(array $element, array $metadata, string $qr, ?string $photo): string
+    private function renderElement(array $element, array $metadata, string $qr, ?string $photo, float $scale = 1.0): string
     {
-        $left = (float) $element['x'];
-        $top = (float) $element['y'];
+        $left = (float) $element['x'] * $scale;
+        $top = (float) $element['y'] * $scale;
         $z = (int) $element['z_index'];
 
         if ($element['type'] === 'qr') {
-            $size = $element['width'] ?: 160;
+            $size = ($element['width'] ?: 160) * $scale;
             $style = "position:absolute;left:{$left}px;top:{$top}px;width:{$size}px;height:{$size}px;z-index:{$z};";
 
             return '<img src="'.$qr.'" alt="QR de check-in" style="'.$style.'" />';
         }
 
         if ($element['type'] === 'image') {
-            $width = $element['width'] ?: 200;
-            $height = $element['height'] ?: $width;
+            $originalWidth = $element['width'] ?: 200;
+            $width = $originalWidth * $scale;
+            $height = ($element['height'] ?: $originalWidth) * $scale;
             $style = "position:absolute;left:{$left}px;top:{$top}px;width:{$width}px;height:{$height}px;z-index:{$z};object-fit:cover;border-radius:8px;";
 
             return '<img src="'.($photo ?? '').'" alt="Foto del participante" style="'.$style.'" />';
         }
 
-        $width = $element['width'] ? (int) $element['width'].'px' : 'auto';
-        $height = $element['height'] ? (int) $element['height'].'px' : 'auto';
+        $width = $element['width'] ? (int) round($element['width'] * $scale).'px' : 'auto';
+        $height = $element['height'] ? (int) round($element['height'] * $scale).'px' : 'auto';
 
         $style = "position:absolute;left:{$left}px;top:{$top}px;width:{$width};height:{$height};z-index:{$z};";
         if (! empty($element['font_size'])) {
-            $style .= "font-size:{$element['font_size']}px;";
+            $style .= 'font-size:'.($element['font_size'] * $scale).'px;';
         }
         if (! empty($element['font_weight'])) {
             $style .= "font-weight:{$element['font_weight']};";
@@ -676,11 +701,14 @@ HTML;
         return 'data:image/svg+xml;base64,'.base64_encode($svg);
     }
 
-    private function fallbackBadgeHtml(User $user, array $metadata, string $qr, string $photo, bool $forPdf = false): string
+    private function fallbackBadgeHtml(User $user, array $metadata, string $qr, string $photo, bool $forPdf = false, float $scale = 1.0, float $offsetX = 0.0, float $offsetY = 0.0, float $pageWidth = 0.0, float $pageHeight = 0.0): string
     {
-        $width = 384;
-        $height = 816;
-        $pageRule = $forPdf ? "@page { size: {$width}px {$height}px; margin: 0; }" : '';
+        $s = $scale;
+        $width = 384 * $s;
+        $height = 816 * $s;
+        $pw = $pageWidth ?: $width;
+        $ph = $pageHeight ?: $height;
+        $pageRule = $forPdf ? "@page { size: {$pw}px {$ph}px; margin: 0; }" : '';
         $printButton = $forPdf ? '' : '<button class="print-btn" onclick="window.print()">Imprimir gafete</button>';
 
         return <<<HTML
@@ -691,19 +719,19 @@ HTML;
     <title>Gafete de {$user->name}</title>
     <style>
         html, body { margin: 0; padding: 0; }
-        .badge { position: relative; width: {$width}px; height: {$height}px; background: #ffffff; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; }
-        .badge-header { position: absolute; top: 0; left: 0; right: 0; height: 64px; background: #0f172a; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 16px; }
-        .badge-header .title { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
-        .badge-header .subtitle { font-size: 11px; color: #94a3b8; }
-        .badge-photo { position: absolute; top: 96px; left: 117px; width: 150px; height: 150px; border-radius: 12px; object-fit: cover; border: 3px solid #e2e8f0; }
-        .badge-name { position: absolute; top: 268px; left: 0; right: 0; text-align: center; padding: 0 12px; font-size: 24px; font-weight: 700; color: #0f172a; }
-        .badge-dni { position: absolute; top: 314px; left: 0; right: 0; text-align: center; font-size: 13px; color: #475569; }
-        .badge-role { position: absolute; top: 352px; left: 0; right: 0; text-align: center; }
-        .badge-role span { display: inline-block; padding: 5px 14px; border-radius: 999px; background: #6366f1; color: #ffffff; font-size: 14px; font-weight: 600; }
-        .badge-aff { position: absolute; top: 408px; left: 0; right: 0; text-align: center; padding: 0 12px; font-size: 13px; color: #475569; }
-        .badge-event { position: absolute; top: 470px; left: 0; right: 0; text-align: center; font-size: 12px; color: #94a3b8; }
-        .badge-qr { position: absolute; left: 102px; bottom: 120px; width: 180px; height: 180px; }
-        .badge-qr-caption { position: absolute; left: 0; right: 0; bottom: 40px; text-align: center; font-size: 12px; color: #64748b; }
+        .badge { position: relative; width: {$width}px; height: {$height}px; margin-left: {$offsetX}px; margin-top: {$offsetY}px; background: #ffffff; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; }
+        .badge-header { position: absolute; top: 0; left: 0; right: 0; height: {64 * $s}px; background: #0f172a; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 {16 * $s}px; }
+        .badge-header .title { font-size: {22 * $s}px; font-weight: 700; letter-spacing: 1px; }
+        .badge-header .subtitle { font-size: {11 * $s}px; color: #94a3b8; }
+        .badge-photo { position: absolute; top: {96 * $s}px; left: {117 * $s}px; width: {150 * $s}px; height: {150 * $s}px; border-radius: {12 * $s}px; object-fit: cover; border: {3 * $s}px solid #e2e8f0; }
+        .badge-name { position: absolute; top: {268 * $s}px; left: 0; right: 0; text-align: center; padding: 0 {12 * $s}px; font-size: {24 * $s}px; font-weight: 700; color: #0f172a; }
+        .badge-dni { position: absolute; top: {314 * $s}px; left: 0; right: 0; text-align: center; font-size: {13 * $s}px; color: #475569; }
+        .badge-role { position: absolute; top: {352 * $s}px; left: 0; right: 0; text-align: center; }
+        .badge-role span { display: inline-block; padding: {5 * $s}px {14 * $s}px; border-radius: 999px; background: #6366f1; color: #ffffff; font-size: {14 * $s}px; font-weight: 600; }
+        .badge-aff { position: absolute; top: {408 * $s}px; left: 0; right: 0; text-align: center; padding: 0 {12 * $s}px; font-size: {13 * $s}px; color: #475569; }
+        .badge-event { position: absolute; top: {470 * $s}px; left: 0; right: 0; text-align: center; font-size: {12 * $s}px; color: #94a3b8; }
+        .badge-qr { position: absolute; left: {102 * $s}px; bottom: {120 * $s}px; width: {180 * $s}px; height: {180 * $s}px; }
+        .badge-qr-caption { position: absolute; left: 0; right: 0; bottom: {40 * $s}px; text-align: center; font-size: {12 * $s}px; color: #64748b; }
         {$pageRule}
         {$this->badgeStyles()}
     </style>
