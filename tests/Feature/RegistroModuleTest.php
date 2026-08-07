@@ -140,6 +140,7 @@ class RegistroModuleTest extends TestCase
         $this->assertStringContainsString('EICAL 2026', $response->getContent());
         $this->assertStringContainsString('data:image/svg+xml;base64', $response->getContent());
         $this->assertStringContainsString('@page { size: 7.5cm 12.5cm; margin: 0; }', $response->getContent());
+        $this->assertStringContainsString('name="viewport"', $response->getContent());
         $this->assertStringContainsString('print-color-adjust: exact', $response->getContent());
     }
 
