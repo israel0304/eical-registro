@@ -260,7 +260,6 @@ class CertificateRenderer
 
         $layout = $this->badgePrintLayout($template);
         $printPage = '7.5cm 12.5cm';
-        $previewScale = 1 / $layout['scale'];
 
         $printButton = <<<'HTML'
 <button class="print-btn" onclick="window.print()">
@@ -282,7 +281,6 @@ HTML;
                 pageWidth: $layout['targetWidth'],
                 pageHeight: $layout['targetHeight'],
                 printPage: $printPage,
-                previewScale: $previewScale,
             );
         }
 
@@ -300,7 +298,6 @@ HTML;
                 'offsetX' => $layout['offsetX'],
                 'offsetY' => $layout['offsetY'],
                 'printPage' => $printPage,
-                'previewScale' => $previewScale,
             ],
         );
     }
@@ -414,22 +411,33 @@ HTML;
         $pageWidth = $options['pageWidth'] ?? $width;
         $pageHeight = $options['pageHeight'] ?? $height;
         $printPage = $options['printPage'] ?? null;
-        $previewScale = $options['previewScale'] ?? 0;
         $pageRule = $forPdf
             ? "@page { size: {$pageWidth}px {$pageHeight}px; margin: 0; }"
             : ($printPage ? "@page { size: {$printPage}; margin: 0; }" : '');
-        $previewW = round($width * $previewScale);
-        $previewH = round($height * $previewScale);
-        $previewRule = $previewScale > 0
-            ? "@media screen { .preview { transform: scale({$previewScale}); transform-origin: top left; width: {$previewW}px; height: {$previewH}px; } }"
-            : '';
-        $previewOpen = $previewScale > 0 ? '<div class="preview">' : '';
-        $previewClose = $previewScale > 0 ? '</div>' : '';
+        $previewOpen = $forPdf ? '' : '<div class="preview">';
+        $previewClose = $forPdf ? '' : '</div>';
         $bgStyle = $forPdf
             ? '.certificate .bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }'
             : '.certificate .bg { position: absolute; inset: 0; width: 100%; height: 100%; }';
 
         $styles = $this->elementStyles();
+
+        $screenRule = $forPdf ? '' : <<<CSS
+@media screen {
+    .preview {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 24px 16px;
+        box-sizing: border-box;
+    }
+    .certificate {
+        transform-origin: center;
+        transform: scale(max(0.2, min(calc((100vw - 48px) / {$width}), calc((100vh - 160px) / {$height}))));
+    }
+}
+CSS;
 
         $fitScript = $forPdf ? '' : <<<'JS'
 
@@ -467,7 +475,7 @@ JS;
         .certificate { position: relative; width: {$width}px; height: {$height}px; margin-left: {$offsetX}px; margin-top: {$offsetY}px; overflow: hidden; }
         {$bgStyle}
         {$pageRule}
-        {$previewRule}
+        {$screenRule}
         {$styles}
         {$extraStyles}
     </style>
@@ -825,7 +833,7 @@ HTML;
         return 'data:image/svg+xml;base64,'.base64_encode($svg);
     }
 
-    private function fallbackBadgeHtml(User $user, array $metadata, string $qr, string $photo, bool $forPdf = false, float $scale = 1.0, float $offsetX = 0.0, float $offsetY = 0.0, float $pageWidth = 0.0, float $pageHeight = 0.0, string $printPage = '', float $previewScale = 0.0): string
+    private function fallbackBadgeHtml(User $user, array $metadata, string $qr, string $photo, bool $forPdf = false, float $scale = 1.0, float $offsetX = 0.0, float $offsetY = 0.0, float $pageWidth = 0.0, float $pageHeight = 0.0, string $printPage = ''): string
     {
         $s = $scale;
         $width = 384 * $s;
@@ -835,13 +843,24 @@ HTML;
         $pageRule = $forPdf
             ? "@page { size: {$pw}px {$ph}px; margin: 0; }"
             : ($printPage ? "@page { size: {$printPage}; margin: 0; }" : '');
-        $previewW = round($width * $previewScale);
-        $previewH = round($height * $previewScale);
-        $previewRule = $previewScale > 0
-            ? "@media screen { .preview { transform: scale({$previewScale}); transform-origin: top left; width: {$previewW}px; height: {$previewH}px; } }"
-            : '';
-        $previewOpen = $previewScale > 0 ? '<div class="preview">' : '';
-        $previewClose = $previewScale > 0 ? '</div>' : '';
+        $previewOpen = $forPdf ? '' : '<div class="preview">';
+        $previewClose = $forPdf ? '' : '</div>';
+        $screenRule = $forPdf ? '' : <<<CSS
+@media screen {
+    .preview {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 24px 16px;
+        box-sizing: border-box;
+    }
+    .badge {
+        transform-origin: center;
+        transform: scale(max(0.2, min(calc((100vw - 48px) / {$width}), calc((100vh - 160px) / {$height}))));
+    }
+}
+CSS;
         $printButton = $forPdf ? '' : '<button class="print-btn" onclick="window.print()">Imprimir gafete</button>';
 
         return <<<HTML
@@ -866,7 +885,7 @@ HTML;
         .badge-qr { position: absolute; left: {102 * $s}px; bottom: {120 * $s}px; width: {180 * $s}px; height: {180 * $s}px; }
         .badge-qr-caption { position: absolute; left: 0; right: 0; bottom: {40 * $s}px; text-align: center; font-size: {12 * $s}px; color: #64748b; }
         {$pageRule}
-        {$previewRule}
+        {$screenRule}
         {$this->badgeStyles()}
     </style>
 </head>

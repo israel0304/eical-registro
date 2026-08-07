@@ -174,6 +174,8 @@ class CertificateTemplateTest extends TestCase
         $this->assertStringContainsString(htmlspecialchars($user->name), $html);
         $this->assertStringContainsString('data:image/svg+xml;base64', $html);
         $this->assertStringContainsString($certificate->folio, $html);
+        $this->assertStringContainsString('@media screen', $html);
+        $this->assertStringContainsString('100vw', $html);
 
         $this->assertDatabaseHas('certificates', [
             'folio' => $certificate->folio,

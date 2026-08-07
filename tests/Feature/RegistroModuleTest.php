@@ -169,6 +169,19 @@ class RegistroModuleTest extends TestCase
         $this->assertEqualsWithDelta(354.33, (float) $matches[2], 0.2);
     }
 
+    public function test_badge_print_page_is_responsive_on_screen()
+    {
+        $user = $this->userWith('Asistente', ['gafete.view']);
+        $this->actingAs($user);
+
+        $content = $this->get('/gafete/imprimir')->getContent();
+
+        $this->assertStringContainsString('@media screen', $content);
+        $this->assertStringContainsString('100vw', $content);
+        $this->assertStringContainsString('transform: scale(max(0.2, min(', $content);
+        $this->assertStringNotContainsString('.preview { transform: scale(', $content);
+    }
+
     public function test_badge_template_is_used_when_available()
     {
         $this->badgeTemplate();
