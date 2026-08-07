@@ -190,10 +190,13 @@ class RegistroModuleTest extends TestCase
         ]);
         $this->actingAs($longUser);
         $longSize = $this->badgeFontSize();
+        $content = $this->get('/gafete/imprimir')->getContent();
         $this->assertStringContainsString(
             'white-space:nowrap;',
-            $this->get('/gafete/imprimir')->getContent(),
+            $content,
         );
+        $this->assertStringContainsString('data-auto-fit="1"', $content);
+        $this->assertStringContainsString('measureText', $content);
 
         $this->badgeTemplate(autoFit: true);
         $shortUser = $this->userWith('Asistente', ['gafete.view']);
@@ -212,6 +215,8 @@ class RegistroModuleTest extends TestCase
         ]);
         $this->actingAs($longUser);
         $longSize = $this->badgeFontSize();
+        $content = $this->get('/gafete/imprimir')->getContent();
+        $this->assertStringNotContainsString('data-auto-fit="1"', $content);
 
         $this->badgeTemplate(autoFit: false);
         $shortUser = $this->userWith('Asistente', ['gafete.view']);
