@@ -55,10 +55,10 @@ const kinds: Record<
         description:
             'Personaliza la credencial de acceso que los participantes descargan desde su perfil.',
         basePath: '/admin/gafetes/plantillas',
-        defaultWidth: 638,
-        defaultHeight: 1004,
+        defaultWidth: 886,
+        defaultHeight: 1476,
         requiresType: false,
-        aspect: 'aspect-[638/1004]',
+        aspect: 'aspect-[3/5]',
         defaultLabel: 'Usar como plantilla por defecto del gafete',
         emptyTitle: 'No hay plantillas de gafete.',
         emptyText: 'Crea la primera para comenzar.',
