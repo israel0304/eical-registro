@@ -111,6 +111,22 @@ class CertificateTemplateTest extends TestCase
         $this->get('/admin/constancias/plantillas')->assertOk();
     }
 
+    public function test_admin_can_access_unified_plantillas_page()
+    {
+        $this->actingAs($this->admin());
+
+        $this->get('/admin/plantillas')->assertOk();
+    }
+
+    public function test_non_admin_is_forbidden_from_unified_plantillas_page()
+    {
+        $user = User::factory()->create();
+        $user->roles()->sync([Role::firstOrCreate(['name' => 'Asistente'])->id]);
+        $this->actingAs($user);
+
+        $this->get('/admin/plantillas')->assertForbidden();
+    }
+
     public function test_non_admin_is_forbidden_from_template_index()
     {
         $user = User::factory()->create();

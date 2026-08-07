@@ -17,6 +17,40 @@ class CertificateTemplateController extends Controller
         return $this->indexFor($request, 'certificate');
     }
 
+    public function plantillas(Request $request)
+    {
+        abort_if(! $request->user()->isAdmin(), 403);
+
+        $lists = [];
+        foreach (['badge', 'certificate', 'invitation'] as $kind) {
+            $lists[$kind] = CertificateTemplate::query()
+                ->kind($kind)
+                ->with('participationType')
+                ->withCount('elements')
+                ->orderBy('participation_type_id')
+                ->orderBy('is_default', 'desc')
+                ->get();
+        }
+
+        $participationTypes = ParticipationType::query()
+            ->withCount('templates')
+            ->orderBy('event_kind')
+            ->orderBy('role')
+            ->get();
+
+        return Inertia::render('Plantillas/Index', [
+            'badgeTemplates' => $lists['badge'],
+            'certificateTemplates' => $lists['certificate'],
+            'invitationTemplates' => $lists['invitation'],
+            'participationTypes' => $participationTypes,
+            'permissions' => [
+                'gafete' => $request->user()->hasPermission('gafete.templates.manage'),
+                'constancias' => $request->user()->hasPermission('constancias.templates.manage'),
+                'invitaciones' => $request->user()->hasPermission('constancias.templates.manage'),
+            ],
+        ]);
+    }
+
     public function badgeIndex(Request $request)
     {
         return $this->indexFor($request, 'badge');

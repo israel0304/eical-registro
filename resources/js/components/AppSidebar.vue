@@ -8,15 +8,13 @@ import {
     CalendarCheck,
     Award,
     BarChart3,
-    FileBadge,
     Presentation,
     Tags,
     ShieldCheck,
     BadgeCheck,
     ScanLine,
-    CreditCard,
     CalendarDays,
-    Mail,
+    LayoutTemplate,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
@@ -100,24 +98,11 @@ const mainNavItems = computed<NavItem[]>(() => {
         items.push({ title: 'Evento', href: '/admin/evento', icon: CalendarDays });
     }
 
-    if (can('gafete.templates.manage')) {
-        items.push({
-            title: 'Plantilla Gafete',
-            href: '/admin/gafetes/plantillas',
-            icon: CreditCard,
-        });
-    }
-
-    if (can('constancias.templates.manage')) {
+    if (can('gafete.templates.manage') || can('constancias.templates.manage')) {
         items.push({
             title: 'Plantillas',
-            href: '/admin/constancias/plantillas',
-            icon: FileBadge,
-        });
-        items.push({
-            title: 'Cartas',
-            href: '/admin/constancias/invitaciones/plantillas',
-            icon: Mail,
+            href: '/admin/plantillas',
+            icon: LayoutTemplate,
         });
     }
 
