@@ -470,6 +470,7 @@ JS;
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{$title}</title>
     <style>
         html, body { margin: 0; padding: 0; }
@@ -880,6 +881,7 @@ CSS;
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Gafete de {$user->name}</title>
     <style>
         html, body { margin: 0; padding: 0; }
