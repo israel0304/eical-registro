@@ -26,3 +26,7 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+bin/
+public/.user.ini
+AGENTS.md
+ARCHITECTURE.md
