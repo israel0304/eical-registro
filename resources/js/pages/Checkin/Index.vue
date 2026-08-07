@@ -8,6 +8,7 @@ import {
     UserRound,
     CameraOff,
     Search,
+    Printer,
 } from 'lucide-vue-next';
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
@@ -242,6 +243,14 @@ const selectUser = (user: any) => {
 
 const clearResult = () => {
     result.value = null;
+};
+
+const openBadgePrint = (userId: number) => {
+    window.open(`/checkin/gafete/${userId}/imprimir`, '_blank');
+};
+
+const openBadgePdf = (userId: number) => {
+    window.open(`/checkin/gafete/${userId}/imprimir/pdf`, '_blank');
 };
 
 onMounted(async () => {
@@ -563,6 +572,25 @@ onBeforeUnmount(() => {
                                 ✕
                             </button>
                         </div>
+
+                        <div
+                            v-if="result.user"
+                            class="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-200 pt-4 dark:border-zinc-700"
+                        >
+                            <button
+                                @click="openBadgePrint(result.user.id)"
+                                class="inline-flex items-center gap-1.5 rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+                            >
+                                <Printer class="h-3.5 w-3.5" />
+                                Imprimir gafete
+                            </button>
+                            <button
+                                @click="openBadgePdf(result.user.id)"
+                                class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-200 dark:hover:bg-zinc-700"
+                            >
+                                Descargar PDF
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -637,6 +665,15 @@ onBeforeUnmount(() => {
                                         : 'Sin constancia'
                                 }}
                             </span>
+                            <button
+                                v-if="attendance.user?.id"
+                                type="button"
+                                :title="'Imprimir gafete de ' + (attendance.user?.first_name ?? '')"
+                                class="shrink-0 rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
+                                @click="openBadgePrint(attendance.user.id)"
+                            >
+                                <Printer class="h-4 w-4" />
+                            </button>
                         </li>
                     </ul>
 
