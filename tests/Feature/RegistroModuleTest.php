@@ -190,6 +190,10 @@ class RegistroModuleTest extends TestCase
         ]);
         $this->actingAs($longUser);
         $longSize = $this->badgeFontSize();
+        $this->assertStringContainsString(
+            'white-space:nowrap;',
+            $this->get('/gafete/imprimir')->getContent(),
+        );
 
         $this->badgeTemplate(autoFit: true);
         $shortUser = $this->userWith('Asistente', ['gafete.view']);
