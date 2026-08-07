@@ -21,6 +21,7 @@ use chillerlan\QRCode\Output\QRGdImagePNG;
 use chillerlan\QRCode\QRCode as ChillerlanQRCode;
 use chillerlan\QRCode\QROptions;
 use Dompdf\Dompdf;
+use Dompdf\FontMetrics;
 use Illuminate\Support\Facades\Storage;
 
 class CertificateRenderer
@@ -583,9 +584,26 @@ HTML;
         $width = $element['width'] ? (int) round($element['width'] * $scale).'px' : 'auto';
         $height = $element['height'] ? (int) round($element['height'] * $scale).'px' : 'auto';
 
+        $content = $element['content'] ?? '';
+        $content = $this->replaceVariables($content, $metadata);
+        $content = str_replace(['{qr}', '{qr_activacion}'], $qr, $content);
+
+        $fontSize = ! empty($element['font_size']) ? (float) $element['font_size'] * $scale : 0.0;
+
+        if ($fontSize > 0 && ! empty($element['auto_fit']) && ! empty($element['width']) && $content !== '') {
+            $boxWidth = (float) $element['width'] * $scale;
+            $measured = $this->measuredTextWidth($content, $element['font_family'] ?? null, $element['font_weight'] ?? null, $fontSize);
+
+            if ($measured > 0) {
+                $fitted = $fontSize * (($boxWidth * 0.75 * 0.96) / $measured);
+                $minFont = 8 * $scale;
+                $fontSize = max($fitted, $minFont);
+            }
+        }
+
         $style = "position:absolute;left:{$left}px;top:{$top}px;width:{$width};height:{$height};z-index:{$z};";
-        if (! empty($element['font_size'])) {
-            $style .= 'font-size:'.($element['font_size'] * $scale).'px;';
+        if ($fontSize > 0) {
+            $style .= 'font-size:'.$fontSize.'px;';
         }
         if (! empty($element['font_weight'])) {
             $style .= "font-weight:{$element['font_weight']};";
@@ -599,11 +617,39 @@ HTML;
         $textAlign = $element['text_align'] ?? 'center';
         $style .= "text-align:{$textAlign};";
 
-        $content = $element['content'] ?? '';
-        $content = $this->replaceVariables($content, $metadata);
-        $content = str_replace(['{qr}', '{qr_activacion}'], $qr, $content);
-
         return '<div style="'.$style.'">'.$content.'</div>';
+    }
+
+    private function measuredTextWidth(string $text, ?string $fontFamily, ?string $fontWeight, float $sizePx): float
+    {
+        $metrics = $this->fontMetrics();
+        $font = $metrics->getFont($fontFamily ?: 'sans-serif', $this->fontStyle($fontWeight));
+
+        return $metrics->getTextWidth($text, $font, $sizePx * 0.75);
+    }
+
+    private function fontStyle(?string $fontWeight): string
+    {
+        $weight = strtolower(trim((string) $fontWeight));
+
+        if ($weight === 'italic') {
+            return 'italic';
+        }
+
+        return in_array($weight, ['bold', 'bolder', '600', '700', '800', '900'], true)
+            ? 'bold'
+            : 'normal';
+    }
+
+    private ?FontMetrics $fontMetricsInstance = null;
+
+    private function fontMetrics(): FontMetrics
+    {
+        if ($this->fontMetricsInstance === null) {
+            $this->fontMetricsInstance = (new Dompdf)->getFontMetrics();
+        }
+
+        return $this->fontMetricsInstance;
     }
 
     private function replaceVariables(string $content, array $metadata): string

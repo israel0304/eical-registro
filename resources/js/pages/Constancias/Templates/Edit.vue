@@ -13,7 +13,14 @@ import {
     Type,
 } from 'lucide-vue-next';
 import QRCode from 'qrcode';
-import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    reactive,
+    ref,
+} from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 interface ElementModel {
@@ -27,6 +34,7 @@ interface ElementModel {
     width: number | null;
     height: number | null;
     font_size: number | null;
+    auto_fit: boolean;
     font_weight: string | null;
     font_family: string | null;
     color: string | null;
@@ -93,6 +101,7 @@ const elements = ref<ElementModel[]>(
         width: el.width ? Number(el.width) : null,
         height: el.height ? Number(el.height) : null,
         font_size: el.font_size ? Number(el.font_size) : null,
+        auto_fit: Boolean(el.auto_fit ?? false),
         font_weight: el.font_weight ?? null,
         font_family: el.font_family ?? null,
         color: el.color ?? null,
@@ -126,6 +135,15 @@ const backgroundUrl = computed(() =>
         : null,
 );
 
+const backgroundPreview = ref<string | null>(null);
+const canvasBackground = computed(
+    () => backgroundPreview.value ?? backgroundUrl.value,
+);
+
+onBeforeUnmount(() => {
+    if (backgroundPreview.value) URL.revokeObjectURL(backgroundPreview.value);
+});
+
 // Sample data for live preview
 const SAMPLE: Record<string, string> = {
     '{nombre}': 'María Fernanda López',
@@ -151,6 +169,22 @@ const previewText = (content: string | null) =>
         /\{nombre\}|\{tipo_participacion\}|\{evento\}|\{fecha_evento\}|\{folio\}|\{dni\}|\{afiliacion\}|\{rol\}|\{iniciales\}/g,
         (m) => SAMPLE[m] ?? m,
     );
+
+const measureCtx = (() => {
+    if (typeof document === 'undefined') return null;
+    return document.createElement('canvas').getContext('2d');
+})();
+
+const fittedFontSize = (el: ElementModel): number => {
+    const base = el.font_size || 0;
+    if (!base || !el.width) return base;
+    const text = previewText(el.content);
+    if (!text || !measureCtx) return base;
+    measureCtx.font = `${el.font_weight || 'normal'} ${base}px ${el.font_family || 'sans-serif'}`;
+    const measured = measureCtx.measureText(text).width;
+    if (!measured) return base;
+    return Math.max((base * el.width * 0.96) / measured, 8);
+};
 
 // QR previews (client-side, for live editing)
 const qrPreviews = reactive<Record<string, string>>({});
@@ -182,6 +216,7 @@ const addElement = (type: 'text' | 'qr' | 'image') => {
         width: type === 'text' ? 400 : 200,
         height: type === 'text' ? 60 : 200,
         font_size: type === 'text' ? 42 : null,
+        auto_fit: false,
         font_weight: type === 'text' ? 'bold' : null,
         font_family: type === 'text' ? 'Georgia, serif' : null,
         color: type === 'text' ? '#000000' : null,
@@ -300,6 +335,7 @@ const save = () => {
         width: el.width,
         height: el.height,
         font_size: el.font_size,
+        auto_fit: el.auto_fit,
         font_weight: el.font_weight,
         font_family: el.font_family,
         color: el.color,
@@ -318,6 +354,8 @@ const onBackgroundChange = (event: Event) => {
     const file = input.files?.[0];
     if (!file) return;
     form.background = file;
+    if (backgroundPreview.value) URL.revokeObjectURL(backgroundPreview.value);
+    backgroundPreview.value = URL.createObjectURL(file);
 };
 
 const elementStyle = (el: ElementModel) => {
@@ -329,7 +367,8 @@ const elementStyle = (el: ElementModel) => {
     if (el.width) style.width = el.width + 'px';
     if (el.height) style.height = el.height + 'px';
     if (el.type === 'text') {
-        if (el.font_size) style.fontSize = el.font_size + 'px';
+        if (el.font_size)
+            style.fontSize = (el.auto_fit ? fittedFontSize(el) : el.font_size) + 'px';
         if (el.font_weight) style.fontWeight = el.font_weight;
         if (el.font_family) style.fontFamily = el.font_family;
         if (el.color) style.color = el.color;
@@ -618,8 +657,8 @@ onMounted(() => {
                             }"
                         >
                             <img
-                                v-if="backgroundUrl"
-                                :src="backgroundUrl"
+                                v-if="canvasBackground"
+                                :src="canvasBackground"
                                 class="pointer-events-none absolute inset-0 h-full w-full select-none"
                                 draggable="false"
                             />
@@ -836,6 +875,16 @@ onMounted(() => {
                                     </option>
                                 </select>
                             </div>
+                            <label
+                                class="mt-3 flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300"
+                            >
+                                <input
+                                    v-model="selected.auto_fit"
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                Ajustar automáticamente
+                            </label>
                             <div
                                 class="mt-3 grid grid-cols-2 gap-2"
                             >
