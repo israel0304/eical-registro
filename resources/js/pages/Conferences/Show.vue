@@ -9,9 +9,20 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
-const hasRole = (name: string) =>
-    page.props.auth.user?.roles?.some((r: any) => r.name === name) ?? false;
-const isAdmin = computed(() => hasRole('Administrator'));
+const can = (permission: string) =>
+    (page.props.auth.permissions as string[] | undefined)?.includes(
+        permission,
+    ) ?? false;
+const currentUserId = computed(() => page.props.auth.user?.id);
+const isAssignedModerator = computed(() => {
+    return props.conference.members?.some(
+        (m: any) =>
+            m.id === currentUserId.value && m.pivot?.role === 'moderator',
+    );
+});
+const canManage = computed(
+    () => can('conferences.edit') || isAssignedModerator.value,
+);
 
 const goBack = () => {
     router.get('/conferences');
@@ -29,15 +40,28 @@ const formatDay = (day: string) => {
 };
 
 const kindLabel = (kind: string) =>
-    ({ magistral: 'Magistral', especial: 'Especial', simposio: 'Simposio', mesa_dialogo: 'Mesa de diálogo' })[kind] ?? kind;
+    ({
+        magistral: 'Magistral',
+        especial: 'Especial',
+        simposio: 'Simposio',
+        mesa_dialogo: 'Mesa de diálogo',
+    })[kind] ?? kind;
 
 const roleLabel = (role: string) =>
     ({ speaker: 'Speaker', moderator: 'Moderador' })[role] ?? role;
 
 const toggleActivation = (userId: number) => {
-    router.post('/conferences/' + props.conference.id + '/members/' + userId + '/activation', {}, {
-        preserveScroll: true,
-    });
+    router.post(
+        '/conferences/' +
+            props.conference.id +
+            '/members/' +
+            userId +
+            '/activation',
+        {},
+        {
+            preserveScroll: true,
+        },
+    );
 };
 
 const downloadConstancia = (userId: number) => {
@@ -167,7 +191,13 @@ const downloadConstancia = (userId: number) => {
                             </span>
                         </div>
 
-                        <template v-if="isAdmin">
+                        <template
+                            v-if="
+                                can('conferences.activate') &&
+                                (can('conferences.view') ||
+                                    isAssignedModerator)
+                            "
+                        >
                             <label
                                 class="flex cursor-pointer items-center gap-1 text-xs text-gray-600 dark:text-gray-400"
                             >
@@ -180,7 +210,10 @@ const downloadConstancia = (userId: number) => {
                                 Constancia activada
                             </label>
                             <button
-                                v-if="member.pivot?.activated"
+                                v-if="
+                                    member.pivot?.activated &&
+                                    can('constancias.download')
+                                "
                                 type="button"
                                 @click="downloadConstancia(member.id)"
                                 class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300"
@@ -200,7 +233,7 @@ const downloadConstancia = (userId: number) => {
                 </ul>
 
                 <div
-                    v-if="isAdmin && conference.members.length"
+                    v-if="canManage && conference.members.length"
                     class="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200"
                 >
                     <p class="font-medium">Activación de constancias</p>

@@ -14,9 +14,9 @@ class PresentationController extends Controller
     {
         $user = $request->user();
 
-        $query = Presentation::with('authors');
+        $query = Presentation::with(['authors', 'moderators']);
 
-        if ($user->hasPermission('presentations.my') && ! $user->isAdmin()) {
+        if ($user->hasPermission('presentations.my') && ! $user->hasPermission('presentations.view')) {
             $query->whereHas('authors', function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             });
@@ -53,6 +53,8 @@ class PresentationController extends Controller
             'submission_id' => 'nullable|string|max:50',
             'author_ids' => 'required|array|min:1',
             'author_ids.*' => 'exists:users,id',
+            'moderator_ids' => 'nullable|array',
+            'moderator_ids.*' => 'exists:users,id',
         ]);
 
         $presentation = Presentation::create([
@@ -70,12 +72,21 @@ class PresentationController extends Controller
         $presentation->authors()->sync($validated['author_ids']);
         $this->syncAuthorRoles($validated['author_ids']);
 
+        $moderatorIds = $validated['moderator_ids'] ?? [];
+        $presentation->moderators()->sync($moderatorIds);
+        $this->syncModeratorRoles($moderatorIds);
+
         return to_route('presentations.index')->with('success', 'Ponencia creada correctamente.');
     }
 
     public function show(Presentation $presentation)
     {
-        $presentation->load('authors');
+        $user = request()->user();
+        $isAssignedModerator = $presentation->moderators()->where('users.id', $user->id)->exists();
+
+        abort_unless($user->canViewActivity('presentations.view', $isAssignedModerator), 403);
+
+        $presentation->load(['authors', 'moderators']);
 
         return Inertia::render('Presentations/Show', [
             'presentation' => $presentation,
@@ -85,8 +96,10 @@ class PresentationController extends Controller
     public function update(Request $request, Presentation $presentation)
     {
         $user = $request->user();
+        $isAssignedModerator = $presentation->moderators()->where('users.id', $user->id)->exists();
+        $isAuthor = $presentation->authors()->where('users.id', $user->id)->exists();
 
-        if ($user->isAdmin()) {
+        if ($user->can('presentations.edit')) {
             $validated = $request->validate([
                 'title' => 'sometimes|string|max:255',
                 'abstract' => 'sometimes|string',
@@ -99,11 +112,21 @@ class PresentationController extends Controller
                 'submission_id' => 'nullable|string|max:50',
                 'author_ids' => 'sometimes|array|min:1',
                 'author_ids.*' => 'exists:users,id',
+                'moderator_ids' => 'sometimes|array',
+                'moderator_ids.*' => 'exists:users,id',
             ]);
+
+            $moderatorIds = $validated['moderator_ids'] ?? null;
+            unset($validated['moderator_ids']);
 
             if ($request->has('author_ids')) {
                 $presentation->authors()->sync($validated['author_ids']);
                 $this->syncAuthorRoles($validated['author_ids']);
+            }
+
+            if ($moderatorIds !== null) {
+                $presentation->moderators()->sync($moderatorIds);
+                $this->syncModeratorRoles($moderatorIds);
             }
 
             if ($request->has('authors_presented')) {
@@ -120,7 +143,21 @@ class PresentationController extends Controller
                     ]);
                 }
             }
-        } elseif ($user->isPonente()) {
+        } elseif ($isAssignedModerator && $request->has('authors_presented')) {
+            $request->validate([
+                'authors_presented' => 'array',
+                'authors_presented.*.user_id' => 'required|exists:users,id',
+                'authors_presented.*.presented' => 'required|boolean',
+            ]);
+
+            foreach ($request->input('authors_presented') as $item) {
+                $presentation->authors()->updateExistingPivot($item['user_id'], [
+                    'presented' => $item['presented'],
+                    'presented_at' => $item['presented'] ? now() : null,
+                ]);
+            }
+            $validated = [];
+        } elseif ($user->hasPermission('presentations.my') && $isAuthor) {
             $validated = $request->validate([
                 'title' => 'sometimes|string|max:255',
                 'abstract' => 'sometimes|string',
@@ -128,42 +165,13 @@ class PresentationController extends Controller
                 'keywords' => 'sometimes|string',
             ]);
         } else {
-            $validated = $request->validate([
-                'title' => 'sometimes|string|max:255',
-                'abstract' => 'sometimes|string',
-                'discipline' => 'sometimes|string|max:255',
-                'keywords' => 'sometimes|string',
-                'location' => 'nullable|string|max:255',
-                'day' => 'nullable|date',
-                'start_time' => 'nullable|date_format:H:i',
-                'end_time' => 'nullable|date_format:H:i',
-                'submission_id' => 'nullable|string|max:50',
-                'author_ids' => 'sometimes|array|min:1',
-                'author_ids.*' => 'exists:users,id',
-            ]);
-
-            if ($request->has('author_ids')) {
-                $presentation->authors()->sync($validated['author_ids']);
-                $this->syncAuthorRoles($validated['author_ids']);
-            }
-
-            if ($request->has('authors_presented')) {
-                $request->validate([
-                    'authors_presented' => 'array',
-                    'authors_presented.*.user_id' => 'required|exists:users,id',
-                    'authors_presented.*.presented' => 'required|boolean',
-                ]);
-
-                foreach ($request->input('authors_presented') as $item) {
-                    $presentation->authors()->updateExistingPivot($item['user_id'], [
-                        'presented' => $item['presented'],
-                        'presented_at' => $item['presented'] ? now() : null,
-                    ]);
-                }
-            }
+            abort_if(! $isAssignedModerator, 403);
+            $validated = [];
         }
 
-        $presentation->update($validated);
+        if (! empty($validated)) {
+            $presentation->update($validated);
+        }
 
         if ($request->has('authors_presented') && ! $request->inertia()) {
             return response()->json(['ok' => true]);
@@ -174,7 +182,7 @@ class PresentationController extends Controller
 
     public function destroy(Request $request, Presentation $presentation)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('presentations.delete'), 403);
 
         $presentation->delete();
 
@@ -183,10 +191,19 @@ class PresentationController extends Controller
 
     private function syncAuthorRoles(array $authorIds): void
     {
-        $ponenteRoleId = Role::where('name', 'Ponente')->value('id') ?? 2;
+        $ponenteRoleId = Role::where('name', 'Ponente')->value('id');
 
         foreach ($authorIds as $authorId) {
             User::find($authorId)?->roles()->syncWithoutDetaching([$ponenteRoleId]);
+        }
+    }
+
+    private function syncModeratorRoles(array $moderatorIds): void
+    {
+        $moderatorRoleId = Role::where('name', 'Moderator')->value('id');
+
+        foreach ($moderatorIds as $moderatorId) {
+            User::find($moderatorId)?->roles()->syncWithoutDetaching([$moderatorRoleId]);
         }
     }
 }

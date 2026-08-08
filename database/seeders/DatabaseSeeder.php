@@ -89,11 +89,11 @@ class DatabaseSeeder extends Seeder
         app(PermissionSync::class)->sync();
 
         $rolePermissions = [
-            2 => ['dashboard.view', 'workshops.view', 'workshops.my', 'presentations.view', 'presentations.my', 'constancias.view', 'constancias.download', 'constancias.invitaciones.download', 'gafete.view'],
+            2 => ['dashboard.view', 'workshops.view', 'workshops.my', 'presentations.my', 'constancias.view', 'constancias.download', 'constancias.invitaciones.download', 'gafete.view'],
             3 => ['dashboard.view', 'workshops.view', 'workshops.my', 'constancias.view', 'constancias.download', 'gafete.view'],
             4 => ['dashboard.view', 'workshops.view', 'workshops.my', 'constancias.view', 'constancias.download', 'gafete.view'],
             5 => ['dashboard.view', 'constancias.view', 'constancias.download', 'gafete.view'],
-            6 => ['dashboard.view', 'constancias.view', 'constancias.download', 'gafete.view'],
+            6 => ['dashboard.view', 'constancias.view', 'constancias.download', 'gafete.view', 'asignaciones.view'],
         ];
 
         foreach ($rolePermissions as $roleId => $keys) {
@@ -114,8 +114,12 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $admin->roles()->sync([1]);
-        Role::where('id', 1)->first()?->permissions()->sync(Permission::pluck('id'));
+        $adminRole = Role::where('name', config('roles.super_admin'))->first();
+
+        if ($adminRole !== null) {
+            $admin->roles()->sync([$adminRole->id]);
+            $adminRole->permissions()->sync(Permission::pluck('id'));
+        }
 
         User::query()
             ->whereNull('checkin_token')

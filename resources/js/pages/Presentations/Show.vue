@@ -17,9 +17,19 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
-const hasRole = (name: string) =>
-    page.props.auth.user?.roles?.some((r: any) => r.name === name) ?? false;
-const isAdmin = computed(() => hasRole('Administrator'));
+const can = (permission: string) =>
+    (page.props.auth.permissions as string[] | undefined)?.includes(
+        permission,
+    ) ?? false;
+const currentUserId = computed(() => page.props.auth.user?.id);
+const isAssignedModerator = computed(() => {
+    return props.presentation.moderators?.some(
+        (m: any) => m.id === currentUserId.value,
+    );
+});
+const canManage = computed(
+    () => can('presentations.edit') || isAssignedModerator.value,
+);
 
 const goBack = () => {
     router.get('/presentations');
@@ -235,7 +245,7 @@ const disciplinesList = computed(() => {
                             </span>
                         </div>
 
-                        <template v-if="isAdmin">
+                        <template v-if="canManage">
                             <label
                                 class="flex cursor-pointer items-center gap-1 text-xs text-gray-600 dark:text-gray-400"
                             >
@@ -255,7 +265,10 @@ const disciplinesList = computed(() => {
                                 Presentó
                             </label>
                             <button
-                                v-if="author.pivot?.presented"
+                                v-if="
+                                    author.pivot?.presented &&
+                                    can('constancias.download')
+                                "
                                 type="button"
                                 @click="downloadConstancia(author.id)"
                                 class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300"

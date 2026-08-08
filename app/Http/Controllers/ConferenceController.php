@@ -31,7 +31,7 @@ class ConferenceController extends Controller
 
     public function create(Request $request)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('conferences.create'), 403);
 
         return Inertia::render('Conferences/Create', [
             'kinds' => Conference::KINDS,
@@ -40,22 +40,28 @@ class ConferenceController extends Controller
 
     public function store(Request $request)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('conferences.create'), 403);
 
         $validated = $this->validateRequest($request);
         $members = $validated['members'] ?? [];
-        unset($validated['members']);
+        $moderatorIds = $validated['moderator_ids'] ?? [];
+        unset($validated['members'], $validated['moderator_ids']);
 
         $conference = Conference::create($validated + ['created_by' => $request->user()->id]);
 
-        $this->syncMembers($conference, $members);
-        $this->syncMemberRoles($members);
+        $this->syncMembers($conference, $members, $moderatorIds);
+        $this->syncMemberRoles($members, $moderatorIds);
 
         return redirect()->route('conferences.show', $conference)->with('success', 'Conferencia creada correctamente.');
     }
 
     public function show(Conference $conference)
     {
+        $user = request()->user();
+        $isAssignedModerator = $conference->moderators()->where('users.id', $user->id)->exists();
+
+        abort_unless($user->canViewActivity('conferences.view', $isAssignedModerator), 403);
+
         $conference->load(['creator', 'members']);
 
         return Inertia::render('Conferences/Show', [
@@ -65,7 +71,7 @@ class ConferenceController extends Controller
 
     public function edit(Request $request, Conference $conference)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('conferences.edit'), 403);
 
         $conference->load('members');
 
@@ -77,22 +83,23 @@ class ConferenceController extends Controller
 
     public function update(Request $request, Conference $conference)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('conferences.edit'), 403);
 
         $validated = $this->validateRequest($request);
         $members = $validated['members'] ?? [];
-        unset($validated['members']);
+        $moderatorIds = $validated['moderator_ids'] ?? [];
+        unset($validated['members'], $validated['moderator_ids']);
 
         $conference->update($validated);
-        $this->syncMembers($conference, $members);
-        $this->syncMemberRoles($members);
+        $this->syncMembers($conference, $members, $moderatorIds);
+        $this->syncMemberRoles($members, $moderatorIds);
 
         return redirect()->route('conferences.show', $conference)->with('success', 'Conferencia actualizada correctamente.');
     }
 
     public function destroy(Conference $conference)
     {
-        abort_if(! request()->user()->isAdmin(), 403);
+        abort_unless(request()->user()->can('conferences.delete'), 403);
 
         $conference->delete();
 
@@ -101,7 +108,10 @@ class ConferenceController extends Controller
 
     public function toggleActivation(Request $request, Conference $conference, User $user)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        $currentUser = $request->user();
+        $isAssignedModerator = $conference->moderators()->where('users.id', $currentUser->id)->exists();
+
+        abort_unless($currentUser->canScoped('conferences.activate', 'conferences.view', $isAssignedModerator), 403);
 
         $member = $conference->members()->where('users.id', $user->id)->first();
 
@@ -131,10 +141,12 @@ class ConferenceController extends Controller
             'end_time' => 'nullable|date_format:H:i|after:start_time',
             'members' => 'nullable|array',
             'members.*.id' => 'required|integer|exists:users,id',
+            'moderator_ids' => 'nullable|array',
+            'moderator_ids.*' => 'required|integer|exists:users,id',
         ]);
     }
 
-    private function syncMembers(Conference $conference, array $members): void
+    private function syncMembers(Conference $conference, array $members, array $moderatorIds): void
     {
         $pivot = [];
 
@@ -142,15 +154,24 @@ class ConferenceController extends Controller
             $pivot[$member['id']] = ['role' => 'speaker'];
         }
 
+        foreach ($moderatorIds as $moderatorId) {
+            $pivot[$moderatorId] = ['role' => 'moderator'];
+        }
+
         $conference->members()->sync($pivot);
     }
 
-    private function syncMemberRoles(array $members): void
+    private function syncMemberRoles(array $members, array $moderatorIds): void
     {
-        $speakerRoleId = Role::where('name', 'Speaker')->value('id') ?? 5;
+        $speakerRoleId = Role::where('name', 'Speaker')->value('id');
+        $moderatorRoleId = Role::where('name', 'Moderator')->value('id');
 
         foreach ($members as $member) {
             User::find($member['id'])?->roles()->syncWithoutDetaching([$speakerRoleId]);
+        }
+
+        foreach ($moderatorIds as $moderatorId) {
+            User::find($moderatorId)?->roles()->syncWithoutDetaching([$moderatorRoleId]);
         }
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\Workshop;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class WorkshopController extends Controller
     {
         $query = Workshop::withCount(['enrollments as enrolled_count' => function ($q) {
             $q->where('status', 'enrolled');
-        }])->with('instructors');
+        }])->with(['instructors', 'moderators']);
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -35,7 +36,7 @@ class WorkshopController extends Controller
 
     public function store(Request $request)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('workshops.create'), 403);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -51,11 +52,15 @@ class WorkshopController extends Controller
             'instructors.*.last_name' => 'required|string|max:255',
             'instructors.*.affiliation' => 'nullable|string|max:255',
             'instructors.*.email' => 'required|email|max:255',
+            'moderator_ids' => 'nullable|array',
+            'moderator_ids.*' => 'exists:users,id',
         ]);
 
         $validated['created_by'] = $request->user()->id;
         $instructorsData = $validated['instructors'] ?? [];
         unset($validated['instructors']);
+        $moderatorIds = $validated['moderator_ids'] ?? [];
+        unset($validated['moderator_ids']);
 
         $workshop = Workshop::create($validated);
 
@@ -75,20 +80,28 @@ class WorkshopController extends Controller
                 $user->update(['affiliation' => $data['affiliation']]);
             }
 
-            $user->roles()->syncWithoutDetaching([4]); // Instructor
+            $user->roles()->syncWithoutDetaching([Role::where('name', 'Instructor')->value('id')]); // Instructor
 
             $workshop->instructors()->attach($user->id);
         }
+
+        $workshop->moderators()->sync($moderatorIds);
+        $this->syncModeratorRoles($moderatorIds);
 
         return back()->with('success', 'Taller creado correctamente.');
     }
 
     public function show(Workshop $workshop)
     {
+        $user = request()->user();
+        $isAssignedModerator = $workshop->moderators()->where('users.id', $user->id)->exists();
+
+        abort_unless($user->canViewActivity('workshops.view', $isAssignedModerator), 403);
+
         $workshop->loadCount(['enrollments as enrolled_count' => function ($q) {
             $q->where('status', 'enrolled');
         }]);
-        $workshop->load(['enrollments.user', 'instructors', 'creator']);
+        $workshop->load(['enrollments.user', 'instructors', 'moderators', 'creator']);
 
         // Add has_attendance flag to each enrollment
         $workshop->setRelation(
@@ -109,7 +122,7 @@ class WorkshopController extends Controller
 
     public function update(Request $request, Workshop $workshop)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('workshops.edit'), 403);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -125,10 +138,14 @@ class WorkshopController extends Controller
             'instructors.*.last_name' => 'required|string|max:255',
             'instructors.*.affiliation' => 'nullable|string|max:255',
             'instructors.*.email' => 'required|email|max:255',
+            'moderator_ids' => 'nullable|array',
+            'moderator_ids.*' => 'exists:users,id',
         ]);
 
         $instructorsData = $validated['instructors'] ?? [];
         unset($validated['instructors']);
+        $moderatorIds = $validated['moderator_ids'] ?? [];
+        unset($validated['moderator_ids']);
 
         $workshop->update($validated);
 
@@ -150,20 +167,32 @@ class WorkshopController extends Controller
                 $user->update(['affiliation' => $data['affiliation']]);
             }
 
-            $user->roles()->syncWithoutDetaching([4]); // Instructor
+            $user->roles()->syncWithoutDetaching([Role::where('name', 'Instructor')->value('id')]); // Instructor
 
             $workshop->instructors()->attach($user->id);
         }
+
+        $workshop->moderators()->sync($moderatorIds);
+        $this->syncModeratorRoles($moderatorIds);
 
         return back()->with('success', 'Taller actualizado correctamente.');
     }
 
     public function destroy(Workshop $workshop)
     {
-        abort_if(! request()->user()->isAdmin(), 403);
+        abort_unless(request()->user()->can('workshops.delete'), 403);
 
         $workshop->delete();
 
         return back()->with('success', 'Taller eliminado correctamente.');
+    }
+
+    private function syncModeratorRoles(array $moderatorIds): void
+    {
+        $moderatorRoleId = Role::where('name', 'Moderator')->value('id');
+
+        foreach ($moderatorIds as $moderatorId) {
+            User::find($moderatorId)?->roles()->syncWithoutDetaching([$moderatorRoleId]);
+        }
     }
 }

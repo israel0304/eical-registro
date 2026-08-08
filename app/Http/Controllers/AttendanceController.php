@@ -85,7 +85,10 @@ class AttendanceController extends Controller
 
     public function toggleAttendance(Request $request, Workshop $workshop, int $userId)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        $user = $request->user();
+        $isAssignedModerator = $workshop->moderators()->where('users.id', $user->id)->exists();
+
+        abort_unless($user->canScoped('workshops.attendance', 'workshops.view', $isAssignedModerator), 403);
 
         $isEnrolled = WorkshopEnrollment::where('user_id', $userId)
             ->where('workshop_id', $workshop->id)
@@ -118,7 +121,7 @@ class AttendanceController extends Controller
 
     public function sendQRToInstructor(Request $request, Workshop $workshop)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('workshops.qr.send'), 403);
 
         $validated = $request->validate([
             'user_id' => 'required|exists:workshop_instructor_user,user_id',
@@ -150,7 +153,7 @@ class AttendanceController extends Controller
 
     public function sendQRToAll(Request $request, Workshop $workshop)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('workshops.qr.send'), 403);
 
         $instructors = $workshop->instructors()->whereNotNull('email')->where('email', '!=', '')->get();
 
