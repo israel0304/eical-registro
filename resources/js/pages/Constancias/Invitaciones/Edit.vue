@@ -110,8 +110,7 @@ const ordered = computed(() =>
 
 const selectedUid = ref<string | null>(null);
 const selected = computed(
-    () =>
-        elements.value.find((el) => el._uid === selectedUid.value) ?? null,
+    () => elements.value.find((el) => el._uid === selectedUid.value) ?? null,
 );
 
 // Canvas scaling
@@ -174,10 +173,13 @@ const fittedFontSize = (el: ElementModel): number => {
 const qrPreviews = reactive<Record<string, string>>({});
 const qrFor = (el: ElementModel) => {
     if (!qrPreviews[el._uid]) {
-        QRCode.toDataURL('https://eical.cinvestav.mx/constancias/verificar/EICAL-2026-0001', {
-            width: 200,
-            margin: 1,
-        }).then((url) => {
+        QRCode.toDataURL(
+            'https://eical.cinvestav.mx/constancias/verificar/EICAL-2026-0001',
+            {
+                width: 200,
+                margin: 1,
+            },
+        ).then((url) => {
             qrPreviews[el._uid] = url;
         });
     }
@@ -352,7 +354,8 @@ const elementStyle = (el: ElementModel) => {
     if (el.height) style.height = el.height + 'px';
     if (el.type === 'text') {
         if (el.font_size)
-            style.fontSize = (el.auto_fit ? fittedFontSize(el) : el.font_size) + 'px';
+            style.fontSize =
+                (el.auto_fit ? fittedFontSize(el) : el.font_size) + 'px';
         if (el.font_weight) style.fontWeight = el.font_weight;
         if (el.font_family) style.fontFamily = el.font_family;
         if (el.color) style.color = el.color;
@@ -538,9 +541,7 @@ onMounted(() => {
                                     </button>
                                     <button
                                         @click.stop="moveZ(el._uid, 1)"
-                                        :disabled="
-                                            i === ordered.length - 1
-                                        "
+                                        :disabled="i === ordered.length - 1"
                                         class="rounded p-0.5 hover:text-black disabled:opacity-30 dark:hover:text-white"
                                     >
                                         <ArrowDown class="h-3.5 w-3.5" />
@@ -556,7 +557,9 @@ onMounted(() => {
                         </p>
                     </div>
 
-                    <div class="mt-5 border-t border-gray-200 pt-4 dark:border-zinc-800">
+                    <div
+                        class="mt-5 border-t border-gray-200 pt-4 dark:border-zinc-800"
+                    >
                         <div
                             class="mb-2 text-[11px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
                         >
@@ -609,7 +612,9 @@ onMounted(() => {
                 </aside>
 
                 <!-- Canvas -->
-                <main class="flex-1 overflow-auto bg-gray-100 p-6 dark:bg-zinc-950">
+                <main
+                    class="flex-1 overflow-auto bg-gray-100 p-6 dark:bg-zinc-950"
+                >
                     <div
                         ref="wrapperRef"
                         :style="{ height: wrapperHeight + 'px' }"
@@ -661,12 +666,10 @@ onMounted(() => {
 
                 <!-- Right: properties -->
                 <aside
-                    class="w-full border-t border-gray-200 p-4 lg:w-72 lg:border-l lg:border-t-0 dark:border-zinc-800"
+                    class="w-full border-t border-gray-200 p-4 lg:w-72 lg:border-t-0 lg:border-l dark:border-zinc-800"
                 >
                     <template v-if="selected">
-                        <div
-                            class="mb-3 flex items-center justify-between"
-                        >
+                        <div class="mb-3 flex items-center justify-between">
                             <h3
                                 class="text-sm font-semibold text-gray-900 dark:text-white"
                             >
@@ -724,9 +727,7 @@ onMounted(() => {
                             </div>
                         </template>
 
-                        <div
-                            class="grid grid-cols-2 gap-2"
-                        >
+                        <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label
                                     class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
@@ -778,9 +779,7 @@ onMounted(() => {
                         </div>
 
                         <template v-if="selected.type === 'text'">
-                            <div
-                                class="mt-3 grid grid-cols-2 gap-2"
-                            >
+                            <div class="mt-3 grid grid-cols-2 gap-2">
                                 <div>
                                     <label
                                         class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
@@ -844,9 +843,7 @@ onMounted(() => {
                                 />
                                 Ajustar automáticamente
                             </label>
-                            <div
-                                class="mt-3 grid grid-cols-2 gap-2"
-                            >
+                            <div class="mt-3 grid grid-cols-2 gap-2">
                                 <div>
                                     <label
                                         class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"

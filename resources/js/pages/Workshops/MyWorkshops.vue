@@ -115,10 +115,7 @@ const formatDate = (dateStr: string) => {
                                             }}{{ instructor.last_name?.[0] }}
                                         </span>
                                     </div>
-                                    <span
-                                        v-else
-                                        class="text-gray-400"
-                                    >
+                                    <span v-else class="text-gray-400">
                                         —
                                     </span>
                                 </td>
@@ -140,9 +137,7 @@ const formatDate = (dateStr: string) => {
                                         class="flex items-center justify-end gap-2"
                                     >
                                         <Link
-                                            :href="
-                                                '/workshops/' + workshop.id
-                                            "
+                                            :href="'/workshops/' + workshop.id"
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
                                         >
                                             <Eye class="h-4 w-4" />

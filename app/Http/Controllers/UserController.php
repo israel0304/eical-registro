@@ -212,7 +212,7 @@ class UserController extends Controller
                 continue;
             }
 
-            $roleIds = [3]; // default Asistente
+            $roleIds = [Role::where('name', config('roles.default'))->value('id')]; // Rol por defecto
             if (! empty($row[6])) {
                 $role = Role::where('name', 'like', "%{$row[6]}%")->first();
                 if ($role) {

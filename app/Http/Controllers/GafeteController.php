@@ -46,7 +46,7 @@ class GafeteController extends Controller
 
     public function print(Request $request)
     {
-        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('gafete.view'), 403);
+        abort_unless($request->user()->can('gafete.view'), 403);
 
         return response($this->renderer->renderBadge($request->user()), 200, [
             'Content-Type' => 'text/html',
@@ -55,7 +55,7 @@ class GafeteController extends Controller
 
     public function printPdf(Request $request)
     {
-        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('gafete.view'), 403);
+        abort_unless($request->user()->can('gafete.view'), 403);
 
         $user = $request->user();
 
@@ -67,7 +67,7 @@ class GafeteController extends Controller
 
     public function staffPrint(Request $request, User $user)
     {
-        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('checkin.scan'), 403);
+        abort_unless($request->user()->can('checkin.scan'), 403);
 
         return response($this->renderer->renderBadge($user), 200, [
             'Content-Type' => 'text/html',
@@ -76,7 +76,7 @@ class GafeteController extends Controller
 
     public function staffPrintPdf(Request $request, User $user)
     {
-        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('checkin.scan'), 403);
+        abort_unless($request->user()->can('checkin.scan'), 403);
 
         return response($this->renderer->renderBadgePdf($user), 200, [
             'Content-Type' => 'application/pdf',
@@ -86,7 +86,7 @@ class GafeteController extends Controller
 
     public function uploadPhoto(Request $request)
     {
-        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('gafete.view'), 403);
+        abort_unless($request->user()->can('gafete.view'), 403);
 
         $validated = $request->validate([
             'photo' => ['required', 'image', 'max:5120'],
@@ -105,7 +105,7 @@ class GafeteController extends Controller
 
     public function destroyPhoto(Request $request)
     {
-        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('gafete.view'), 403);
+        abort_unless($request->user()->can('gafete.view'), 403);
 
         $user = $request->user();
 

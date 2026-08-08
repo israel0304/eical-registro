@@ -6,9 +6,10 @@ import { computed, ref } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const page = usePage();
-const isAdmin = computed(() =>
-    page.props.auth.user?.roles?.some((r: any) => r.name === 'Administrator'),
-);
+const can = (permission: string) =>
+    (page.props.auth.permissions as string[] | undefined)?.includes(
+        permission,
+    ) ?? false;
 
 const props = defineProps<{
     roles: any[];
@@ -121,9 +122,7 @@ const confirmDelete = () => {
 </script>
 
 <template>
-    <AppLayout
-        :breadcrumbs="[{ title: 'Roles', href: '/admin/roles' }]"
-    >
+    <AppLayout :breadcrumbs="[{ title: 'Roles', href: '/admin/roles' }]">
         <Head title="Roles y Permisos" />
 
         <div class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-8 py-8">
@@ -137,7 +136,8 @@ const confirmDelete = () => {
                         Roles y Permisos
                     </h1>
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        Los módulos del sistema se detectan automáticamente desde
+                        Los módulos del sistema se detectan automáticamente
+                        desde
                         <code
                             class="rounded bg-gray-100 px-1 py-0.5 dark:bg-zinc-800"
                             >config/permissions.php</code
@@ -145,7 +145,7 @@ const confirmDelete = () => {
                     </p>
                 </div>
                 <button
-                    v-if="isAdmin"
+                    v-if="can('roles.manage')"
                     @click="openCreateModal"
                     class="inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2"
                 >
@@ -225,7 +225,10 @@ const confirmDelete = () => {
                                 <td class="px-6 py-4">
                                     <div class="flex flex-wrap gap-1">
                                         <span
-                                            v-for="permission in role.permissions.slice(0, 4)"
+                                            v-for="permission in role.permissions.slice(
+                                                0,
+                                                4,
+                                            )"
                                             :key="permission.key"
                                             class="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
                                         >
@@ -249,7 +252,11 @@ const confirmDelete = () => {
                                         "
                                         class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium"
                                     >
-                                        {{ role.is_active ? 'Activo' : 'Inactivo' }}
+                                        {{
+                                            role.is_active
+                                                ? 'Activo'
+                                                : 'Inactivo'
+                                        }}
                                     </span>
                                 </td>
                                 <td
@@ -258,16 +265,22 @@ const confirmDelete = () => {
                                     <div
                                         class="flex items-center justify-end gap-2"
                                     >
-                                        <template v-if="isAdmin">
+                                        <template v-if="can('roles.manage')">
                                             <button
-                                                v-if="role.name !== 'Administrator'"
+                                                v-if="
+                                                    role.name !==
+                                                    'Administrator'
+                                                "
                                                 @click="openEditModal(role)"
                                                 class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
                                             >
                                                 <Pencil class="h-4 w-4" />
                                             </button>
                                             <button
-                                                v-if="role.name !== 'Administrator'"
+                                                v-if="
+                                                    role.name !==
+                                                    'Administrator'
+                                                "
                                                 @click="requestDelete(role)"
                                                 class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-red-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-red-400"
                                             >
@@ -389,8 +402,9 @@ const confirmDelete = () => {
                                             @change="
                                                 toggleModule(
                                                     group.module,
-                                                    ($event.target as HTMLInputElement)
-                                                        .checked,
+                                                    (
+                                                        $event.target as HTMLInputElement
+                                                    ).checked,
                                                 )
                                             "
                                             class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
@@ -494,7 +508,9 @@ const confirmDelete = () => {
                     <div
                         class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800"
                     >
-                        <p class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <p
+                            class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
                             <Users class="h-4 w-4" />
                             {{
                                 loadingUsers
@@ -513,7 +529,9 @@ const confirmDelete = () => {
                                 class="truncate text-xs text-gray-600 dark:text-gray-400"
                             >
                                 {{ user.first_name }} {{ user.last_name }}
-                                <span class="text-gray-400">({{ user.email }})</span>
+                                <span class="text-gray-400"
+                                    >({{ user.email }})</span
+                                >
                             </li>
                         </ul>
                         <p

@@ -18,7 +18,7 @@ class EventoController extends Controller
 
     public function index(Request $request)
     {
-        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('constancias.evento.manage'), 403);
+        abort_unless($request->user()->can('constancias.evento.manage'), 403);
 
         $attendances = Attendance::query()
             ->whereNull('workshop_id')
@@ -96,7 +96,7 @@ class EventoController extends Controller
 
     public function update(Request $request)
     {
-        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('constancias.evento.manage'), 403);
+        abort_unless($request->user()->can('constancias.evento.manage'), 403);
 
         $validated = $request->validate([
             'evento_nombre' => ['required', 'string', 'max:255'],
@@ -136,7 +136,7 @@ class EventoController extends Controller
 
     public function generateConstancias(Request $request)
     {
-        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('constancias.evento.manage'), 403);
+        abort_unless($request->user()->can('constancias.evento.manage'), 403);
 
         $userIds = Attendance::query()
             ->whereNull('workshop_id')
@@ -170,7 +170,7 @@ class EventoController extends Controller
 
     public function destroyAttendance(Request $request, Attendance $attendance)
     {
-        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('constancias.evento.manage'), 403);
+        abort_unless($request->user()->can('constancias.evento.manage'), 403);
 
         if ($attendance->workshop_id !== null || $attendance->presentation_id !== null) {
             abort(404);

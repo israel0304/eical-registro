@@ -1024,14 +1024,21 @@ const handleFileUpload = (event: Event) => {
                     <div
                         class="mx-auto mb-6 flex h-[70px] w-[70px] items-center justify-center rounded-full border border-gray-400 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800"
                     >
-                        <Award class="h-[34px] w-[34px] text-gray-800 dark:text-gray-200" />
+                        <Award
+                            class="h-[34px] w-[34px] text-gray-800 dark:text-gray-200"
+                        />
                     </div>
 
-                    <h3 class="text-center text-[17px] font-medium text-gray-900 dark:text-white">
+                    <h3
+                        class="text-center text-[17px] font-medium text-gray-900 dark:text-white"
+                    >
                         Generar constancia para
                     </h3>
-                    <p class="mt-1 text-center text-sm text-gray-500 dark:text-gray-400">
-                        {{ constanciaUser.first_name }} {{ constanciaUser.last_name }}
+                    <p
+                        class="mt-1 text-center text-sm text-gray-500 dark:text-gray-400"
+                    >
+                        {{ constanciaUser.first_name }}
+                        {{ constanciaUser.last_name }}
                     </p>
 
                     <div class="mt-6 space-y-2">
@@ -1042,7 +1049,9 @@ const handleFileUpload = (event: Event) => {
                             class="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-zinc-700 dark:text-gray-300 dark:hover:border-indigo-700 dark:hover:bg-indigo-900/20"
                         >
                             <span>{{ type.label }}</span>
-                            <span class="text-xs text-gray-400">{{ type.key }}</span>
+                            <span class="text-xs text-gray-400">{{
+                                type.key
+                            }}</span>
                         </a>
 
                         <p

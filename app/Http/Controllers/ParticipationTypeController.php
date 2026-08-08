@@ -31,7 +31,7 @@ class ParticipationTypeController extends Controller
 
     public function store(Request $request)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('constancias.types.manage'), 403);
 
         $validated = $this->validateType($request);
 
@@ -45,7 +45,7 @@ class ParticipationTypeController extends Controller
 
     public function update(Request $request, ParticipationType $type)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('constancias.types.manage'), 403);
 
         $validated = $this->validateType($request, $type);
 
@@ -59,7 +59,7 @@ class ParticipationTypeController extends Controller
 
     public function destroy(Request $request, ParticipationType $type)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('constancias.types.manage'), 403);
 
         $templates = $type->templates()->count();
         $certificates = $type->certificates()->count();
