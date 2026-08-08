@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CertificateTemplateController;
 use App\Http\Controllers\CertificateVerificationController;
@@ -80,33 +81,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('users/export/csv', [UserController::class, 'exportCsv'])->middleware('can:users.export')->name('users.export');
     Route::post('users/import/csv', [UserController::class, 'importCsv'])->middleware('can:users.import')->name('users.import');
 
-    Route::middleware('can:users.manage')->group(function () {
-        Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
-        Route::delete('users/{user}/force-delete', [UserController::class, 'forceDelete'])->name('users.force-delete');
-        Route::resource('users', UserController::class);
-    });
+    Route::get('users', [UserController::class, 'index'])->middleware('can:users.view')->name('users.index');
+    Route::post('users', [UserController::class, 'store'])->middleware('can:users.create')->name('users.store');
+    Route::put('users/{user}', [UserController::class, 'update'])->middleware('can:users.edit')->name('users.update');
+    Route::delete('users/{user}', [UserController::class, 'destroy'])->middleware('can:users.delete')->name('users.destroy');
+    Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])->middleware('can:users.edit')->name('users.reset-password');
+    Route::delete('users/{user}/force-delete', [UserController::class, 'forceDelete'])->middleware('can:users.delete')->name('users.force-delete');
 
     // Workshops
     Route::get('workshops', [WorkshopController::class, 'index'])->middleware('can:workshops.view')->name('workshops.index');
-    Route::get('workshops/{workshop}', [WorkshopController::class, 'show'])->middleware('can:workshops.view')->name('workshops.show');
+    Route::get('workshops/{workshop}', [WorkshopController::class, 'show'])->name('workshops.show');
 
-    Route::middleware('can:workshops.manage')->group(function () {
-        Route::get('api/instructores', function (Request $request) {
-            $search = $request->input('search');
+    Route::get('api/instructores', function (Request $request) {
+        abort_unless(
+            $request->user()->can('workshops.create') || $request->user()->can('workshops.edit'),
+            403
+        );
 
-            return User::where(function ($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
-            })
-                ->limit(20)
-                ->get(['id', 'first_name', 'last_name', 'email', 'affiliation']);
-        })->name('api.instructores.index');
+        $search = $request->input('search');
 
-        Route::post('workshops', [WorkshopController::class, 'store'])->name('workshops.store');
-        Route::put('workshops/{workshop}', [WorkshopController::class, 'update'])->name('workshops.update');
-        Route::delete('workshops/{workshop}', [WorkshopController::class, 'destroy'])->name('workshops.destroy');
-    });
+        return User::where(function ($q) use ($search) {
+            $q->where('first_name', 'like', "%{$search}%")
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%");
+        })
+            ->limit(20)
+            ->get(['id', 'first_name', 'last_name', 'email', 'affiliation']);
+    })->name('api.instructores.index');
+
+    Route::post('workshops', [WorkshopController::class, 'store'])->middleware('can:workshops.create')->name('workshops.store');
+    Route::put('workshops/{workshop}', [WorkshopController::class, 'update'])->middleware('can:workshops.edit')->name('workshops.update');
+    Route::delete('workshops/{workshop}', [WorkshopController::class, 'destroy'])->middleware('can:workshops.delete')->name('workshops.destroy');
 
     // Workshop enrollment
     Route::post('workshops/{workshop}/enroll', [WorkshopEnrollmentController::class, 'store'])->name('workshops.enroll');
@@ -121,35 +126,39 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('admin/workshops/{workshop}/enrollments', [AttendanceController::class, 'showEnrollments'])->middleware('can:workshops.enrollments')->name('workshops.admin-enrollments');
 
     // Admin: attendance
-    Route::post('admin/workshops/{workshop}/attendance/{userId}', [AttendanceController::class, 'toggleAttendance'])->middleware('can:workshops.attendance')->name('workshops.admin-attendance-toggle');
+    Route::post('admin/workshops/{workshop}/attendance/{userId}', [AttendanceController::class, 'toggleAttendance'])->name('workshops.admin-attendance-toggle');
     Route::post('admin/workshops/{workshop}/send-qr', [AttendanceController::class, 'sendQRToInstructor'])->middleware('can:workshops.attendance')->name('workshops.admin-send-qr');
     Route::post('admin/workshops/{workshop}/send-qr-all', [AttendanceController::class, 'sendQRToAll'])->middleware('can:workshops.attendance')->name('workshops.admin-send-qr-all');
 
     // Presentations
     Route::get('presentations', [PresentationController::class, 'index'])->middleware('can:presentations.view')->name('presentations.index');
-    Route::get('presentations/{presentation}', [PresentationController::class, 'show'])->middleware('can:presentations.view')->name('presentations.show');
+    Route::get('presentations/{presentation}', [PresentationController::class, 'show'])->name('presentations.show');
 
-    Route::middleware('can:presentations.manage')->group(function () {
-        Route::post('presentations', [PresentationController::class, 'store'])->name('presentations.store');
-        Route::put('presentations/{presentation}', [PresentationController::class, 'update'])->name('presentations.update');
-        Route::delete('presentations/{presentation}', [PresentationController::class, 'destroy'])->name('presentations.destroy');
-    });
+    Route::post('presentations', [PresentationController::class, 'store'])->middleware('can:presentations.create')->name('presentations.store');
+    Route::put('presentations/{presentation}', [PresentationController::class, 'update'])->name('presentations.update');
+    Route::delete('presentations/{presentation}', [PresentationController::class, 'destroy'])->middleware('can:presentations.delete')->name('presentations.destroy');
+
+    // Mis asignaciones (moderador)
+    Route::get('mis-asignaciones', [AssignmentController::class, 'index'])->middleware('can:asignaciones.view')->name('asignaciones.index');
 
     // Conferences
     Route::get('conferences', [ConferenceController::class, 'index'])->middleware('can:conferences.view')->name('conferences.index');
-    Route::get('conferences/{conference}', [ConferenceController::class, 'show'])->middleware('can:conferences.view')->name('conferences.show');
+    Route::get('conferences/{conference}', [ConferenceController::class, 'show'])->name('conferences.show');
 
-    Route::middleware('can:conferences.manage')->group(function () {
-        Route::get('conferences/create', [ConferenceController::class, 'create'])->name('conferences.create');
-        Route::get('conferences/{conference}/edit', [ConferenceController::class, 'edit'])->name('conferences.edit');
-        Route::post('conferences', [ConferenceController::class, 'store'])->name('conferences.store');
-        Route::put('conferences/{conference}', [ConferenceController::class, 'update'])->name('conferences.update');
-        Route::delete('conferences/{conference}', [ConferenceController::class, 'destroy'])->name('conferences.destroy');
-        Route::post('conferences/{conference}/members/{user}/activation', [ConferenceController::class, 'toggleActivation'])->name('conferences.activation');
-    });
+    Route::get('conferences/create', [ConferenceController::class, 'create'])->middleware('can:conferences.create')->name('conferences.create');
+    Route::get('conferences/{conference}/edit', [ConferenceController::class, 'edit'])->middleware('can:conferences.edit')->name('conferences.edit');
+    Route::post('conferences', [ConferenceController::class, 'store'])->middleware('can:conferences.create')->name('conferences.store');
+    Route::put('conferences/{conference}', [ConferenceController::class, 'update'])->middleware('can:conferences.edit')->name('conferences.update');
+    Route::delete('conferences/{conference}', [ConferenceController::class, 'destroy'])->middleware('can:conferences.delete')->name('conferences.destroy');
+    Route::post('conferences/{conference}/members/{user}/activation', [ConferenceController::class, 'toggleActivation'])->name('conferences.activation');
 
     // API-like routes for internal use (ponente search/create)
     Route::get('api/ponentes', function (Request $request) {
+        abort_unless(
+            $request->user()->can('presentations.create') || $request->user()->can('presentations.edit'),
+            403
+        );
+
         $search = $request->input('search');
 
         return User::where(function ($q) use ($search) {
@@ -162,6 +171,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('api.ponentes.index');
 
     Route::post('api/ponentes', function (Request $request) {
+        abort_unless(
+            $request->user()->can('presentations.create') || $request->user()->can('presentations.edit'),
+            403
+        );
+
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
@@ -169,7 +183,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'semblanza' => 'nullable|string|max:5000',
         ]);
 
-        $ponenteRoleId = Role::where('name', 'Ponente')->value('id') ?? 2;
+        $ponenteRoleId = Role::where('name', 'Ponente')->value('id');
 
         $user = User::where('email', $validated['email'])->first();
 
@@ -197,55 +211,125 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return $user->only(['id', 'first_name', 'last_name', 'email']);
     })->name('api.ponentes.store');
 
-    Route::middleware('can:conferences.manage')->group(function () {
-        Route::get('api/usuarios', function (Request $request) {
-            $search = $request->input('search');
+    Route::get('api/moderadores', function (Request $request) {
+        abort_unless(
+            $request->user()->can('presentations.create') || $request->user()->can('presentations.edit') ||
+            $request->user()->can('workshops.create') || $request->user()->can('workshops.edit') ||
+            $request->user()->can('conferences.create') || $request->user()->can('conferences.edit'),
+            403
+        );
 
-            return User::where(function ($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
-            })
-                ->limit(20)
-                ->get(['id', 'first_name', 'last_name', 'email']);
-        })->name('api.usuarios.index');
+        $search = $request->input('search');
 
-        Route::post('api/usuarios', function (Request $request) {
-            $validated = $request->validate([
-                'first_name' => 'required|string|max:255',
-                'last_name' => 'required|string|max:255',
-                'email' => 'required|email',
-                'semblanza' => 'nullable|string|max:5000',
+        return User::where(function ($q) use ($search) {
+            $q->where('first_name', 'like', "%{$search}%")
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%");
+        })
+            ->limit(20)
+            ->get(['id', 'first_name', 'last_name', 'email']);
+    })->name('api.moderadores.index');
+
+    Route::post('api/moderadores', function (Request $request) {
+        abort_unless(
+            $request->user()->can('presentations.create') || $request->user()->can('presentations.edit') ||
+            $request->user()->can('workshops.create') || $request->user()->can('workshops.edit') ||
+            $request->user()->can('conferences.create') || $request->user()->can('conferences.edit'),
+            403
+        );
+
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email',
+            'semblanza' => 'nullable|string|max:5000',
+        ]);
+
+        $moderatorRoleId = Role::where('name', 'Moderator')->value('id');
+
+        $user = User::where('email', $validated['email'])->first();
+
+        if ($user === null) {
+            $user = User::create([
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'email' => $validated['email'],
+                'dni' => 'CNV-'.Str::random(7),
+                'password' => bcrypt(Str::random(16)),
+                'affiliation' => $request->input('affiliation', ''),
+                'country' => $request->input('country', ''),
+                'state' => $request->input('state', ''),
+                'semblanza' => $request->input('semblanza', ''),
             ]);
 
-            $speakerRoleId = Role::where('name', 'Speaker')->value('id') ?? 5;
+            $activationToken = Str::random(60);
+            $user->update(['activation_token' => $activationToken]);
+            $url = url('/ponente/activar/'.$activationToken);
+            $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
+        }
 
-            $user = User::where('email', $validated['email'])->first();
+        $user->roles()->syncWithoutDetaching([$moderatorRoleId]);
 
-            if ($user === null) {
-                $user = User::create([
-                    'first_name' => $validated['first_name'],
-                    'last_name' => $validated['last_name'],
-                    'email' => $validated['email'],
-                    'dni' => 'CNV-'.Str::random(7),
-                    'password' => bcrypt(Str::random(16)),
-                    'affiliation' => $request->input('affiliation', ''),
-                    'country' => $request->input('country', ''),
-                    'state' => $request->input('state', ''),
-                    'semblanza' => $request->input('semblanza', ''),
-                ]);
+        return $user->only(['id', 'first_name', 'last_name', 'email']);
+    })->name('api.moderadores.store');
 
-                $activationToken = Str::random(60);
-                $user->update(['activation_token' => $activationToken]);
-                $url = url('/ponente/activar/'.$activationToken);
-                $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
-            }
+    Route::get('api/usuarios', function (Request $request) {
+        abort_unless(
+            $request->user()->can('conferences.create') || $request->user()->can('conferences.edit'),
+            403
+        );
 
-            $user->roles()->syncWithoutDetaching([$speakerRoleId]);
+        $search = $request->input('search');
 
-            return $user->only(['id', 'first_name', 'last_name', 'email']);
-        })->name('api.usuarios.store');
-    });
+        return User::where(function ($q) use ($search) {
+            $q->where('first_name', 'like', "%{$search}%")
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%");
+        })
+            ->limit(20)
+            ->get(['id', 'first_name', 'last_name', 'email']);
+    })->name('api.usuarios.index');
+
+    Route::post('api/usuarios', function (Request $request) {
+        abort_unless(
+            $request->user()->can('conferences.create') || $request->user()->can('conferences.edit'),
+            403
+        );
+
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email',
+            'semblanza' => 'nullable|string|max:5000',
+        ]);
+
+        $speakerRoleId = Role::where('name', 'Speaker')->value('id');
+
+        $user = User::where('email', $validated['email'])->first();
+
+        if ($user === null) {
+            $user = User::create([
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'email' => $validated['email'],
+                'dni' => 'CNV-'.Str::random(7),
+                'password' => bcrypt(Str::random(16)),
+                'affiliation' => $request->input('affiliation', ''),
+                'country' => $request->input('country', ''),
+                'state' => $request->input('state', ''),
+                'semblanza' => $request->input('semblanza', ''),
+            ]);
+
+            $activationToken = Str::random(60);
+            $user->update(['activation_token' => $activationToken]);
+            $url = url('/ponente/activar/'.$activationToken);
+            $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
+        }
+
+        $user->roles()->syncWithoutDetaching([$speakerRoleId]);
+
+        return $user->only(['id', 'first_name', 'last_name', 'email']);
+    })->name('api.usuarios.store');
 
     Route::redirect('admin/presentations/import', '/presentations?tab=import')->middleware('can:presentations.import')->name('presentations.import');
     Route::post('admin/presentations/import', [PresentationImportController::class, 'store'])->middleware('can:presentations.import')->name('presentations.import.store');
@@ -272,15 +356,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('constancias/{id}/download', [ConstanciaController::class, 'download'])->middleware('can:constancias.download')->name('constancias.download');
     Route::get('constancias/{certificate}/pdf', [ConstanciaController::class, 'downloadPdf'])->middleware('can:constancias.download')->name('constancias.pdf');
-    Route::get('admin/constancias/{workshopId}/{userId}/download', [ConstanciaController::class, 'adminDownload'])->middleware('can:constancias.download')->name('constancias.admin.download');
+    Route::get('admin/constancias/{workshopId}/{userId}/download', [ConstanciaController::class, 'adminDownload'])->name('constancias.admin.download');
 
     // Constancias de ponencia
     Route::get('constancias/ponencia/{presentation}/download', [ConstanciaController::class, 'downloadPonencia'])->middleware('can:constancias.download')->name('constancias.ponencia.download');
-    Route::get('admin/constancias/ponencia/{presentation}/{user}/download', [ConstanciaController::class, 'adminDownloadPonencia'])->middleware('can:constancias.download')->name('constancias.ponencia.admin-download');
+    Route::get('admin/constancias/ponencia/{presentation}/{user}/download', [ConstanciaController::class, 'adminDownloadPonencia'])->name('constancias.ponencia.admin-download');
 
     // Constancias de conferencia
     Route::get('constancias/conferencia/{conference}/download', [ConstanciaController::class, 'downloadConferencia'])->middleware('can:constancias.download')->name('constancias.conferencia.download');
-    Route::get('admin/constancias/conferencia/{conference}/{user}/download', [ConstanciaController::class, 'adminDownloadConferencia'])->middleware('can:constancias.download')->name('constancias.conferencia.admin-download');
+    Route::get('admin/constancias/conferencia/{conference}/{user}/download', [ConstanciaController::class, 'adminDownloadConferencia'])->name('constancias.conferencia.admin-download');
 
     // Generación manual de constancias de tipos marcados como "manuales" (ej. staff)
     Route::get('admin/constancias/tipos/{type}/usuario/{user}/generar', [ConstanciaController::class, 'adminGenerate'])->middleware('can:constancias.download')->name('constancias.tipos.admin-generate');

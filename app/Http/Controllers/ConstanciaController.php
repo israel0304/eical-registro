@@ -183,7 +183,7 @@ class ConstanciaController extends Controller
 
     public function adminDownloadEvento(User $user)
     {
-        abort_if(! request()->user()->isAdmin(), 403);
+        abort_unless(request()->user()->can('constancias.download'), 403);
 
         if (! EventSettings::qualifies($user->id)) {
             return back()->withErrors(['error' => 'El usuario no cumple los días mínimos de asistencia al evento (lleva '.EventSettings::attendedDays($user->id).' de '.EventSettings::minDays().').']);
@@ -233,10 +233,13 @@ class ConstanciaController extends Controller
 
     public function adminDownload($workshopId, $userId)
     {
-        abort_if(! request()->user()->isAdmin(), 403);
-
+        $currentUser = request()->user();
         $workshop = Workshop::findOrFail($workshopId);
         $user = User::findOrFail($userId);
+
+        $isAssignedModerator = $workshop->moderators()->where('users.id', $currentUser->id)->exists();
+
+        abort_unless($currentUser->canScoped('constancias.download', 'constancias.view', $isAssignedModerator), 403);
 
         $hasAttendance = $workshop->attendances()->where('user_id', $user->id)->exists();
 
@@ -281,7 +284,10 @@ class ConstanciaController extends Controller
 
     public function adminDownloadPonencia(Presentation $presentation, User $user)
     {
-        abort_if(! request()->user()->isAdmin(), 403);
+        $currentUser = request()->user();
+        $isAssignedModerator = $presentation->moderators()->where('users.id', $currentUser->id)->exists();
+
+        abort_unless($currentUser->canScoped('constancias.download', 'constancias.view', $isAssignedModerator), 403);
 
         $certificate = $this->renderer->issue($user, 'presentation', $presentation);
 
@@ -320,7 +326,10 @@ class ConstanciaController extends Controller
 
     public function adminDownloadConferencia(Conference $conference, User $user)
     {
-        abort_if(! request()->user()->isAdmin(), 403);
+        $currentUser = request()->user();
+        $isAssignedModerator = $conference->moderators()->where('users.id', $currentUser->id)->exists();
+
+        abort_unless($currentUser->canScoped('constancias.download', 'constancias.view', $isAssignedModerator), 403);
 
         $certificate = $this->renderer->issue($user, 'conference', $conference);
 
@@ -335,7 +344,7 @@ class ConstanciaController extends Controller
 
     public function adminGenerate(ParticipationType $type, User $user)
     {
-        abort_if(! request()->user()->isAdmin(), 403);
+        abort_unless(request()->user()->can('constancias.download'), 403);
 
         if (! $type->manual_generable) {
             return back()->withErrors(['error' => 'Este tipo de constancia no está marcado como generable manualmente.']);
@@ -356,7 +365,7 @@ class ConstanciaController extends Controller
     {
         $user = $request->user();
 
-        abort_unless($certificate->user_id === $user->id || $user->isAdmin(), 403);
+        abort_unless($certificate->user_id === $user->id || $user->can('constancias.download'), 403);
 
         return response($this->renderer->renderPdf($certificate), 200, [
             'Content-Type' => 'application/pdf',

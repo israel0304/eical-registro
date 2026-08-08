@@ -20,10 +20,32 @@ import { computed, ref, onMounted, nextTick, watch } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const page = usePage();
-const hasRole = (name: string) =>
-    page.props.auth.user?.roles?.some((r: any) => r.name === name) ?? false;
-const isAdmin = computed(() => hasRole('Administrator'));
+const can = (permission: string) =>
+    (page.props.auth.permissions as string[] | undefined)?.includes(
+        permission,
+    ) ?? false;
 const currentUserId = computed(() => page.props.auth.user?.id);
+const isAssignedModerator = computed(() => {
+    return props.workshop.moderators?.some(
+        (m: any) => m.id === currentUserId.value,
+    );
+});
+const isInstructor = computed(() => {
+    return props.workshop.instructors?.some(
+        (i: any) => i.id === currentUserId.value,
+    );
+});
+const canManage = computed(
+    () =>
+        can('workshops.edit') ||
+        isAssignedModerator.value ||
+        isInstructor.value,
+);
+const canToggleAttendance = computed(
+    () =>
+        can('workshops.attendance') &&
+        (can('workshops.view') || isAssignedModerator.value),
+);
 
 const props = defineProps<{
     workshop: any;
@@ -225,7 +247,7 @@ const sendQRToAll = () => {
 };
 
 onMounted(() => {
-    if (isAdmin.value) {
+    if (canManage.value) {
         generateQR();
     }
 });
@@ -233,7 +255,7 @@ onMounted(() => {
 watch(
     () => props.workshop.id,
     () => {
-        if (isAdmin.value) {
+        if (canManage.value) {
             generateQR();
         }
     },
@@ -281,11 +303,11 @@ watch(
                         </div>
                         <div class="flex items-center gap-1.5">
                             <Clock class="h-4 w-4 shrink-0" />
-                            <span class="text-gray-900 dark:text-white">{{
-                                workshop.start_time
-                            }}
-                            -
-                            {{ workshop.end_time }}</span>
+                            <span class="text-gray-900 dark:text-white"
+                                >{{ workshop.start_time }}
+                                -
+                                {{ workshop.end_time }}</span
+                            >
                         </div>
                         <div class="flex items-center gap-1.5">
                             <MapPin class="h-4 w-4 shrink-0" />
@@ -295,7 +317,9 @@ watch(
                         </div>
                     </div>
 
-                    <div class="border-t border-gray-200 pt-3 dark:border-zinc-700">
+                    <div
+                        class="border-t border-gray-200 pt-3 dark:border-zinc-700"
+                    >
                         <span
                             class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
                             >Cupos</span
@@ -326,7 +350,10 @@ watch(
                         </div>
                     </div>
 
-                    <div v-if="workshop.description" class="border-t border-gray-200 pt-3 dark:border-zinc-700">
+                    <div
+                        v-if="workshop.description"
+                        class="border-t border-gray-200 pt-3 dark:border-zinc-700"
+                    >
                         <span
                             class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
                             >Descripción</span
@@ -338,21 +365,28 @@ watch(
                         </p>
                     </div>
 
-                    <div class="border-t border-gray-200 pt-3 dark:border-zinc-700">
+                    <div
+                        class="border-t border-gray-200 pt-3 dark:border-zinc-700"
+                    >
                         <span
                             class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
                             >Instructores</span
                         >
                         <div class="mt-1 flex items-start gap-1.5">
-                            <UserCheck class="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                            <UserCheck
+                                class="mt-0.5 h-4 w-4 shrink-0 text-gray-400"
+                            />
                             <template v-if="workshop.instructors?.length">
                                 <span
-                                    v-for="(instructor, idx) in workshop.instructors"
+                                    v-for="(
+                                        instructor, idx
+                                    ) in workshop.instructors"
                                     :key="instructor.id"
                                     class="text-gray-900 dark:text-white"
                                 >
                                     {{ instructor.first_name }}
-                                    {{ instructor.last_name }}<span
+                                    {{ instructor.last_name
+                                    }}<span
                                         v-if="instructor.affiliation"
                                         class="text-xs text-gray-500"
                                     >
@@ -372,9 +406,9 @@ watch(
                     </div>
                 </div>
 
-                <!-- Enrollment buttons (non-admin) -->
+                <!-- Enrollment buttons (non-admin/non-moderator) -->
                 <div
-                    v-if="!isAdmin"
+                    v-if="!canManage"
                     class="mt-4 border-t border-gray-100 pt-4 dark:border-zinc-800"
                 >
                     <button
@@ -401,9 +435,9 @@ watch(
                 </div>
             </div>
 
-            <!-- Enrollments List (Admin with tabs) -->
+            <!-- Enrollments List (Admin/Moderator with tabs) -->
             <div
-                v-if="isAdmin"
+                v-if="canManage"
                 class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
             >
                 <div class="border-b border-gray-200 dark:border-zinc-800">
@@ -437,6 +471,7 @@ watch(
                             </button>
                         </nav>
                         <a
+                            v-if="can('reportes.view')"
                             :href="
                                 '/admin/reportes/workshops/' +
                                 workshop.id +
@@ -533,6 +568,7 @@ watch(
                                     class="px-6 py-4 text-sm"
                                 >
                                     <button
+                                        v-if="canToggleAttendance"
                                         @click="
                                             toggleAttendance(
                                                 enrollment.user?.id,
@@ -564,7 +600,10 @@ watch(
                                         class="flex items-center justify-end gap-2"
                                     >
                                         <button
-                                            v-if="activeTab === 'enrolled'"
+                                            v-if="
+                                                activeTab === 'enrolled' &&
+                                                can('constancias.download')
+                                            "
                                             @click="
                                                 downloadConstancia(
                                                     enrollment.user?.id,
@@ -576,7 +615,10 @@ watch(
                                             <Download class="h-4 w-4" />
                                         </button>
                                         <button
-                                            v-if="activeTab === 'enrolled'"
+                                            v-if="
+                                                activeTab === 'enrolled' &&
+                                                can('workshops.enrollments')
+                                            "
                                             @click="
                                                 removeEnrollment(enrollment.id)
                                             "
@@ -605,9 +647,9 @@ watch(
                 </div>
             </div>
 
-            <!-- QR Section (Admin) - Always visible, at the bottom -->
+            <!-- QR Section (Admin/Moderator) - Always visible, at the bottom -->
             <div
-                v-if="isAdmin"
+                v-if="canManage"
                 class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
             >
                 <div class="mb-4 flex items-center justify-between">
@@ -616,7 +658,10 @@ watch(
                     >
                         <QrCode class="h-5 w-5" /> Código QR de asistencia
                     </h2>
-                    <div class="flex items-center gap-3">
+                    <div
+                        v-if="can('workshops.edit')"
+                        class="flex items-center gap-3"
+                    >
                         <button
                             @click="toggleQrTimeRestricted"
                             class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
@@ -663,7 +708,10 @@ watch(
                 </div>
 
                 <div
-                    v-if="workshop.instructors?.length > 0"
+                    v-if="
+                        workshop.instructors?.length > 0 &&
+                        can('workshops.qr.send')
+                    "
                     class="mt-4 border-t border-gray-100 pt-4 dark:border-zinc-800"
                 >
                     <p

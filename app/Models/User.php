@@ -117,6 +117,23 @@ class User extends Authenticatable implements MustVerifyEmail
             ->withTimestamps();
     }
 
+    public function moderatedWorkshops(): BelongsToMany
+    {
+        return $this->belongsToMany(Workshop::class, 'workshop_moderator_user')->withTimestamps();
+    }
+
+    public function moderatedPresentations(): BelongsToMany
+    {
+        return $this->belongsToMany(Presentation::class, 'presentation_moderators')->withTimestamps();
+    }
+
+    public function moderatedConferences(): BelongsToMany
+    {
+        return $this->belongsToMany(Conference::class, 'conference_members')
+            ->wherePivot('role', 'moderator')
+            ->withTimestamps();
+    }
+
     public function enrolledWorkshops(): BelongsToMany
     {
         return $this->belongsToMany(Workshop::class, 'workshop_enrollments')
@@ -153,7 +170,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function isAdmin(): bool
     {
-        return $this->hasRole('Administrator');
+        return $this->hasRole(config('roles.super_admin'));
     }
 
     public function isInstructor(): bool
@@ -174,6 +191,16 @@ class User extends Authenticatable implements MustVerifyEmail
     public function hasPermission(string $key): bool
     {
         return in_array($key, $this->permissionKeys(), true);
+    }
+
+    public function canViewActivity(string $moduleView, bool $isAssigned): bool
+    {
+        return $this->can($moduleView) || $isAssigned;
+    }
+
+    public function canScoped(string $permission, string $moduleView, bool $isAssigned): bool
+    {
+        return $this->can($permission) && ($this->can($moduleView) || $isAssigned);
     }
 
     public function permissionKeys(): array
