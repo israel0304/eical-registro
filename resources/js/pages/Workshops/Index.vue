@@ -2,13 +2,14 @@
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { Search, Plus, Edit, Trash2, Eye, UserPlus } from 'lucide-vue-next';
-import { ref, watch, computed, reactive } from 'vue';
+import { ref, watch, reactive } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const page = usePage();
-const hasRole = (name: string) =>
-    page.props.auth.user?.roles?.some((r: any) => r.name === name) ?? false;
-const isAdmin = computed(() => hasRole('Administrator'));
+const can = (permission: string) =>
+    (page.props.auth.permissions as string[] | undefined)?.includes(
+        permission,
+    ) ?? false;
 
 const props = defineProps<{
     workshops: {
@@ -60,12 +61,116 @@ const form = useForm({
     end_time: '',
     qr_time_restricted: true,
     instructors: [] as InstructorForm[],
+    moderator_ids: [] as number[],
 });
+
+const selectedModerators = ref<any[]>([]);
+const moderatorSearchQuery = ref('');
+const moderatorSearchResults = ref<any[]>([]);
+const showModeratorSearchResults = ref(false);
+const searchingModerator = ref(false);
+let searchModeratorTimeout: ReturnType<typeof setTimeout>;
+
+const searchModerators = (query: string) => {
+    moderatorSearchQuery.value = query;
+    clearTimeout(searchModeratorTimeout);
+    if (!query.trim()) {
+        moderatorSearchResults.value = [];
+        showModeratorSearchResults.value = false;
+        return;
+    }
+    searchingModerator.value = true;
+    searchModeratorTimeout = setTimeout(async () => {
+        try {
+            const res = await axios.get('/api/moderadores', {
+                params: { search: query },
+            });
+            moderatorSearchResults.value = res.data.filter(
+                (u: any) => !form.moderator_ids.includes(u.id),
+            );
+            showModeratorSearchResults.value =
+                moderatorSearchResults.value.length > 0 ||
+                query.trim().length > 0;
+        } catch {
+            moderatorSearchResults.value = [];
+        } finally {
+            searchingModerator.value = false;
+        }
+    }, 300);
+};
+
+const selectModerator = (user: any) => {
+    if (!selectedModerators.value.some((m) => m.id === user.id)) {
+        selectedModerators.value.push(user);
+        form.moderator_ids.push(user.id);
+    }
+    moderatorSearchQuery.value = '';
+    moderatorSearchResults.value = [];
+    showModeratorSearchResults.value = false;
+};
+
+const removeModerator = (index: number) => {
+    const mod = selectedModerators.value[index];
+    selectedModerators.value.splice(index, 1);
+    form.moderator_ids = form.moderator_ids.filter((id) => id !== mod.id);
+};
+
+const showCreateModerator = ref(false);
+const creatingModerator = ref(false);
+const newModerator = reactive({
+    first_name: '',
+    last_name: '',
+    email: '',
+    affiliation: '',
+    country: '',
+    state: '',
+    semblanza: '',
+});
+const newModeratorErrors = reactive<Record<string, string>>({});
+
+const createModerator = async () => {
+    Object.keys(newModeratorErrors).forEach(
+        (key) => delete newModeratorErrors[key],
+    );
+    if (
+        !newModerator.first_name.trim() ||
+        !newModerator.last_name.trim() ||
+        !newModerator.email.trim()
+    )
+        return;
+
+    creatingModerator.value = true;
+    try {
+        const res = await axios.post('/api/moderadores', {
+            first_name: newModerator.first_name,
+            last_name: newModerator.last_name,
+            email: newModerator.email,
+            affiliation: newModerator.affiliation,
+            country: newModerator.country,
+            state: newModerator.state,
+            semblanza: newModerator.semblanza,
+        });
+        selectModerator(res.data);
+        showCreateModerator.value = false;
+        newModerator.first_name = '';
+        newModerator.last_name = '';
+        newModerator.email = '';
+        newModerator.affiliation = '';
+    } catch (err: any) {
+        if (err.response?.data?.errors) {
+            Object.assign(newModeratorErrors, err.response.data.errors);
+        }
+    } finally {
+        creatingModerator.value = false;
+    }
+};
 
 const openCreateModal = () => {
     isEditing.value = false;
     form.reset();
     form.instructors = [];
+    form.moderator_ids = [];
+    selectedModerators.value = [];
     showModal.value = true;
 };
 
@@ -78,7 +183,9 @@ const openEditModal = (workshop: any) => {
     form.capacity = workshop.capacity || 30;
     form.location = workshop.location || '';
     form.day = workshop.day || '';
-    form.start_time = workshop.start_time ? workshop.start_time.slice(0, 5) : '';
+    form.start_time = workshop.start_time
+        ? workshop.start_time.slice(0, 5)
+        : '';
     form.end_time = workshop.end_time ? workshop.end_time.slice(0, 5) : '';
     form.qr_time_restricted = workshop.qr_time_restricted ?? true;
     form.instructors = workshop.instructors?.length
@@ -89,6 +196,9 @@ const openEditModal = (workshop: any) => {
               email: i.email || '',
           }))
         : [];
+    form.moderator_ids = workshop.moderators?.map((m: any) => m.id) || [];
+    selectedModerators.value =
+        workshop.moderators?.map((m: any) => ({ ...m })) || [];
     showModal.value = true;
 };
 
@@ -256,7 +366,7 @@ const formatDate = (dateStr: string) => {
                 </div>
 
                 <div
-                    v-if="isAdmin"
+                    v-if="can('workshops.create')"
                     class="flex items-center gap-3 self-start xl:self-auto"
                 >
                     <button
@@ -337,9 +447,7 @@ const formatDate = (dateStr: string) => {
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
                                 >
-                                    <div
-                                        class="flex items-center -space-x-2"
-                                    >
+                                    <div class="flex items-center -space-x-2">
                                         <span
                                             v-for="instructor in workshop.instructors"
                                             :key="instructor.id"
@@ -392,22 +500,20 @@ const formatDate = (dateStr: string) => {
                                         >
                                             <Eye class="h-4 w-4" />
                                         </Link>
-                                        <template v-if="isAdmin">
-                                            <button
-                                                @click="openEditModal(workshop)"
-                                                class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
-                                            >
-                                                <Edit class="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                @click="
-                                                    deleteWorkshop(workshop.id)
-                                                "
-                                                class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-gray-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
-                                            >
-                                                <Trash2 class="h-4 w-4" />
-                                            </button>
-                                        </template>
+                                        <button
+                                            v-if="can('workshops.edit')"
+                                            @click="openEditModal(workshop)"
+                                            class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
+                                        >
+                                            <Edit class="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            v-if="can('workshops.delete')"
+                                            @click="deleteWorkshop(workshop.id)"
+                                            class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-gray-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
+                                        >
+                                            <Trash2 class="h-4 w-4" />
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -466,7 +572,10 @@ const formatDate = (dateStr: string) => {
             >
                 <div
                     class="fixed inset-0 bg-black/50 transition-opacity"
-                    @click="showModal = false; clickOutsideSearch()"
+                    @click="
+                        showModal = false;
+                        clickOutsideSearch();
+                    "
                 ></div>
                 <span class="hidden sm:inline-block sm:h-screen sm:align-middle"
                     >&#8203;</span
@@ -654,9 +763,7 @@ const formatDate = (dateStr: string) => {
                                             class="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-400"
                                         />
                                         <p
-                                            v-if="
-                                                form.instructors.length >= 5
-                                            "
+                                            v-if="form.instructors.length >= 5"
                                             class="mt-1 text-xs text-gray-500 dark:text-gray-400"
                                         >
                                             Límite de 5 instructores alcanzado.
@@ -672,12 +779,12 @@ const formatDate = (dateStr: string) => {
                                                 v-for="user in searchResults"
                                                 :key="user.id"
                                                 type="button"
-                                                @click="
-                                                    selectInstructor(user)
-                                                "
+                                                @click="selectInstructor(user)"
                                                 class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-zinc-700"
                                             >
-                                                <UserPlus class="h-3.5 w-3.5 shrink-0 text-indigo-500" />
+                                                <UserPlus
+                                                    class="h-3.5 w-3.5 shrink-0 text-indigo-500"
+                                                />
                                                 <span class="truncate">
                                                     {{ user.first_name }}
                                                     {{ user.last_name }}
@@ -865,6 +972,125 @@ const formatDate = (dateStr: string) => {
                                     >
                                         {{ form.errors.instructors }}
                                     </p>
+
+                                    <!-- Moderator section -->
+                                    <div
+                                        class="mt-6 border-t border-gray-100 pt-4 dark:border-zinc-800"
+                                    >
+                                        <div
+                                            class="mb-3 flex items-center justify-between"
+                                        >
+                                            <label
+                                                class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                            >
+                                                Moderadores
+                                            </label>
+                                        </div>
+
+                                        <div
+                                            v-if="selectedModerators.length > 0"
+                                            class="mb-2 flex flex-wrap gap-2"
+                                        >
+                                            <span
+                                                v-for="(
+                                                    mod, idx
+                                                ) in selectedModerators"
+                                                :key="mod.id"
+                                                class="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                                            >
+                                                {{ mod.first_name }}
+                                                {{ mod.last_name }}
+                                                <button
+                                                    type="button"
+                                                    @click="
+                                                        removeModerator(idx)
+                                                    "
+                                                    class="inline-flex items-center text-emerald-400 hover:text-emerald-600"
+                                                >
+                                                    <X class="h-3 w-3" />
+                                                </button>
+                                            </span>
+                                        </div>
+
+                                        <div class="relative">
+                                            <input
+                                                v-model="moderatorSearchQuery"
+                                                @input="
+                                                    searchModerators(
+                                                        (
+                                                            $event.target as HTMLInputElement
+                                                        ).value,
+                                                    )
+                                                "
+                                                @focus="
+                                                    searchModerators(
+                                                        moderatorSearchQuery,
+                                                    )
+                                                "
+                                                type="text"
+                                                placeholder="Buscar moderadores por nombre o correo..."
+                                                class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                            />
+                                            <div
+                                                v-if="
+                                                    showModeratorSearchResults &&
+                                                    moderatorSearchResults.length >
+                                                        0
+                                                "
+                                                class="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
+                                            >
+                                                <button
+                                                    v-for="user in moderatorSearchResults"
+                                                    :key="user.id"
+                                                    type="button"
+                                                    @click="
+                                                        selectModerator(user)
+                                                    "
+                                                    class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-zinc-700"
+                                                >
+                                                    <UserPlus
+                                                        class="h-3.5 w-3.5 shrink-0 text-gray-400"
+                                                    />
+                                                    <span
+                                                        >{{ user.first_name }}
+                                                        {{
+                                                            user.last_name
+                                                        }}</span
+                                                    >
+                                                    <span
+                                                        class="ml-auto text-xs text-gray-400"
+                                                        >{{ user.email }}</span
+                                                    >
+                                                </button>
+                                            </div>
+                                            <div
+                                                v-else-if="
+                                                    showModeratorSearchResults &&
+                                                    moderatorSearchQuery.trim() &&
+                                                    !searchingModerator
+                                                "
+                                                class="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
+                                            >
+                                                <p
+                                                    class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400"
+                                                >
+                                                    No se encontraron usuarios.
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    @click="
+                                                        showCreateModerator = true
+                                                    "
+                                                    class="flex w-full items-center gap-2 border-t border-gray-100 px-3 py-2 text-left text-sm font-medium text-indigo-600 hover:bg-gray-50 dark:border-zinc-700 dark:text-indigo-400 dark:hover:bg-zinc-700"
+                                                >
+                                                    <UserPlus
+                                                        class="h-3.5 w-3.5"
+                                                    />
+                                                    Registrar nuevo moderador
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -983,6 +1209,114 @@ const formatDate = (dateStr: string) => {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Create moderator inline modal -->
+        <div
+            v-if="showCreateModerator"
+            class="fixed inset-0 z-[60] overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+        >
+            <div
+                class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0"
+            >
+                <div
+                    class="fixed inset-0 bg-black/50 transition-opacity"
+                    @click="showCreateModerator = false"
+                ></div>
+                <span class="hidden sm:inline-block sm:h-screen sm:align-middle"
+                    >&#8203;</span
+                >
+                <div
+                    class="relative inline-block transform overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md sm:p-8 sm:align-middle dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                    <h3
+                        class="mb-4 text-lg font-semibold text-gray-900 dark:text-white"
+                    >
+                        Nuevo Moderador
+                    </h3>
+
+                    <form @submit.prevent="createModerator">
+                        <div
+                            v-if="Object.keys(newModeratorErrors).length > 0"
+                            class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+                        >
+                            <p class="font-medium">
+                                Corrige los siguientes errores:
+                            </p>
+                            <ul class="mt-1 list-inside list-disc">
+                                <li
+                                    v-for="(message, key) in newModeratorErrors"
+                                    :key="key"
+                                >
+                                    {{ message }}
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label
+                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    >Nombre(s) *</label
+                                >
+                                <input
+                                    v-model="newModerator.first_name"
+                                    type="text"
+                                    required
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    >Apellido(s) *</label
+                                >
+                                <input
+                                    v-model="newModerator.last_name"
+                                    type="text"
+                                    required
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    >Correo electrónico *</label
+                                >
+                                <input
+                                    v-model="newModerator.email"
+                                    type="email"
+                                    required
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                />
+                            </div>
+                        </div>
+                        <div
+                            class="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-4 dark:border-zinc-800"
+                        >
+                            <button
+                                type="button"
+                                @click="showCreateModerator = false"
+                                class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                :disabled="creatingModerator"
+                                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                                {{
+                                    creatingModerator
+                                        ? 'Creando...'
+                                        : 'Crear moderador'
+                                }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </AppLayout>

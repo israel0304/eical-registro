@@ -11,15 +11,16 @@ import {
     Pencil,
     Trash2,
 } from 'lucide-vue-next';
-import { ref, watch, computed, reactive } from 'vue';
+import { ref, watch, reactive } from 'vue';
 import DisciplineInput from '@/components/DisciplineInput.vue';
 import TagInput from '@/components/TagInput.vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const page = usePage();
-const hasRole = (name: string) =>
-    page.props.auth.user?.roles?.some((r: any) => r.name === name) ?? false;
-const isAdmin = computed(() => hasRole('Administrator'));
+const can = (permission: string) =>
+    (page.props.auth.permissions as string[] | undefined)?.includes(
+        permission,
+    ) ?? false;
 
 const props = defineProps<{
     presentations: {
@@ -67,7 +68,109 @@ const form = useForm({
     end_time: '',
     submission_id: '' as string | number,
     author_ids: [] as number[],
+    moderator_ids: [] as number[],
 });
+
+const selectedModerators = ref<any[]>([]);
+const moderatorSearchQuery = ref('');
+const moderatorSearchResults = ref<any[]>([]);
+const showModeratorSearchResults = ref(false);
+const searchingModerator = ref(false);
+let searchModeratorTimeout: ReturnType<typeof setTimeout>;
+
+const searchModerators = (query: string) => {
+    moderatorSearchQuery.value = query;
+    clearTimeout(searchModeratorTimeout);
+    if (!query.trim()) {
+        moderatorSearchResults.value = [];
+        showModeratorSearchResults.value = false;
+        return;
+    }
+    searchingModerator.value = true;
+    searchModeratorTimeout = setTimeout(async () => {
+        try {
+            const res = await axios.get('/api/moderadores', {
+                params: { search: query },
+            });
+            moderatorSearchResults.value = res.data.filter(
+                (u: any) => !form.moderator_ids.includes(u.id),
+            );
+            showModeratorSearchResults.value =
+                moderatorSearchResults.value.length > 0 ||
+                query.trim().length > 0;
+        } catch {
+            moderatorSearchResults.value = [];
+        } finally {
+            searchingModerator.value = false;
+        }
+    }, 300);
+};
+
+const selectModerator = (user: any) => {
+    if (!selectedModerators.value.some((m) => m.id === user.id)) {
+        selectedModerators.value.push(user);
+        form.moderator_ids.push(user.id);
+    }
+    moderatorSearchQuery.value = '';
+    moderatorSearchResults.value = [];
+    showModeratorSearchResults.value = false;
+};
+
+const removeModerator = (index: number) => {
+    const mod = selectedModerators.value[index];
+    selectedModerators.value.splice(index, 1);
+    form.moderator_ids = form.moderator_ids.filter((id) => id !== mod.id);
+};
+
+const showCreateModerator = ref(false);
+const creatingModerator = ref(false);
+const newModerator = reactive({
+    first_name: '',
+    last_name: '',
+    email: '',
+    affiliation: '',
+    country: '',
+    state: '',
+    semblanza: '',
+});
+const newModeratorErrors = reactive<Record<string, string>>({});
+
+const createModerator = async () => {
+    Object.keys(newModeratorErrors).forEach(
+        (key) => delete newModeratorErrors[key],
+    );
+    if (
+        !newModerator.first_name.trim() ||
+        !newModerator.last_name.trim() ||
+        !newModerator.email.trim()
+    )
+        return;
+
+    creatingModerator.value = true;
+    try {
+        const res = await axios.post('/api/moderadores', {
+            first_name: newModerator.first_name,
+            last_name: newModerator.last_name,
+            email: newModerator.email,
+            affiliation: newModerator.affiliation,
+            country: newModerator.country,
+            state: newModerator.state,
+            semblanza: newModerator.semblanza,
+        });
+        selectModerator(res.data);
+        showCreateModerator.value = false;
+        newModerator.first_name = '';
+        newModerator.last_name = '';
+        newModerator.email = '';
+        newModerator.affiliation = '';
+    } catch (err: any) {
+        if (err.response?.data?.errors) {
+            Object.assign(newModeratorErrors, err.response.data.errors);
+        }
+    } finally {
+        creatingModerator.value = false;
+    }
+};
 
 const openCreateModal = () => {
     isEditing.value = false;
@@ -75,6 +178,8 @@ const openCreateModal = () => {
     form.reset();
     form.author_ids = [];
     selectedAuthors.value = [];
+    form.moderator_ids = [];
+    selectedModerators.value = [];
     showModal.value = true;
 };
 
@@ -88,12 +193,19 @@ const openEditModal = (presentation: any) => {
     form.keywords = presentation.keywords || '';
     form.location = presentation.location || '';
     form.day = presentation.day || '';
-    form.start_time = presentation.start_time ? presentation.start_time.slice(0, 5) : '';
-    form.end_time = presentation.end_time ? presentation.end_time.slice(0, 5) : '';
+    form.start_time = presentation.start_time
+        ? presentation.start_time.slice(0, 5)
+        : '';
+    form.end_time = presentation.end_time
+        ? presentation.end_time.slice(0, 5)
+        : '';
     form.submission_id = presentation.submission_id || '';
     form.author_ids = presentation.authors?.map((a: any) => a.id) || [];
     selectedAuthors.value =
         presentation.authors?.map((a: any) => ({ ...a })) || [];
+    form.moderator_ids = presentation.moderators?.map((m: any) => m.id) || [];
+    selectedModerators.value =
+        presentation.moderators?.map((m: any) => ({ ...m })) || [];
     showModal.value = true;
 };
 
@@ -103,6 +215,7 @@ const savePresentation = () => {
             showModal.value = false;
             form.reset();
             selectedAuthors.value = [];
+            selectedModerators.value = [];
             isEditing.value = false;
             editingId.value = null;
         },
@@ -188,7 +301,9 @@ const newPonente = reactive({
 const newPonenteErrors = reactive<Record<string, string>>({});
 
 const createPonente = async () => {
-    Object.keys(newPonenteErrors).forEach(key => delete newPonenteErrors[key]);
+    Object.keys(newPonenteErrors).forEach(
+        (key) => delete newPonenteErrors[key],
+    );
 
     if (
         !newPonente.first_name.trim() ||
@@ -277,7 +392,7 @@ const submitImport = () => {
             </h1>
 
             <div
-                v-if="isAdmin"
+                v-if="can('presentations.import')"
                 class="mb-6 border-b border-gray-200 dark:border-zinc-800"
             >
                 <nav class="-mb-px flex gap-6">
@@ -334,7 +449,7 @@ const submitImport = () => {
                     </div>
 
                     <div
-                        v-if="isAdmin"
+                        v-if="can('presentations.create')"
                         class="flex items-center gap-3 self-start xl:self-auto"
                     >
                         <button
@@ -466,10 +581,7 @@ const submitImport = () => {
                                                 "
                                                 :title="
                                                     presentation.authors
-                                                        .map(
-                                                            (a: any) =>
-                                                                a.name,
-                                                        )
+                                                        .map((a: any) => a.name)
                                                         .join(', ')
                                                 "
                                                 class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600 ring-2 ring-white dark:bg-zinc-700 dark:text-gray-300 dark:ring-zinc-900"
@@ -500,6 +612,10 @@ const submitImport = () => {
                                                 <Eye class="h-4 w-4" />
                                             </Link>
                                             <button
+                                                v-if="
+                                                    can('presentations.edit') ||
+                                                    can('presentations.my')
+                                                "
                                                 type="button"
                                                 @click="
                                                     openEditModal(presentation)
@@ -509,7 +625,9 @@ const submitImport = () => {
                                                 <Pencil class="h-4 w-4" />
                                             </button>
                                             <button
-                                                v-if="isAdmin"
+                                                v-if="
+                                                    can('presentations.delete')
+                                                "
                                                 type="button"
                                                 @click="
                                                     deletePresentation(
@@ -767,7 +885,11 @@ const submitImport = () => {
                                         {{ form.errors.keywords }}
                                     </p>
                                 </div>
-                                <div v-if="isAdmin || !isEditing">
+                                <div
+                                    v-if="
+                                        can('presentations.edit') || !isEditing
+                                    "
+                                >
                                     <label
                                         class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
                                         >ID de envío</label
@@ -784,7 +906,11 @@ const submitImport = () => {
                                         {{ form.errors.submission_id }}
                                     </p>
                                 </div>
-                                <div v-if="isAdmin || !isEditing">
+                                <div
+                                    v-if="
+                                        can('presentations.edit') || !isEditing
+                                    "
+                                >
                                     <label
                                         class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
                                         >Día</label
@@ -801,7 +927,11 @@ const submitImport = () => {
                                         {{ form.errors.day }}
                                     </p>
                                 </div>
-                                <div v-if="isAdmin || !isEditing">
+                                <div
+                                    v-if="
+                                        can('presentations.edit') || !isEditing
+                                    "
+                                >
                                     <label
                                         class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
                                         >Lugar</label
@@ -818,7 +948,11 @@ const submitImport = () => {
                                         {{ form.errors.location }}
                                     </p>
                                 </div>
-                                <div v-if="isAdmin || !isEditing">
+                                <div
+                                    v-if="
+                                        can('presentations.edit') || !isEditing
+                                    "
+                                >
                                     <label
                                         class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
                                         >Hora inicio</label
@@ -835,7 +969,11 @@ const submitImport = () => {
                                         {{ form.errors.start_time }}
                                     </p>
                                 </div>
-                                <div v-if="isAdmin || !isEditing">
+                                <div
+                                    v-if="
+                                        can('presentations.edit') || !isEditing
+                                    "
+                                >
                                     <label
                                         class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
                                         >Hora fin</label
@@ -881,7 +1019,10 @@ const submitImport = () => {
                                             {{ author.first_name }}
                                             {{ author.last_name }}
                                             <button
-                                                v-if="isAdmin || !isEditing"
+                                                v-if="
+                                                    can('presentations.edit') ||
+                                                    !isEditing
+                                                "
                                                 type="button"
                                                 @click="removeAuthor(idx)"
                                                 class="inline-flex items-center text-indigo-400 hover:text-indigo-600"
@@ -893,7 +1034,10 @@ const submitImport = () => {
 
                                     <!-- Author search -->
                                     <div
-                                        v-if="isAdmin || !isEditing"
+                                        v-if="
+                                            can('presentations.edit') ||
+                                            !isEditing
+                                        "
                                         class="relative"
                                     >
                                         <input
@@ -952,9 +1096,14 @@ const submitImport = () => {
                                                 No se encontraron ponentes.
                                             </p>
                                             <button
-                                                v-if="isAdmin || !isEditing"
+                                                v-if="
+                                                    can('presentations.edit') ||
+                                                    !isEditing
+                                                "
                                                 type="button"
-                                                @click="showCreatePonente = true"
+                                                @click="
+                                                    showCreatePonente = true
+                                                "
                                                 class="flex w-full items-center gap-2 border-t border-gray-100 px-3 py-2 text-left text-sm font-medium text-indigo-600 hover:bg-gray-50 dark:border-zinc-700 dark:text-indigo-400 dark:hover:bg-zinc-700"
                                             >
                                                 <UserPlus class="h-3.5 w-3.5" />
@@ -966,7 +1115,7 @@ const submitImport = () => {
                                     <p
                                         v-if="
                                             isEditing &&
-                                            !isAdmin &&
+                                            !can('presentations.edit') &&
                                             selectedAuthors.length
                                         "
                                         class="mt-2 text-xs text-gray-500"
@@ -981,6 +1130,141 @@ const submitImport = () => {
                                     >
                                         {{ form.errors.author_ids }}
                                     </p>
+
+                                    <!-- Moderator section -->
+                                    <div
+                                        class="mt-6 border-t border-gray-100 pt-4 dark:border-zinc-800"
+                                    >
+                                        <div
+                                            class="mb-3 flex items-center justify-between"
+                                        >
+                                            <label
+                                                class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                            >
+                                                Moderadores
+                                            </label>
+                                        </div>
+
+                                        <div
+                                            v-if="selectedModerators.length > 0"
+                                            class="mb-2 flex flex-wrap gap-2"
+                                        >
+                                            <span
+                                                v-for="(
+                                                    mod, idx
+                                                ) in selectedModerators"
+                                                :key="mod.id"
+                                                class="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                                            >
+                                                {{ mod.first_name }}
+                                                {{ mod.last_name }}
+                                                <button
+                                                    v-if="
+                                                        can(
+                                                            'presentations.edit',
+                                                        ) || !isEditing
+                                                    "
+                                                    type="button"
+                                                    @click="
+                                                        removeModerator(idx)
+                                                    "
+                                                    class="inline-flex items-center text-emerald-400 hover:text-emerald-600"
+                                                >
+                                                    <X class="h-3 w-3" />
+                                                </button>
+                                            </span>
+                                        </div>
+
+                                        <div
+                                            v-if="
+                                                can('presentations.edit') ||
+                                                !isEditing
+                                            "
+                                            class="relative"
+                                        >
+                                            <input
+                                                v-model="moderatorSearchQuery"
+                                                @input="
+                                                    searchModerators(
+                                                        (
+                                                            $event.target as HTMLInputElement
+                                                        ).value,
+                                                    )
+                                                "
+                                                @focus="
+                                                    searchModerators(
+                                                        moderatorSearchQuery,
+                                                    )
+                                                "
+                                                type="text"
+                                                placeholder="Buscar moderadores por nombre o correo..."
+                                                class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                            />
+                                            <div
+                                                v-if="
+                                                    showModeratorSearchResults &&
+                                                    moderatorSearchResults.length >
+                                                        0
+                                                "
+                                                class="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
+                                            >
+                                                <button
+                                                    v-for="user in moderatorSearchResults"
+                                                    :key="user.id"
+                                                    type="button"
+                                                    @click="
+                                                        selectModerator(user)
+                                                    "
+                                                    class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-zinc-700"
+                                                >
+                                                    <UserPlus
+                                                        class="h-3.5 w-3.5 shrink-0 text-gray-400"
+                                                    />
+                                                    <span
+                                                        >{{ user.first_name }}
+                                                        {{
+                                                            user.last_name
+                                                        }}</span
+                                                    >
+                                                    <span
+                                                        class="ml-auto text-xs text-gray-400"
+                                                        >{{ user.email }}</span
+                                                    >
+                                                </button>
+                                            </div>
+                                            <div
+                                                v-else-if="
+                                                    showModeratorSearchResults &&
+                                                    moderatorSearchQuery.trim() &&
+                                                    !searchingModerator
+                                                "
+                                                class="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
+                                            >
+                                                <p
+                                                    class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400"
+                                                >
+                                                    No se encontraron usuarios.
+                                                </p>
+                                                <button
+                                                    v-if="
+                                                        can(
+                                                            'presentations.edit',
+                                                        ) || !isEditing
+                                                    "
+                                                    type="button"
+                                                    @click="
+                                                        showCreateModerator = true
+                                                    "
+                                                    class="flex w-full items-center gap-2 border-t border-gray-100 px-3 py-2 text-left text-sm font-medium text-indigo-600 hover:bg-gray-50 dark:border-zinc-700 dark:text-indigo-400 dark:hover:bg-zinc-700"
+                                                >
+                                                    <UserPlus
+                                                        class="h-3.5 w-3.5"
+                                                    />
+                                                    Registrar nuevo moderador
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1143,6 +1427,114 @@ const submitImport = () => {
                                     creatingPonente
                                         ? 'Creando...'
                                         : 'Crear ponente'
+                                }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create moderator inline modal -->
+        <div
+            v-if="showCreateModerator"
+            class="fixed inset-0 z-[60] overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+        >
+            <div
+                class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0"
+            >
+                <div
+                    class="fixed inset-0 bg-black/50 transition-opacity"
+                    @click="showCreateModerator = false"
+                ></div>
+                <span class="hidden sm:inline-block sm:h-screen sm:align-middle"
+                    >&#8203;</span
+                >
+                <div
+                    class="relative inline-block transform overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md sm:p-8 sm:align-middle dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                    <h3
+                        class="mb-4 text-lg font-semibold text-gray-900 dark:text-white"
+                    >
+                        Nuevo Moderador
+                    </h3>
+
+                    <form @submit.prevent="createModerator">
+                        <div
+                            v-if="Object.keys(newModeratorErrors).length > 0"
+                            class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+                        >
+                            <p class="font-medium">
+                                Corrige los siguientes errores:
+                            </p>
+                            <ul class="mt-1 list-inside list-disc">
+                                <li
+                                    v-for="(message, key) in newModeratorErrors"
+                                    :key="key"
+                                >
+                                    {{ message }}
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label
+                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    >Nombre(s) *</label
+                                >
+                                <input
+                                    v-model="newModerator.first_name"
+                                    type="text"
+                                    required
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    >Apellido(s) *</label
+                                >
+                                <input
+                                    v-model="newModerator.last_name"
+                                    type="text"
+                                    required
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    >Correo electrónico *</label
+                                >
+                                <input
+                                    v-model="newModerator.email"
+                                    type="email"
+                                    required
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                />
+                            </div>
+                        </div>
+                        <div
+                            class="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-4 dark:border-zinc-800"
+                        >
+                            <button
+                                type="button"
+                                @click="showCreateModerator = false"
+                                class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                :disabled="creatingModerator"
+                                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                                {{
+                                    creatingModerator
+                                        ? 'Creando...'
+                                        : 'Crear moderador'
                                 }}
                             </button>
                         </div>

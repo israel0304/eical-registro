@@ -15,6 +15,7 @@ import {
     ScanLine,
     CalendarDays,
     LayoutTemplate,
+    ClipboardCheck,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
@@ -79,15 +80,31 @@ const mainNavItems = computed<NavItem[]>(() => {
     }
 
     if (can('reportes.view')) {
-        items.push({ title: 'Reportes', href: '/admin/reportes', icon: BarChart3 });
+        items.push({
+            title: 'Reportes',
+            href: '/admin/reportes',
+            icon: BarChart3,
+        });
     }
 
     if (can('constancias.view')) {
-        items.push({ title: 'Mis Constancias', href: '/constancias', icon: Award });
+        items.push({
+            title: 'Mis Constancias',
+            href: '/constancias',
+            icon: Award,
+        });
     }
 
     if (can('gafete.view')) {
         items.push({ title: 'Mi Gafete', href: '/gafete', icon: BadgeCheck });
+    }
+
+    if (can('asignaciones.view')) {
+        items.push({
+            title: 'Mis Asignaciones',
+            href: '/mis-asignaciones',
+            icon: ClipboardCheck,
+        });
     }
 
     if (can('checkin.scan')) {
@@ -95,7 +112,11 @@ const mainNavItems = computed<NavItem[]>(() => {
     }
 
     if (can('constancias.evento.manage')) {
-        items.push({ title: 'Evento', href: '/admin/evento', icon: CalendarDays });
+        items.push({
+            title: 'Evento',
+            href: '/admin/evento',
+            icon: CalendarDays,
+        });
     }
 
     if (can('gafete.templates.manage') || can('constancias.templates.manage')) {
