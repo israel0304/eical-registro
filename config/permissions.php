@@ -6,26 +6,36 @@ return [
     ],
     'Usuarios' => [
         'users.view' => 'Ver listado de usuarios',
-        'users.manage' => 'Crear, editar y eliminar usuarios',
+        'users.create' => 'Crear usuarios',
+        'users.edit' => 'Editar usuarios',
+        'users.delete' => 'Eliminar usuarios',
         'users.import' => 'Importar usuarios desde CSV',
         'users.export' => 'Exportar usuarios a CSV',
     ],
     'Talleres' => [
         'workshops.view' => 'Ver talleres',
         'workshops.my' => 'Ver mis talleres inscritos',
-        'workshops.manage' => 'Crear, editar y eliminar talleres',
+        'workshops.create' => 'Crear talleres',
+        'workshops.edit' => 'Editar talleres',
+        'workshops.delete' => 'Eliminar talleres',
         'workshops.enrollments' => 'Gestionar inscripciones de talleres',
         'workshops.attendance' => 'Gestionar asistencia de talleres',
+        'workshops.qr.send' => 'Enviar código QR de taller a instructores',
     ],
     'Ponencias' => [
         'presentations.view' => 'Ver ponencias',
         'presentations.my' => 'Ver mis ponencias',
-        'presentations.manage' => 'Editar ponencias y activar constancias',
+        'presentations.create' => 'Crear ponencias',
+        'presentations.edit' => 'Editar ponencias',
+        'presentations.delete' => 'Eliminar ponencias',
         'presentations.import' => 'Importar ponencias desde OJS',
     ],
     'Conferencias' => [
         'conferences.view' => 'Ver conferencias',
-        'conferences.manage' => 'Crear, editar y eliminar conferencias y activar constancias',
+        'conferences.create' => 'Crear conferencias',
+        'conferences.edit' => 'Editar conferencias',
+        'conferences.delete' => 'Eliminar conferencias',
+        'conferences.activate' => 'Activar constancias de conferencias',
     ],
     'Constancias' => [
         'constancias.view' => 'Ver mis constancias',
@@ -38,6 +48,9 @@ return [
     'Gafete' => [
         'gafete.view' => 'Ver mi gafete',
         'gafete.templates.manage' => 'Gestionar plantilla del gafete',
+    ],
+    'Asignaciones' => [
+        'asignaciones.view' => 'Ver mis asignaciones',
     ],
     'Check-in' => [
         'checkin.scan' => 'Escanear gafetes para registro de asistencia',

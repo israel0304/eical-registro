@@ -16,7 +16,7 @@ class CheckinController extends Controller
 
     public function index(Request $request)
     {
-        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('checkin.scan'), 403);
+        abort_unless($request->user()->can('checkin.scan'), 403);
 
         $today = now()->format('Y-m-d');
 
@@ -43,7 +43,7 @@ class CheckinController extends Controller
 
     public function register(Request $request)
     {
-        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('checkin.scan'), 403);
+        abort_unless($request->user()->can('checkin.scan'), 403);
 
         $validated = $request->validate([
             'token' => ['required', 'string', 'max:200'],
@@ -115,7 +115,7 @@ class CheckinController extends Controller
 
     public function lookup(Request $request)
     {
-        abort_if(! $request->user()->isAdmin() && ! $request->user()->hasPermission('checkin.scan'), 403);
+        abort_unless($request->user()->can('checkin.scan'), 403);
 
         $validated = $request->validate([
             'search' => ['required', 'string', 'max:255'],

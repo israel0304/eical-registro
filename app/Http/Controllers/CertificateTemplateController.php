@@ -19,7 +19,10 @@ class CertificateTemplateController extends Controller
 
     public function plantillas(Request $request)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless(
+            $request->user()->can('gafete.templates.manage') || $request->user()->can('constancias.templates.manage'),
+            403
+        );
 
         $lists = [];
         foreach (['badge', 'certificate', 'invitation'] as $kind) {
@@ -58,7 +61,7 @@ class CertificateTemplateController extends Controller
 
     private function indexFor(Request $request, string $kind)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can($this->templatePermission($kind)), 403);
 
         $templates = CertificateTemplate::query()
             ->kind($kind)
@@ -95,7 +98,7 @@ class CertificateTemplateController extends Controller
 
     private function storeFor(Request $request, string $kind)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can($this->templatePermission($kind)), 403);
 
         $validated = $this->validateTemplate($request, $kind);
 
@@ -129,7 +132,7 @@ class CertificateTemplateController extends Controller
 
     private function editFor(Request $request, CertificateTemplate $template)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can($this->templatePermission($template->kind ?? 'certificate')), 403);
 
         $kind = $template->kind ?? 'certificate';
         $template->load('elements', 'participationType');
@@ -162,7 +165,7 @@ class CertificateTemplateController extends Controller
 
     private function updateFor(Request $request, CertificateTemplate $template)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can($this->templatePermission($template->kind ?? 'certificate')), 403);
 
         $kind = $template->kind ?? 'certificate';
         $validated = $this->validateTemplate($request, $kind);
@@ -225,7 +228,7 @@ class CertificateTemplateController extends Controller
 
     private function destroyFor(Request $request, CertificateTemplate $template)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can($this->templatePermission($template->kind ?? 'certificate')), 403);
 
         $template->delete();
 
@@ -281,6 +284,11 @@ class CertificateTemplateController extends Controller
         }
 
         return $path;
+    }
+
+    private function templatePermission(string $kind): string
+    {
+        return $kind === 'badge' ? 'gafete.templates.manage' : 'constancias.templates.manage';
     }
 
     private function clearDefault(string $kind, ?int $participationTypeId, ?int $except = null): void

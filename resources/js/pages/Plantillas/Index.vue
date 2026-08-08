@@ -30,7 +30,11 @@ type PermissionKey = keyof typeof props.permissions;
 const tabs: { key: TabKey; label: string; permission: PermissionKey }[] = [
     { key: 'badge', label: 'Gafete', permission: 'gafete' },
     { key: 'certificate', label: 'Constancias', permission: 'constancias' },
-    { key: 'invitation', label: 'Cartas de Invitación', permission: 'invitaciones' },
+    {
+        key: 'invitation',
+        label: 'Cartas de Invitación',
+        permission: 'invitaciones',
+    },
 ];
 
 const kinds: Record<
@@ -102,7 +106,9 @@ const visibleTabs = computed(() =>
 const activeKind = computed(() => kinds[activeTab.value]);
 
 const activePermission = computed(
-    () => tabs.find((t) => t.key === activeTab.value)?.permission ?? 'constancias',
+    () =>
+        tabs.find((t) => t.key === activeTab.value)?.permission ??
+        'constancias',
 );
 
 const canManage = computed(() => props.permissions[activePermission.value]);
@@ -119,9 +125,13 @@ const templates = computed(() => {
 });
 
 const readTabFromUrl = (): TabKey => {
-    const tab = new URL(window.location.href).searchParams.get('tab') as TabKey | null;
+    const tab = new URL(window.location.href).searchParams.get(
+        'tab',
+    ) as TabKey | null;
     const found = tabs.find((t) => t.key === tab);
-    return found && props.permissions[found.permission] ? found.key : defaultTab();
+    return found && props.permissions[found.permission]
+        ? found.key
+        : defaultTab();
 };
 
 const defaultTab = (): TabKey => {
@@ -159,7 +169,7 @@ const openCreateModal = () => {
     form.width = activeKind.value.defaultWidth;
     form.height = activeKind.value.defaultHeight;
     form.participation_type_id = activeKind.value.requiresType
-        ? props.participationTypes.find((t) => t.is_active)?.id ?? ''
+        ? (props.participationTypes.find((t) => t.is_active)?.id ?? '')
         : '';
     showModal.value = true;
 };
@@ -190,13 +200,12 @@ const deleteTemplate = (id: number) => {
     }
 };
 
-const templateEditUrl = (id: number) => activeKind.value.basePath + '/' + id + '/edit';
+const templateEditUrl = (id: number) =>
+    activeKind.value.basePath + '/' + id + '/edit';
 
 const participationTypeLabel = (id: number | null) => {
     if (!id) return 'Sin tipo';
-    return (
-        props.participationTypes.find((t) => t.id === id)?.label ?? 'Tipo'
-    );
+    return props.participationTypes.find((t) => t.id === id)?.label ?? 'Tipo';
 };
 
 const activeTypes = computed(() =>
@@ -212,7 +221,9 @@ const activeTypes = computed(() =>
 
         <div class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-8 py-8">
             <!-- Tabs -->
-            <div class="flex flex-wrap gap-1 border-b border-gray-200 dark:border-zinc-800">
+            <div
+                class="flex flex-wrap gap-1 border-b border-gray-200 dark:border-zinc-800"
+            >
                 <button
                     v-for="tab in visibleTabs"
                     :key="tab.key"
@@ -229,16 +240,16 @@ const activeTypes = computed(() =>
                 </button>
             </div>
 
-            <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div
+                class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
+            >
                 <div>
                     <h1
                         class="text-3xl font-normal tracking-tight text-gray-900 dark:text-white"
                     >
                         {{ activeKind.title }}
                     </h1>
-                    <p
-                        class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                    >
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         {{ activeKind.description }}
                     </p>
                 </div>
@@ -261,19 +272,14 @@ const activeTypes = computed(() =>
                     :key="template.id"
                     class="group relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
                 >
-                    <Link
-                        :href="templateEditUrl(template.id)"
-                        class="block"
-                    >
+                    <Link :href="templateEditUrl(template.id)" class="block">
                         <div
                             class="flex w-full items-center justify-center overflow-hidden bg-gray-100 dark:bg-zinc-800"
                             :class="activeKind.aspect"
                         >
                             <img
                                 v-if="template.background_path"
-                                :src="
-                                    '/storage/' + template.background_path
-                                "
+                                :src="'/storage/' + template.background_path"
                                 :alt="template.name"
                                 class="h-full w-full object-cover"
                             />
@@ -315,7 +321,11 @@ const activeTypes = computed(() =>
                                 v-if="activeKind.requiresType"
                                 class="mt-3 inline-flex rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
                             >
-                                {{ participationTypeLabel(template.participation_type_id) }}
+                                {{
+                                    participationTypeLabel(
+                                        template.participation_type_id,
+                                    )
+                                }}
                             </div>
                         </div>
                     </Link>
@@ -349,7 +359,10 @@ const activeTypes = computed(() =>
                 <p class="mt-4 text-gray-500 dark:text-gray-400">
                     {{ activeKind.emptyTitle }}
                 </p>
-                <p v-if="canManage" class="mt-1 text-sm text-gray-400 dark:text-gray-500">
+                <p
+                    v-if="canManage"
+                    class="mt-1 text-sm text-gray-400 dark:text-gray-500"
+                >
                     {{ activeKind.emptyText }}
                 </p>
             </div>
@@ -379,8 +392,7 @@ const activeTypes = computed(() =>
                     class="fixed inset-0 bg-black/50 transition-opacity"
                     @click="showModal = false"
                 ></div>
-                <span
-                    class="hidden sm:inline-block sm:h-screen sm:align-middle"
+                <span class="hidden sm:inline-block sm:h-screen sm:align-middle"
                     >&#8203;</span
                 >
                 <div
@@ -459,9 +471,7 @@ const activeTypes = computed(() =>
                                         v-if="form.errors.participation_type_id"
                                         class="mt-1 text-xs text-red-500"
                                     >
-                                        {{
-                                            form.errors.participation_type_id
-                                        }}
+                                        {{ form.errors.participation_type_id }}
                                     </p>
                                 </div>
                                 <div>
@@ -470,9 +480,7 @@ const activeTypes = computed(() =>
                                     >
                                         Tamaño del lienzo (px)
                                     </label>
-                                    <div
-                                        class="grid grid-cols-2 gap-2"
-                                    >
+                                    <div class="grid grid-cols-2 gap-2">
                                         <input
                                             v-model.number="form.width"
                                             type="number"

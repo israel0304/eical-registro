@@ -45,7 +45,7 @@ const openCreateModal = () => {
     form.height = isBadge.value ? 700 : 1200;
     form.participation_type_id = isBadge.value
         ? ''
-        : props.participationTypes.find((t) => t.is_active)?.id ?? '';
+        : (props.participationTypes.find((t) => t.is_active)?.id ?? '');
     showModal.value = true;
 };
 
@@ -79,9 +79,7 @@ const templateEditUrl = (id: number) => basePath.value + '/' + id + '/edit';
 
 const participationTypeLabel = (id: number | null) => {
     if (!id) return 'Sin tipo';
-    return (
-        props.participationTypes.find((t) => t.id === id)?.label ?? 'Tipo'
-    );
+    return props.participationTypes.find((t) => t.id === id)?.label ?? 'Tipo';
 };
 
 const activeTypes = computed(() =>
@@ -91,11 +89,23 @@ const activeTypes = computed(() =>
 
 <template>
     <AppLayout
-        :breadcrumbs="isBadge
-            ? [{ title: 'Gafete', href: '/gafete' }, { title: 'Plantilla del Gafete', href: basePath }]
-            : [{ title: 'Constancias', href: '/constancias' }, { title: 'Plantillas', href: basePath }]"
+        :breadcrumbs="
+            isBadge
+                ? [
+                      { title: 'Gafete', href: '/gafete' },
+                      { title: 'Plantilla del Gafete', href: basePath },
+                  ]
+                : [
+                      { title: 'Constancias', href: '/constancias' },
+                      { title: 'Plantillas', href: basePath },
+                  ]
+        "
     >
-        <Head :title="isBadge ? 'Plantilla del Gafete' : 'Plantillas de Certificados'" />
+        <Head
+            :title="
+                isBadge ? 'Plantilla del Gafete' : 'Plantillas de Certificados'
+            "
+        />
 
         <div class="mx-auto min-h-screen w-full max-w-7xl space-y-10 px-8 py-8">
             <div
@@ -111,9 +121,7 @@ const activeTypes = computed(() =>
                                 : 'Plantillas de Certificados'
                         }}
                     </h1>
-                    <p
-                        class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                    >
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         {{
                             isBadge
                                 ? 'Personaliza la credencial de acceso que los participantes descargan desde su perfil.'
@@ -139,18 +147,13 @@ const activeTypes = computed(() =>
                     :key="template.id"
                     class="group relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
                 >
-                    <Link
-                        :href="templateEditUrl(template.id)"
-                        class="block"
-                    >
+                    <Link :href="templateEditUrl(template.id)" class="block">
                         <div
                             class="flex aspect-[3/2] w-full items-center justify-center overflow-hidden bg-gray-100 dark:bg-zinc-800"
                         >
                             <img
                                 v-if="template.background_path"
-                                :src="
-                                    '/storage/' + template.background_path
-                                "
+                                :src="'/storage/' + template.background_path"
                                 :alt="template.name"
                                 class="h-full w-full object-cover"
                             />
@@ -192,7 +195,11 @@ const activeTypes = computed(() =>
                                 v-if="!isBadge"
                                 class="mt-3 inline-flex rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
                             >
-                                {{ participationTypeLabel(template.participation_type_id) }}
+                                {{
+                                    participationTypeLabel(
+                                        template.participation_type_id,
+                                    )
+                                }}
                             </div>
                         </div>
                     </Link>
@@ -228,16 +235,17 @@ const activeTypes = computed(() =>
             </div>
 
             <!-- Participation types -->
-            <div v-if="!isBadge" class="flex items-center justify-between gap-4 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 dark:border-zinc-800 dark:bg-zinc-900/50">
+            <div
+                v-if="!isBadge"
+                class="flex items-center justify-between gap-4 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 dark:border-zinc-800 dark:bg-zinc-900/50"
+            >
                 <div>
                     <h2
                         class="text-xl font-normal tracking-tight text-gray-900 dark:text-white"
                     >
                         Tipos de Participación
                     </h2>
-                    <p
-                        class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                    >
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         La gestión de tipos se movió a su propio módulo.
                     </p>
                 </div>
@@ -249,10 +257,7 @@ const activeTypes = computed(() =>
                 </Link>
             </div>
 
-            <p
-                v-if="!isBadge"
-                class="text-xs text-gray-400 dark:text-gray-600"
-            >
+            <p v-if="!isBadge" class="text-xs text-gray-400 dark:text-gray-600">
                 La página pública de verificación se accede en
                 <code class="rounded bg-gray-100 px-1 py-0.5 dark:bg-zinc-800"
                     >/constancias/verificar/{folio}</code
@@ -274,8 +279,7 @@ const activeTypes = computed(() =>
                     class="fixed inset-0 bg-black/50 transition-opacity"
                     @click="showModal = false"
                 ></div>
-                <span
-                    class="hidden sm:inline-block sm:h-screen sm:align-middle"
+                <span class="hidden sm:inline-block sm:h-screen sm:align-middle"
                     >&#8203;</span
                 >
                 <div
@@ -354,9 +358,7 @@ const activeTypes = computed(() =>
                                         v-if="form.errors.participation_type_id"
                                         class="mt-1 text-xs text-red-500"
                                     >
-                                        {{
-                                            form.errors.participation_type_id
-                                        }}
+                                        {{ form.errors.participation_type_id }}
                                     </p>
                                 </div>
                                 <div>
@@ -365,9 +367,7 @@ const activeTypes = computed(() =>
                                     >
                                         Tamaño del lienzo (px)
                                     </label>
-                                    <div
-                                        class="grid grid-cols-2 gap-2"
-                                    >
+                                    <div class="grid grid-cols-2 gap-2">
                                         <input
                                             v-model.number="form.width"
                                             type="number"

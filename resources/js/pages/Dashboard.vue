@@ -22,6 +22,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const user = usePage().props.auth.user;
 
+const superAdminRole =
+    (usePage().props.auth as any)?.superAdminRole ?? 'Administrator';
+
 const hasRole = (name: string) =>
     user?.roles?.some((r: any) => r.name === name) ?? false;
 
@@ -43,7 +46,7 @@ const can = (permission: string) =>
             </h1>
 
             <!-- Admin Dashboard -->
-            <template v-if="hasRole('Administrator')">
+            <template v-if="hasRole(superAdminRole)">
                 <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
                     <div
                         class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
@@ -238,7 +241,7 @@ const can = (permission: string) =>
             </template>
 
             <!-- Ponente Dashboard -->
-            <template v-if="hasRole('Ponente')">
+            <template v-if="can('presentations.my')">
                 <div class="grid grid-cols-2 gap-4">
                     <div
                         class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
@@ -297,7 +300,7 @@ const can = (permission: string) =>
             </template>
 
             <!-- Asistente Dashboard -->
-            <template v-if="hasRole('Asistente') || hasRole('Instructor')">
+            <template v-if="can('workshops.my') && !can('presentations.my')">
                 <div
                     class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
                 >

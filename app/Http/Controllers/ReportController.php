@@ -211,7 +211,7 @@ class ReportController extends Controller
 
     public function exportWorkshopCsv(Request $request, Workshop $workshop)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('reportes.view'), 403);
 
         $workshop->load([
             'enrollments' => function ($q) {

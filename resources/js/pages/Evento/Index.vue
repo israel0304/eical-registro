@@ -70,14 +70,10 @@ const daysError = computed(() => {
 });
 
 const applyDayFilter = (day: string) => {
-    router.get(
-        '/admin/evento',
-        day ? { day } : {},
-        {
-            preserveState: true,
-            preserveScroll: true,
-        },
-    );
+    router.get('/admin/evento', day ? { day } : {}, {
+        preserveState: true,
+        preserveScroll: true,
+    });
 };
 
 const save = () => {
@@ -135,7 +131,9 @@ const deleteAttendance = (attendance: any) => {
     <AppLayout :breadcrumbs="[{ title: 'Evento', href: '/admin/evento' }]">
         <Head title="Gestión del Evento" />
 
-        <div class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-8 sm:py-8">
+        <div
+            class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-8 sm:py-8"
+        >
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="min-w-0">
                     <h1
@@ -143,9 +141,7 @@ const deleteAttendance = (attendance: any) => {
                     >
                         Gestión del Evento
                     </h1>
-                    <p
-                        class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                    >
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         Configura el check-in y las constancias de asistencia al
                         evento.
                     </p>
@@ -157,7 +153,7 @@ const deleteAttendance = (attendance: any) => {
 
             <div class="grid gap-6 lg:grid-cols-3 lg:gap-8">
                 <!-- Settings -->
-                <div class="space-y-6 min-w-0 lg:col-span-1">
+                <div class="min-w-0 space-y-6 lg:col-span-1">
                     <div
                         class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
                     >
@@ -166,10 +162,7 @@ const deleteAttendance = (attendance: any) => {
                         >
                             Configuración
                         </h2>
-                        <form
-                            class="space-y-4"
-                            @submit.prevent="save"
-                        >
+                        <form class="space-y-4" @submit.prevent="save">
                             <div
                                 v-if="Object.keys(form.errors).length > 0"
                                 class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
@@ -227,8 +220,9 @@ const deleteAttendance = (attendance: any) => {
                             >
                                 El evento dura
                                 {{ settings.total_days }}
-                                {{ settings.total_days === 1 ? 'día' : 'días' }}.
-                                El check-in será por cada día del rango.
+                                {{
+                                    settings.total_days === 1 ? 'día' : 'días'
+                                }}. El check-in será por cada día del rango.
                             </p>
                             <div>
                                 <label
@@ -241,9 +235,7 @@ const deleteAttendance = (attendance: any) => {
                                     type="number"
                                     min="1"
                                     :max="
-                                        formTotalDays > 0
-                                            ? formTotalDays
-                                            : 31
+                                        formTotalDays > 0 ? formTotalDays : 31
                                     "
                                     class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                 />
@@ -284,15 +276,15 @@ const deleteAttendance = (attendance: any) => {
                                 class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
                             >
                                 <input
-                                    v-model="form.evento_checkin_time_restricted"
+                                    v-model="
+                                        form.evento_checkin_time_restricted
+                                    "
                                     type="checkbox"
                                     class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 />
                                 Restricción horaria
                             </label>
-                            <p
-                                class="text-xs text-gray-400 dark:text-gray-500"
-                            >
+                            <p class="text-xs text-gray-400 dark:text-gray-500">
                                 Desactiva para permitir registrar asistencias
                                 fuera de las fechas del evento (pruebas).
                             </p>
@@ -315,12 +307,8 @@ const deleteAttendance = (attendance: any) => {
                             Resumen
                         </h2>
                         <dl class="space-y-3 text-sm">
-                            <div
-                                class="flex items-center justify-between"
-                            >
-                                <dt
-                                    class="text-gray-500 dark:text-gray-400"
-                                >
+                            <div class="flex items-center justify-between">
+                                <dt class="text-gray-500 dark:text-gray-400">
                                     Asistentes registrados
                                 </dt>
                                 <dd
@@ -329,12 +317,8 @@ const deleteAttendance = (attendance: any) => {
                                     {{ total_checked_in }}
                                 </dd>
                             </div>
-                            <div
-                                class="flex items-center justify-between"
-                            >
-                                <dt
-                                    class="text-gray-500 dark:text-gray-400"
-                                >
+                            <div class="flex items-center justify-between">
+                                <dt class="text-gray-500 dark:text-gray-400">
                                     Constancias emitidas
                                 </dt>
                                 <dd
@@ -343,12 +327,8 @@ const deleteAttendance = (attendance: any) => {
                                     {{ constancias_issued }}
                                 </dd>
                             </div>
-                            <div
-                                class="flex items-center justify-between"
-                            >
-                                <dt
-                                    class="text-gray-500 dark:text-gray-400"
-                                >
+                            <div class="flex items-center justify-between">
+                                <dt class="text-gray-500 dark:text-gray-400">
                                     Usuarios totales
                                 </dt>
                                 <dd
@@ -370,7 +350,7 @@ const deleteAttendance = (attendance: any) => {
 
                 <!-- Attendance list -->
                 <div
-                    class="min-w-0 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 lg:col-span-2"
+                    class="min-w-0 rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2 dark:border-zinc-800 dark:bg-zinc-900"
                 >
                     <h2
                         class="mb-4 text-lg font-semibold text-gray-900 dark:text-white"
@@ -408,50 +388,25 @@ const deleteAttendance = (attendance: any) => {
                         </button>
                     </div>
 
-                    <div
-                        v-if="attendances.length > 0"
-                        class="overflow-x-auto"
-                    >
-                        <table
-                            class="w-full min-w-[760px] text-left text-sm"
-                        >
+                    <div v-if="attendances.length > 0" class="overflow-x-auto">
+                        <table class="w-full min-w-[760px] text-left text-sm">
                             <thead>
                                 <tr
                                     class="border-b border-gray-100 text-xs text-gray-400 uppercase dark:border-zinc-800"
                                 >
-                                    <th
-                                        class="px-3 py-2 font-medium"
-                                    >
+                                    <th class="px-3 py-2 font-medium">
                                         Participante
                                     </th>
-                                    <th
-                                        class="px-3 py-2 font-medium"
-                                    >
-                                        DNI
-                                    </th>
-                                    <th
-                                        class="px-3 py-2 font-medium"
-                                    >
-                                        Día
-                                    </th>
-                                    <th
-                                        class="px-3 py-2 font-medium"
-                                    >
-                                        Días
-                                    </th>
-                                    <th
-                                        class="px-3 py-2 font-medium"
-                                    >
+                                    <th class="px-3 py-2 font-medium">DNI</th>
+                                    <th class="px-3 py-2 font-medium">Día</th>
+                                    <th class="px-3 py-2 font-medium">Días</th>
+                                    <th class="px-3 py-2 font-medium">
                                         Registrado por
                                     </th>
-                                    <th
-                                        class="px-3 py-2 font-medium"
-                                    >
+                                    <th class="px-3 py-2 font-medium">
                                         Constancia
                                     </th>
-                                    <th
-                                        class="px-3 py-2 font-medium"
-                                    >
+                                    <th class="px-3 py-2 font-medium">
                                         Acción
                                     </th>
                                 </tr>
@@ -462,12 +417,8 @@ const deleteAttendance = (attendance: any) => {
                                     :key="attendance.id"
                                     class="border-b border-gray-50 dark:border-zinc-800/60"
                                 >
-                                    <td
-                                        class="px-3 py-2.5 whitespace-nowrap"
-                                    >
-                                        <div
-                                            class="flex items-center gap-2"
-                                        >
+                                    <td class="px-3 py-2.5 whitespace-nowrap">
+                                        <div class="flex items-center gap-2">
                                             <UserRound
                                                 class="h-4 w-4 shrink-0 text-gray-400"
                                             />
@@ -477,9 +428,7 @@ const deleteAttendance = (attendance: any) => {
                                                 {{
                                                     attendance.user?.first_name
                                                 }}
-                                                {{
-                                                    attendance.user?.last_name
-                                                }}
+                                                {{ attendance.user?.last_name }}
                                             </span>
                                         </div>
                                     </td>
@@ -519,16 +468,12 @@ const deleteAttendance = (attendance: any) => {
                                             attendance.registered_by?.last_name
                                         }}
                                     </td>
-                                    <td
-                                        class="px-3 py-2.5 whitespace-nowrap"
-                                    >
+                                    <td class="px-3 py-2.5 whitespace-nowrap">
                                         <span
                                             v-if="attendance.certificate_issued"
                                             class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
                                         >
-                                            <CheckCircle2
-                                                class="h-3 w-3"
-                                            />
+                                            <CheckCircle2 class="h-3 w-3" />
                                             Emitida
                                         </span>
                                         <span
@@ -539,9 +484,7 @@ const deleteAttendance = (attendance: any) => {
                                             Pendiente
                                         </span>
                                     </td>
-                                    <td
-                                        class="px-3 py-2.5 whitespace-nowrap"
-                                    >
+                                    <td class="px-3 py-2.5 whitespace-nowrap">
                                         <button
                                             @click="
                                                 downloadConstancia(
@@ -555,7 +498,9 @@ const deleteAttendance = (attendance: any) => {
                                             Constancia
                                         </button>
                                         <button
-                                            @click="deleteAttendance(attendance)"
+                                            @click="
+                                                deleteAttendance(attendance)
+                                            "
                                             title="Eliminar registro"
                                             class="ml-2 inline-flex items-center rounded-md border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 dark:border-red-900/50 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-950"
                                         >

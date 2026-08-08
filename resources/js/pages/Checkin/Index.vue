@@ -95,11 +95,10 @@ const register = async (token: string) => {
         }
 
         const data = await response.json().catch(() => null);
-        result.value =
-            data ?? {
-                success: false,
-                message: 'Respuesta inesperada del servidor.',
-            };
+        result.value = data ?? {
+            success: false,
+            message: 'Respuesta inesperada del servidor.',
+        };
 
         if (data?.success) {
             searchResults.value = [];
@@ -170,8 +169,9 @@ const startScanner = async () => {
         try {
             const cameras = await Html5Qrcode.getCameras();
             const preferred =
-                cameras.find((camera: any) => /back|environment|rear/i.test(camera.label ?? '')) ??
-                cameras[0];
+                cameras.find((camera: any) =>
+                    /back|environment|rear/i.test(camera.label ?? ''),
+                ) ?? cameras[0];
             cameraId = preferred?.id ?? null;
         } catch {
             // Sin acceso a la lista de cámaras; usamos facingMode.
@@ -267,7 +267,9 @@ onBeforeUnmount(() => {
     <AppLayout :breadcrumbs="[{ title: 'Check-in', href: '/checkin' }]">
         <Head title="Check-in de Gafetes" />
 
-        <div class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-8 sm:py-8">
+        <div
+            class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-8 sm:py-8"
+        >
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="min-w-0">
                     <h1
@@ -275,11 +277,9 @@ onBeforeUnmount(() => {
                     >
                         Check-in de Gafetes
                     </h1>
-                    <p
-                        class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                    >
-                        Escanea el QR del gafete para registrar la asistencia
-                        al evento.
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        Escanea el QR del gafete para registrar la asistencia al
+                        evento.
                     </p>
                     <p
                         class="mt-1 text-sm font-medium text-indigo-600 dark:text-indigo-400"
@@ -302,9 +302,7 @@ onBeforeUnmount(() => {
                     <div
                         class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
                     >
-                        <div
-                            class="mb-4 flex items-center justify-between"
-                        >
+                        <div class="mb-4 flex items-center justify-between">
                             <h2
                                 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white"
                             >
@@ -362,9 +360,7 @@ onBeforeUnmount(() => {
                             >
                                 Registro manual (busca por nombre, DNI o código)
                             </label>
-                            <div
-                                class="flex gap-2"
-                            >
+                            <div class="flex gap-2">
                                 <input
                                     v-model="manualToken"
                                     type="text"
@@ -386,7 +382,7 @@ onBeforeUnmount(() => {
                             <!-- Search results -->
                             <div
                                 v-if="searchOpen && searchResults.length"
-                                class="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+                                class="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
                             >
                                 <div class="max-h-64 overflow-y-auto">
                                     <button
@@ -394,7 +390,9 @@ onBeforeUnmount(() => {
                                         :key="user.id"
                                         type="button"
                                         :disabled="user.checked_in"
-                                        @mousedown.prevent="!user.checked_in && selectUser(user)"
+                                        @mousedown.prevent="
+                                            !user.checked_in && selectUser(user)
+                                        "
                                         class="flex w-full items-center gap-3 border-b border-gray-100 px-3 py-2.5 text-left transition-colors last:border-b-0 dark:border-zinc-800"
                                         :class="
                                             user.checked_in
@@ -450,7 +448,7 @@ onBeforeUnmount(() => {
                             </div>
                             <div
                                 v-else-if="searching"
-                                class="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500 shadow-lg dark:border-zinc-700 dark:bg-zinc-900 dark:text-gray-400"
+                                class="absolute top-full right-0 left-0 z-20 mt-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500 shadow-lg dark:border-zinc-700 dark:bg-zinc-900 dark:text-gray-400"
                             >
                                 Buscando...
                             </div>
@@ -529,13 +527,9 @@ onBeforeUnmount(() => {
                                                     class="text-xs text-gray-500 dark:text-gray-400"
                                                 >
                                                     Asistencia:
-                                                    {{
-                                                        result.days_attended
-                                                    }}
+                                                    {{ result.days_attended }}
                                                     /
-                                                    {{
-                                                        result.required_days
-                                                    }}
+                                                    {{ result.required_days }}
                                                     días requeridos
                                                 </p>
                                                 <p
@@ -668,7 +662,10 @@ onBeforeUnmount(() => {
                             <button
                                 v-if="attendance.user?.id"
                                 type="button"
-                                :title="'Imprimir gafete de ' + (attendance.user?.first_name ?? '')"
+                                :title="
+                                    'Imprimir gafete de ' +
+                                    (attendance.user?.first_name ?? '')
+                                "
                                 class="shrink-0 rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
                                 @click="openBadgePrint(attendance.user.id)"
                             >

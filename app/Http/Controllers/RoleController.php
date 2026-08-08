@@ -11,7 +11,7 @@ class RoleController extends Controller
 {
     public function index(Request $request)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('roles.manage'), 403);
 
         $roles = Role::query()
             ->withCount('users')
@@ -35,7 +35,7 @@ class RoleController extends Controller
 
     public function store(Request $request)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('roles.manage'), 403);
 
         $validated = $this->validateRequest($request);
 
@@ -51,9 +51,9 @@ class RoleController extends Controller
 
     public function update(Request $request, Role $role)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('roles.manage'), 403);
 
-        abort_if($role->name === 'Administrator', 403, 'El rol Administrator no se puede modificar.');
+        abort_if($role->name === config('roles.super_admin'), 403, 'El rol '.config('roles.super_admin').' no se puede modificar.');
 
         $validated = $this->validateRequest($request, $role);
 
@@ -69,7 +69,7 @@ class RoleController extends Controller
 
     public function users(Role $role)
     {
-        abort_if(! request()->user()->isAdmin(), 403);
+        abort_unless(request()->user()->can('roles.manage'), 403);
 
         return response()->json(
             $role->users()->get(['users.id', 'first_name', 'last_name', 'email'])
@@ -78,9 +78,9 @@ class RoleController extends Controller
 
     public function destroy(Role $role)
     {
-        abort_if(! request()->user()->isAdmin(), 403);
+        abort_unless(request()->user()->can('roles.manage'), 403);
 
-        abort_if($role->name === 'Administrator', 403, 'El rol Administrator no se puede eliminar.');
+        abort_if($role->name === config('roles.super_admin'), 403, 'El rol '.config('roles.super_admin').' no se puede eliminar.');
 
         $role->users()->detach();
         $role->permissions()->detach();

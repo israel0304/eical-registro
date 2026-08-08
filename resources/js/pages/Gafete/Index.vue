@@ -73,7 +73,9 @@ const generateQR = async () => {
 
     const QRCode = await import('qrcode');
     const url =
-        window.location.origin + '/gafete/escaneo?token=' + props.user.checkin_token;
+        window.location.origin +
+        '/gafete/escaneo?token=' +
+        props.user.checkin_token;
     QRCode.toCanvas(qrCanvas.value, url, {
         width: 220,
         margin: 2,
@@ -112,9 +114,7 @@ onMounted(generateQR);
                     >
                         Mi Gafete
                     </h1>
-                    <p
-                        class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                    >
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         {{ eventoNombre }}
                     </p>
                 </div>
@@ -141,11 +141,7 @@ onMounted(generateQR);
                             >
                                 {{ eventoNombre }}
                             </span>
-                            <span
-                                class="text-sm text-slate-400"
-                            >
-                                Acceso
-                            </span>
+                            <span class="text-sm text-slate-400"> Acceso </span>
                         </div>
                         <div class="p-6">
                             <div class="flex items-start gap-5">
@@ -206,9 +202,7 @@ onMounted(generateQR);
                         </div>
                     </div>
 
-                    <div
-                        class="mt-4 grid grid-cols-2 gap-3"
-                    >
+                    <div class="mt-4 grid grid-cols-2 gap-3">
                         <button
                             @click="openPrint"
                             class="inline-flex items-center justify-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
@@ -254,11 +248,7 @@ onMounted(generateQR);
                             class="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:border-indigo-400 hover:text-indigo-600 dark:border-zinc-700 dark:text-gray-400 dark:hover:text-indigo-400"
                         >
                             <Camera class="h-4 w-4" />
-                            {{
-                                user.has_photo
-                                    ? 'Cambiar foto'
-                                    : 'Subir foto'
-                            }}
+                            {{ user.has_photo ? 'Cambiar foto' : 'Subir foto' }}
                             <input
                                 type="file"
                                 accept="image/*"
@@ -304,21 +294,27 @@ onMounted(generateQR);
                                 Check-in del evento
                             </h2>
                         </div>
-                        <ul class="mt-4 space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                        <ul
+                            class="mt-4 space-y-3 text-sm text-gray-600 dark:text-gray-400"
+                        >
                             <li class="flex items-start gap-2">
-                                <UserRound class="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                                <UserRound
+                                    class="mt-0.5 h-4 w-4 shrink-0 text-gray-400"
+                                />
                                 <span>
                                     Tu asistencia al evento se registra
-                                    escaneando el código QR de este gafete en
-                                    la mesa de registro.
+                                    escaneando el código QR de este gafete en la
+                                    mesa de registro.
                                 </span>
                             </li>
                             <li class="flex items-start gap-2">
-                                <CheckCircle2 class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                                <CheckCircle2
+                                    class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500"
+                                />
                                 <span>
                                     <template v-if="checkedIn">
-                                        Ya tienes tu asistencia registrada
-                                        hoy. Recuerda registrarte cada día del
+                                        Ya tienes tu asistencia registrada hoy.
+                                        Recuerda registrarte cada día del
                                         evento. Podrás descargar tu constancia
                                         de asistencia al evento en
                                         <a
@@ -332,8 +328,8 @@ onMounted(generateQR);
                                             El registro está habilitado.
                                         </template>
                                         <template v-else>
-                                            El registro está deshabilitado
-                                            por el momento.
+                                            El registro está deshabilitado por
+                                            el momento.
                                         </template>
                                     </template>
                                 </span>

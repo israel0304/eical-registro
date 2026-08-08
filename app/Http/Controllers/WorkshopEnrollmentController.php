@@ -90,7 +90,7 @@ class WorkshopEnrollmentController extends Controller
 
     public function adminDestroy(Request $request, Workshop $workshop, WorkshopEnrollment $enrollment)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('workshops.enrollments'), 403);
 
         if ($enrollment->workshop_id !== $workshop->id) {
             abort(404);

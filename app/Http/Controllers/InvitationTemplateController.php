@@ -14,7 +14,7 @@ class InvitationTemplateController extends Controller
 {
     public function index(Request $request)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('constancias.templates.manage'), 403);
 
         $templates = CertificateTemplate::query()
             ->kind('invitation')
@@ -38,7 +38,7 @@ class InvitationTemplateController extends Controller
 
     public function store(Request $request)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('constancias.templates.manage'), 403);
 
         $validated = $this->validateTemplate($request);
 
@@ -62,7 +62,7 @@ class InvitationTemplateController extends Controller
 
     public function edit(Request $request, CertificateTemplate $template)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('constancias.templates.manage'), 403);
         abort_if($template->kind !== 'invitation', 404);
 
         $template->load('elements', 'participationType');
@@ -82,7 +82,7 @@ class InvitationTemplateController extends Controller
 
     public function update(Request $request, CertificateTemplate $template)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('constancias.templates.manage'), 403);
         abort_if($template->kind !== 'invitation', 404);
 
         $validated = $this->validateTemplate($request);
@@ -135,7 +135,7 @@ class InvitationTemplateController extends Controller
 
     public function destroy(Request $request, CertificateTemplate $template)
     {
-        abort_if(! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->can('constancias.templates.manage'), 403);
         abort_if($template->kind !== 'invitation', 404);
 
         $template->delete();

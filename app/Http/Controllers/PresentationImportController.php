@@ -128,7 +128,7 @@ class PresentationImportController extends Controller
                     ]
                 );
 
-                $user->roles()->syncWithoutDetaching([2]); // Ponente
+                $user->roles()->syncWithoutDetaching([Role::where('name', 'Ponente')->value('id')]); // Ponente
 
                 // Enviar email de activación
                 try {

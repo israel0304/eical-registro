@@ -39,11 +39,11 @@ const props = defineProps<{
     user: any;
 }>();
 
-const hasRole = (name: string) =>
-    page.props.auth.user?.roles?.some((r: any) => r.name === name) ?? false;
-const isAdmin = computed(() => hasRole('Administrator'));
-const isPonente = computed(() => hasRole('Ponente'));
-const canSeePonencias = computed(() => isAdmin.value || isPonente.value);
+const can = (permission: string) =>
+    (page.props.auth.permissions as string[] | undefined)?.includes(
+        permission,
+    ) ?? false;
+const canSeePonencias = computed(() => can('constancias.download'));
 
 const downloadCertificate = (workshopId: number) => {
     window.open('/constancias/' + workshopId + '/download', '_blank');
@@ -99,10 +99,7 @@ const eventProgress = computed(() => {
 const missingDays = computed(() => {
     const attendance = props.eventAttendance;
     if (!attendance) return 0;
-    return Math.max(
-        0,
-        attendance.required_days - attendance.days_attended,
-    );
+    return Math.max(0, attendance.required_days - attendance.days_attended);
 });
 </script>
 
@@ -112,7 +109,9 @@ const missingDays = computed(() => {
     >
         <Head title="Mis Constancias" />
 
-        <div class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-8 sm:py-8">
+        <div
+            class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-8 sm:py-8"
+        >
             <h1
                 class="mb-8 text-3xl font-normal tracking-tight text-gray-900 dark:text-white"
             >
@@ -141,9 +140,7 @@ const missingDays = computed(() => {
                             <p
                                 class="mt-1 text-xs text-gray-500 dark:text-gray-400"
                             >
-                                {{
-                                    invitationLetter.tipo_participacion
-                                }}
+                                {{ invitationLetter.tipo_participacion }}
                                 como
                                 {{ invitationLetter.rol }}.
                             </p>
@@ -197,23 +194,16 @@ const missingDays = computed(() => {
                                 Folio: {{ eventCertificate.folio }}
                             </p>
 
-                            <div
-                                v-if="eventAttendance"
-                                class="mt-4"
-                            >
+                            <div v-if="eventAttendance" class="mt-4">
                                 <div
                                     class="flex flex-wrap items-center justify-between gap-2 text-xs"
                                 >
                                     <span
                                         class="font-medium text-gray-700 dark:text-gray-300"
                                     >
-                                        {{
-                                            eventAttendance.days_attended
-                                        }}
+                                        {{ eventAttendance.days_attended }}
                                         de
-                                        {{
-                                            eventAttendance.required_days
-                                        }}
+                                        {{ eventAttendance.required_days }}
                                         días requeridos
                                     </span>
                                     <span
@@ -258,8 +248,7 @@ const missingDays = computed(() => {
                     <div class="mt-4">
                         <button
                             v-if="
-                                eventAttendance?.qualifies ||
-                                eventCertificate
+                                eventAttendance?.qualifies || eventCertificate
                             "
                             @click="downloadEvento"
                             class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-100 sm:w-auto dark:border-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300"
@@ -323,7 +312,9 @@ const missingDays = computed(() => {
                                             .join(', ') || '—'
                                     }}
                                 </p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                <p
+                                    class="text-xs text-gray-500 dark:text-gray-400"
+                                >
                                     {{ workshop.day }} | {{ workshop.location }}
                                 </p>
                                 <p
@@ -339,7 +330,8 @@ const missingDays = computed(() => {
                                 @click="downloadCertificate(workshop.id)"
                                 class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
                             >
-                                <Download class="h-4 w-4" /> Descargar Constancia
+                                <Download class="h-4 w-4" /> Descargar
+                                Constancia
                             </button>
                         </div>
                     </div>
@@ -373,7 +365,9 @@ const missingDays = computed(() => {
                                 >
                                     {{ workshop.name }}
                                 </h3>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                <p
+                                    class="text-xs text-gray-500 dark:text-gray-400"
+                                >
                                     {{ workshop.day }} | {{ workshop.location }}
                                 </p>
                                 <p
@@ -389,7 +383,8 @@ const missingDays = computed(() => {
                                 @click="downloadCertificate(workshop.id)"
                                 class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-900/30 dark:text-violet-300"
                             >
-                                <Download class="h-4 w-4" /> Descargar Constancia
+                                <Download class="h-4 w-4" /> Descargar
+                                Constancia
                             </button>
                         </div>
                     </div>
@@ -496,7 +491,9 @@ const missingDays = computed(() => {
                                         'Participante'
                                     }}
                                 </p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                <p
+                                    class="text-xs text-gray-500 dark:text-gray-400"
+                                >
                                     {{ conference.day || '—' }}
                                 </p>
                                 <p
@@ -513,13 +510,15 @@ const missingDays = computed(() => {
                                 @click="downloadConferencia(conference.id)"
                                 class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
                             >
-                                <Download class="h-4 w-4" /> Descargar Constancia
+                                <Download class="h-4 w-4" /> Descargar
+                                Constancia
                             </button>
                             <div
                                 v-else
                                 class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-500"
                             >
-                                <Clock class="h-4 w-4" /> Pendiente de activación
+                                <Clock class="h-4 w-4" /> Pendiente de
+                                activación
                             </div>
                         </div>
                     </div>
