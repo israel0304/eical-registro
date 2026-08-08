@@ -31,6 +31,12 @@ class Presentation extends Model
             ->withTimestamps();
     }
 
+    public function moderators(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'presentation_moderators')
+            ->withTimestamps();
+    }
+
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class);

@@ -36,6 +36,12 @@ class Workshop extends Model
             ->withTimestamps();
     }
 
+    public function moderators(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'workshop_moderator_user')
+            ->withTimestamps();
+    }
+
     public function enrollments(): HasMany
     {
         return $this->hasMany(WorkshopEnrollment::class);
