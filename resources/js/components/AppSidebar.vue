@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
-import AppLogo from './AppLogo.vue';
 
 const page = usePage();
 
@@ -154,7 +153,14 @@ const mainNavItems = computed<NavItem[]>(() => {
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
                         <Link :href="dashboard()">
-                            <AppLogo />
+                            <img
+                                src="/images/logo-eical.png"
+                                class="h-8 w-auto"
+                                alt="Registro EICAL"
+                            />
+                            <span class="truncate text-sm font-semibold">
+                                Registro EICAL
+                            </span>
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
