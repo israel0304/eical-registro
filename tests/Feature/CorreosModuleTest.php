@@ -194,6 +194,27 @@ class CorreosModuleTest extends TestCase
         $this->assertDatabaseMissing('email_triggers', ['id' => $trigger->id]);
     }
 
+    public function test_trigger_can_be_created_with_role_recipient_and_no_to_field(): void
+    {
+        $template = $this->templateFor('user.created');
+        $role = Role::firstOrCreate(['name' => 'Asistente']);
+        $this->actingAs($this->userWith('correos.templates.manage'));
+
+        $this->post(route('correos.triggers.store'), [
+            'event_key' => 'user.created',
+            'email_template_id' => $template->id,
+            'role_id' => $role->id,
+            'is_active' => true,
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('email_triggers', [
+            'event_key' => 'user.created',
+            'email_template_id' => $template->id,
+            'role_id' => $role->id,
+            'to' => null,
+        ]);
+    }
+
     public function test_active_trigger_sends_email_on_event(): void
     {
         Mail::fake();
