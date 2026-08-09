@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Conference;
 use App\Models\ParticipationType;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Workshop;
 use App\Notifications\BienvenidaNuevoUsuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -17,7 +19,7 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::with('roles');
+        $query = User::with('roles')->withCount(['createdWorkshops', 'createdConferences']);
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -137,6 +139,12 @@ class UserController extends Controller
     public function forceDelete($id)
     {
         $user = User::withTrashed()->findOrFail($id);
+
+        if ($user->createdWorkshops()->exists() || $user->createdConferences()->exists()) {
+            $adminId = auth()->id();
+            Workshop::withTrashed()->where('created_by', $user->id)->update(['created_by' => $adminId]);
+            Conference::withTrashed()->where('created_by', $user->id)->update(['created_by' => $adminId]);
+        }
 
         if ($user->profile_photo_path) {
             Storage::disk('public')->delete($user->profile_photo_path);

@@ -176,11 +176,26 @@ const sendResetPassword = () => {
 };
 
 const confirmForceDelete = (user: any) => {
-    if (
-        confirm(
-            `¿Estás seguro de eliminar a ${user.name} PERMANENTEMENTE? Esta acción no se puede deshacer y borrará todos sus datos del sistema.`,
-        )
-    ) {
+    const parts = [
+        `¿Estás seguro de eliminar a ${user.name} PERMANENTEMENTE? Esta acción no se puede deshacer y borrará todos sus datos del sistema.`,
+    ];
+
+    const workshops = user.created_workshops_count ?? 0;
+    const conferences = user.created_conferences_count ?? 0;
+
+    if (workshops > 0 || conferences > 0) {
+        const details = [
+            workshops > 0 ? `${workshops} taller${workshops === 1 ? '' : 'es'}` : null,
+            conferences > 0 ? `${conferences} conferencia${conferences === 1 ? '' : 's'}` : null,
+        ]
+            .filter(Boolean)
+            .join(' y ');
+        parts.push(
+            `\n\nAdemás, es creador de ${details}. Al eliminar, estos registros se reasignarán a tu cuenta.`,
+        );
+    }
+
+    if (confirm(parts.join(''))) {
         router.delete(`/users/${user.id}/force-delete`, {
             onSuccess: () => alert('Usuario eliminado de forma definitiva.'),
         });
