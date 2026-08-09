@@ -40,6 +40,8 @@ class CreateNewUser implements CreatesNewUsers
 
         $user->roles()->sync([Role::where('name', config('roles.default'))->value('id')]); // Rol por defecto
 
+        $user->sendEmailVerificationNotification();
+
         return $user;
     }
 }

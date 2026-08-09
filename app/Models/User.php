@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\EmiteEventos;
-use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Services\EventAudit;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
@@ -33,7 +34,38 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function sendEmailVerificationNotification(): void
     {
-        $this->notify(new VerifyEmail);
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes((int) config('auth.verification.expire', 60)),
+            ['id' => $this->getKey(), 'hash' => sha1($this->getEmailForVerification())],
+        );
+
+        EventAudit::emit('user.registered', $this, null, [
+            'destinatario' => $this->email,
+            'nombre_completo' => $this->name,
+            'nombre' => $this->first_name,
+            'url_verificacion' => $verificationUrl,
+        ]);
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $resetUrl = url(route('password.reset', [
+            'token' => $token,
+            'email' => $this->getEmailForPasswordReset(),
+        ], false));
+
+        EventAudit::emit('user.password_reset', $this, null, [
+            'destinatario' => $this->email,
+            'nombre_completo' => $this->name,
+            'nombre' => $this->first_name,
+            'url_restablecer' => $resetUrl,
+        ]);
+    }
+
+    public function getEmailForPasswordReset(): string
+    {
+        return $this->email;
     }
 
     public function getEmailForVerification(): string

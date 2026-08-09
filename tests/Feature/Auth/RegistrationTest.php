@@ -41,5 +41,11 @@ class RegistrationTest extends TestCase
 
         $user = User::where('email', 'test@example.com')->first();
         $this->assertNotNull($user->password_set_at);
+
+        $this->assertDatabaseHas('event_logs', [
+            'event_key' => 'user.registered',
+            'subject_type' => (new User)->getMorphClass(),
+            'subject_id' => $user->id,
+        ]);
     }
 }

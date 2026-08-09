@@ -2,10 +2,9 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\EventLog;
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class PasswordResetTest extends TestCase
@@ -21,54 +20,45 @@ class PasswordResetTest extends TestCase
 
     public function test_reset_password_link_can_be_requested()
     {
-        Notification::fake();
-
         $user = User::factory()->create();
 
         $this->post(route('password.email'), ['email' => $user->email]);
 
-        Notification::assertSentTo($user, ResetPassword::class);
+        $this->assertDatabaseHas('event_logs', [
+            'event_key' => 'user.password_reset',
+            'subject_type' => (new User)->getMorphClass(),
+            'subject_id' => $user->id,
+            'status' => 'recorded',
+        ]);
     }
 
     public function test_reset_password_screen_can_be_rendered()
     {
-        Notification::fake();
-
         $user = User::factory()->create();
 
         $this->post(route('password.email'), ['email' => $user->email]);
 
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
-            $response = $this->get(route('password.reset', $notification->token));
+        $response = $this->get(route('password.reset', $this->resetToken($user)));
 
-            $response->assertOk();
-
-            return true;
-        });
+        $response->assertOk();
     }
 
     public function test_password_can_be_reset_with_valid_token()
     {
-        Notification::fake();
-
         $user = User::factory()->create();
 
         $this->post(route('password.email'), ['email' => $user->email]);
 
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
-            $response = $this->post(route('password.update'), [
-                'token' => $notification->token,
-                'email' => $user->email,
-                'password' => 'password',
-                'password_confirmation' => 'password',
-            ]);
+        $response = $this->post(route('password.update'), [
+            'token' => $this->resetToken($user),
+            'email' => $user->email,
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
 
-            $response
-                ->assertSessionHasNoErrors()
-                ->assertRedirect(route('login'));
-
-            return true;
-        });
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('login'));
     }
 
     public function test_password_cannot_be_reset_with_invalid_token(): void
@@ -83,5 +73,17 @@ class PasswordResetTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors('email');
+    }
+
+    private function resetToken(User $user): string
+    {
+        $log = EventLog::query()
+            ->where('event_key', 'user.password_reset')
+            ->where('subject_id', $user->id)
+            ->firstOrFail();
+
+        $url = $log->payload['url_restablecer'] ?? '';
+
+        return basename((string) parse_url($url, PHP_URL_PATH));
     }
 }
