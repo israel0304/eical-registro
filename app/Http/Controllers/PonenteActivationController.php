@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Notifications\BienvenidaNuevoUsuario;
+use App\Services\EventAudit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -46,7 +46,12 @@ class PonenteActivationController extends Controller
 
         $url = url('/ponente/activar/'.$token);
 
-        $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
+        EventAudit::emit('user.welcome', $user, $request->user(), [
+            'destinatario' => $user->email,
+            'nombre_completo' => $user->name,
+            'nombre' => $user->first_name,
+            'url_activacion' => $url,
+        ]);
 
         return back()->with('success', 'Te hemos enviado un correo con las instrucciones para activar tu cuenta. Revisa tu bandeja de entrada.');
     }

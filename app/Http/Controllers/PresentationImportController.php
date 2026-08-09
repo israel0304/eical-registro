@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Presentation;
 use App\Models\Role;
 use App\Models\User;
-use App\Notifications\BienvenidaNuevoUsuario;
+use App\Services\EventAudit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -134,7 +134,12 @@ class PresentationImportController extends Controller
                 try {
                     $user->update(['activation_token' => Str::random(60)]);
                     $activationUrl = url('/ponente/activar/'.$user->activation_token);
-                    $user->notify(new BienvenidaNuevoUsuario($activationUrl, $user->first_name));
+                    EventAudit::emit('user.welcome', $user, $request->user(), [
+                        'destinatario' => $user->email,
+                        'nombre_completo' => $user->name,
+                        'nombre' => $user->first_name,
+                        'url_activacion' => $activationUrl,
+                    ]);
                 } catch (\Throwable $e) {
                     Log::error("Error enviando invitación a {$user->email}: ".$e->getMessage());
                 }

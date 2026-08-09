@@ -119,7 +119,11 @@ const mainNavItems = computed<NavItem[]>(() => {
         });
     }
 
-    if (can('gafete.templates.manage') || can('constancias.templates.manage')) {
+    if (
+        can('gafete.templates.manage') ||
+        can('constancias.templates.manage') ||
+        can('correos.templates.manage')
+    ) {
         items.push({
             title: 'Plantillas',
             href: '/admin/plantillas',

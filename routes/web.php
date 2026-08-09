@@ -7,6 +7,8 @@ use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\CheckinController;
 use App\Http\Controllers\ConferenceController;
 use App\Http\Controllers\ConstanciaController;
+use App\Http\Controllers\EmailTemplateController;
+use App\Http\Controllers\EmailTriggerController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\EventoController;
 use App\Http\Controllers\GafeteController;
@@ -25,7 +27,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopEnrollment;
-use App\Notifications\BienvenidaNuevoUsuario;
+use App\Services\EventAudit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -203,7 +205,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $activationToken = Str::random(60);
             $user->update(['activation_token' => $activationToken]);
             $url = url('/ponente/activar/'.$activationToken);
-            $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
+            EventAudit::emit('user.welcome', $user, $request->user(), [
+                'destinatario' => $user->email,
+                'nombre_completo' => $user->name,
+                'nombre' => $user->first_name,
+                'url_activacion' => $url,
+            ]);
         }
 
         $user->roles()->syncWithoutDetaching([$ponenteRoleId]);
@@ -265,7 +272,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $activationToken = Str::random(60);
             $user->update(['activation_token' => $activationToken]);
             $url = url('/ponente/activar/'.$activationToken);
-            $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
+            EventAudit::emit('user.welcome', $user, $request->user(), [
+                'destinatario' => $user->email,
+                'nombre_completo' => $user->name,
+                'nombre' => $user->first_name,
+                'url_activacion' => $url,
+            ]);
         }
 
         $user->roles()->syncWithoutDetaching([$moderatorRoleId]);
@@ -323,7 +335,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $activationToken = Str::random(60);
             $user->update(['activation_token' => $activationToken]);
             $url = url('/ponente/activar/'.$activationToken);
-            $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
+            EventAudit::emit('user.welcome', $user, $request->user(), [
+                'destinatario' => $user->email,
+                'nombre_completo' => $user->name,
+                'nombre' => $user->first_name,
+                'url_activacion' => $url,
+            ]);
         }
 
         $user->roles()->syncWithoutDetaching([$speakerRoleId]);
@@ -389,6 +406,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Admin: plantillas (unificado)
     Route::get('admin/plantillas', [CertificateTemplateController::class, 'plantillas'])->name('plantillas.index');
+
+    // Admin: plantillas de correo y disparadores
+    Route::middleware('can:correos.templates.manage')->group(function () {
+        Route::post('admin/correos/plantillas', [EmailTemplateController::class, 'store'])->name('correos.templates.store');
+        Route::get('admin/correos/plantillas/{template}/edit', [EmailTemplateController::class, 'edit'])->name('correos.templates.edit');
+        Route::put('admin/correos/plantillas/{template}', [EmailTemplateController::class, 'update'])->name('correos.templates.update');
+        Route::delete('admin/correos/plantillas/{template}', [EmailTemplateController::class, 'destroy'])->name('correos.templates.destroy');
+        Route::post('admin/correos/preview', [EmailTemplateController::class, 'preview'])->name('correos.templates.preview');
+
+        Route::post('admin/correos/disparadores', [EmailTriggerController::class, 'store'])->name('correos.triggers.store');
+        Route::put('admin/correos/disparadores/{trigger}', [EmailTriggerController::class, 'update'])->name('correos.triggers.update');
+        Route::delete('admin/correos/disparadores/{trigger}', [EmailTriggerController::class, 'destroy'])->name('correos.triggers.destroy');
+    });
 
     // Admin: badge templates
     Route::middleware('can:gafete.templates.manage')->group(function () {

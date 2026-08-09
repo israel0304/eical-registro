@@ -9,11 +9,9 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
-use App\Notifications\BienvenidaNuevoUsuario;
 use App\Services\CertificateRenderer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class RegistroModuleTest extends TestCase
@@ -865,7 +863,6 @@ class RegistroModuleTest extends TestCase
 
     public function test_csv_import_creates_users_with_activation_link()
     {
-        Notification::fake();
         $this->actingAs($this->admin());
 
         $csv = "nombre,apellido,email,rol\nMaria,Garcia,maria@correo.mx,Asistente\n";
@@ -877,12 +874,11 @@ class RegistroModuleTest extends TestCase
         $user = User::where('email', 'maria@correo.mx')->first();
         $this->assertNotNull($user);
         $this->assertNotNull($user->activation_token);
-        Notification::assertSentTo($user, BienvenidaNuevoUsuario::class);
+        $this->assertDatabaseHas('event_logs', ['event_key' => 'user.welcome', 'subject_id' => $user->id]);
     }
 
     public function test_csv_import_reactivates_existing_users_without_password()
     {
-        Notification::fake();
         $this->actingAs($this->admin());
 
         $existing = User::factory()->create([
@@ -899,12 +895,11 @@ class RegistroModuleTest extends TestCase
 
         $existing->refresh();
         $this->assertNotNull($existing->activation_token);
-        Notification::assertSentTo($existing, BienvenidaNuevoUsuario::class);
+        $this->assertDatabaseHas('event_logs', ['event_key' => 'user.welcome', 'subject_id' => $existing->id]);
     }
 
     public function test_csv_import_preserves_existing_user_account_and_gains_role()
     {
-        Notification::fake();
         $this->actingAs($this->admin());
 
         $asistenteRole = Role::firstOrCreate(['name' => 'Asistente']);
@@ -930,6 +925,6 @@ class RegistroModuleTest extends TestCase
         $this->assertSame($dni, $asistente->dni);
         $this->assertTrue($asistente->roles()->where('roles.id', $asistenteRole->id)->exists());
         $this->assertTrue($asistente->roles()->where('roles.id', $ponenteRole->id)->exists());
-        Notification::assertNotSentTo($asistente, BienvenidaNuevoUsuario::class);
+        $this->assertDatabaseMissing('event_logs', ['event_key' => 'user.welcome', 'subject_id' => $asistente->id]);
     }
 }

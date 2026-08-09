@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\EmiteEventos;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -16,7 +17,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasFactory, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
+    use EmiteEventos, HasFactory, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
 
     public function hasVerifiedEmail(): bool
     {

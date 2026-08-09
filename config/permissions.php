@@ -58,6 +58,9 @@ return [
     'Reportes' => [
         'reportes.view' => 'Ver reportes',
     ],
+    'Correos' => [
+        'correos.templates.manage' => 'Gestionar plantillas de correo y disparadores',
+    ],
     'Roles' => [
         'roles.manage' => 'Gestionar roles y permisos',
     ],

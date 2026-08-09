@@ -7,7 +7,7 @@ use App\Models\ParticipationType;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Workshop;
-use App\Notifications\BienvenidaNuevoUsuario;
+use App\Services\EventAudit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -87,7 +87,12 @@ class UserController extends Controller
         $activationToken = Str::random(60);
         $user->update(['activation_token' => $activationToken]);
         $url = url('/ponente/activar/'.$activationToken);
-        $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
+        EventAudit::emit('user.welcome', $user, $request->user(), [
+            'destinatario' => $user->email,
+            'nombre_completo' => $user->name,
+            'nombre' => $user->first_name,
+            'url_activacion' => $url,
+        ]);
 
         return back()->with('success', 'Usuario creado correctamente. Se le ha enviado un correo de bienvenida.');
     }
@@ -245,7 +250,12 @@ class UserController extends Controller
                 $activationToken = Str::random(60);
                 $user->update(['activation_token' => $activationToken]);
                 $url = url('/ponente/activar/'.$activationToken);
-                $user->notify(new BienvenidaNuevoUsuario($url, $user->first_name));
+                EventAudit::emit('user.welcome', $user, $request->user(), [
+                    'destinatario' => $user->email,
+                    'nombre_completo' => $user->name,
+                    'nombre' => $user->first_name,
+                    'url_activacion' => $url,
+                ]);
             }
 
             $user->roles()->syncWithoutDetaching($roleIds);
