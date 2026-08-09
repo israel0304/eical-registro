@@ -263,7 +263,7 @@ const save = () => {
                                         value="payload"
                                         class="h-3.5 w-3.5 accent-indigo-600"
                                     />
-                                    Participante del evento
+                                    Event Producer
                                 </label>
                                 <label
                                     v-if="roles.length > 0"
