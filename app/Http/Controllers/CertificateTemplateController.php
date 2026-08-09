@@ -3,7 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\CertificateTemplate;
+use App\Models\EmailTemplate;
+use App\Models\EmailTrigger;
+use App\Models\EventLog;
 use App\Models\ParticipationType;
+use App\Models\Role;
+use App\Support\EventCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -20,7 +25,9 @@ class CertificateTemplateController extends Controller
     public function plantillas(Request $request)
     {
         abort_unless(
-            $request->user()->can('gafete.templates.manage') || $request->user()->can('constancias.templates.manage'),
+            $request->user()->can('gafete.templates.manage')
+            || $request->user()->can('constancias.templates.manage')
+            || $request->user()->can('correos.templates.manage'),
             403
         );
 
@@ -41,15 +48,58 @@ class CertificateTemplateController extends Controller
             ->orderBy('role')
             ->get();
 
+        $eventLogs = collect();
+        $roles = collect();
+        if ($request->user()->hasPermission('correos.templates.manage')) {
+            $eventLogs = EventLog::query()
+                ->latest()
+                ->limit(30)
+                ->get()
+                ->map(function (EventLog $log) {
+                    return [
+                        'id' => $log->id,
+                        'event_key' => $log->event_key,
+                        'event_label' => EventCatalog::label($log->event_key),
+                        'status' => $log->status,
+                        'message' => $log->message,
+                        'subject_type' => class_basename($log->subject_type ?? ''),
+                        'subject_id' => $log->subject_id,
+                        'actor_name' => $log->actor?->name,
+                        'payload' => $log->payload,
+                        'created_at' => $log->created_at?->diffForHumans(),
+                    ];
+                });
+
+            $roles = Role::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name']);
+        }
+
         return Inertia::render('Plantillas/Index', [
             'badgeTemplates' => $lists['badge'],
             'certificateTemplates' => $lists['certificate'],
             'invitationTemplates' => $lists['invitation'],
             'participationTypes' => $participationTypes,
+            'emailTemplates' => EmailTemplate::query()->with('triggers')->orderBy('name')->get(),
+            'emailTriggers' => EmailTrigger::query()->with('template')->orderBy('event_key')->get(),
+            'eventCatalog' => collect(config('events.events'))
+                ->filter(fn ($event) => $event['has_trigger'] ?? false)
+                ->map(fn ($event, $key) => [
+                    'event_key' => $key,
+                    'label' => $event['label'],
+                    'group' => $event['group'],
+                    'to_options' => $event['to_options'] ?? ['destinatario' => 'Destinatario del evento'],
+                    'variables' => $event['variables'] ?? [],
+                ])
+                ->values(),
+            'eventLogs' => $eventLogs,
+            'roles' => $roles,
             'permissions' => [
                 'gafete' => $request->user()->hasPermission('gafete.templates.manage'),
                 'constancias' => $request->user()->hasPermission('constancias.templates.manage'),
                 'invitaciones' => $request->user()->hasPermission('constancias.templates.manage'),
+                'correos' => $request->user()->hasPermission('correos.templates.manage'),
             ],
         ]);
     }

@@ -10,6 +10,7 @@ import {
     Layers,
 } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
+import CorreosSection from '@/components/CorreosSection.vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const props = defineProps<{
@@ -17,14 +18,20 @@ const props = defineProps<{
     certificateTemplates: any[];
     invitationTemplates: any[];
     participationTypes: any[];
+    emailTemplates: any[];
+    emailTriggers: any[];
+    eventCatalog: any[];
+    eventLogs: any[];
+    roles: any[];
     permissions: {
         gafete: boolean;
         constancias: boolean;
         invitaciones: boolean;
+        correos: boolean;
     };
 }>();
 
-type TabKey = 'badge' | 'certificate' | 'invitation';
+type TabKey = 'badge' | 'certificate' | 'invitation' | 'correos';
 type PermissionKey = keyof typeof props.permissions;
 
 const tabs: { key: TabKey; label: string; permission: PermissionKey }[] = [
@@ -35,6 +42,7 @@ const tabs: { key: TabKey; label: string; permission: PermissionKey }[] = [
         label: 'Cartas de Invitación',
         permission: 'invitaciones',
     },
+    { key: 'correos', label: 'Correos', permission: 'correos' },
 ];
 
 const kinds: Record<
@@ -95,6 +103,19 @@ const kinds: Record<
         emptyTitle: 'Aún no hay plantillas.',
         emptyText: 'Crea la primera para comenzar.',
     },
+    correos: {
+        title: 'Plantillas de Correo',
+        headTitle: 'Plantillas de Correo',
+        description: 'Correos automáticos del sistema.',
+        basePath: '/admin/correos/plantillas',
+        defaultWidth: 1800,
+        defaultHeight: 1200,
+        requiresType: false,
+        aspect: 'aspect-[3/2]',
+        defaultLabel: '',
+        emptyTitle: 'Aún no hay plantillas de correo.',
+        emptyText: 'Crea la primera para comenzar.',
+    },
 };
 
 const activeTab = ref<TabKey>('certificate');
@@ -119,6 +140,8 @@ const templates = computed(() => {
             return props.badgeTemplates;
         case 'invitation':
             return props.invitationTemplates;
+        case 'correos':
+            return [];
         default:
             return props.certificateTemplates;
     }
@@ -240,9 +263,20 @@ const activeTypes = computed(() =>
                 </button>
             </div>
 
-            <div
-                class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
-            >
+            <CorreosSection
+                v-if="activeTab === 'correos'"
+                :templates="emailTemplates"
+                :triggers="emailTriggers"
+                :catalog="eventCatalog"
+                :logs="eventLogs"
+                :roles="roles"
+                :can-manage="permissions.correos"
+            />
+
+            <template v-else>
+                <div
+                    class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
+                >
                 <div>
                     <h1
                         class="text-3xl font-normal tracking-tight text-gray-900 dark:text-white"
@@ -376,6 +410,7 @@ const activeTypes = computed(() =>
                     >/constancias/verificar/{folio}</code
                 >
             </p>
+            </template>
         </div>
 
         <!-- Modal -->

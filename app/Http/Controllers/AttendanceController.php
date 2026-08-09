@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\WorkshopQRForInstructor;
 use App\Models\Attendance;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopEnrollment;
+use App\Services\EventAudit;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 class AttendanceController extends Controller
@@ -76,6 +75,8 @@ class AttendanceController extends Controller
             'registered_by' => $user->id,
         ]);
 
+        $this->notifyAttendanceConfirmed($workshop, $user);
+
         return Inertia::render('Workshops/Scan', [
             'success' => true,
             'message' => 'Asistencia registrada correctamente.',
@@ -116,7 +117,26 @@ class AttendanceController extends Controller
             'registered_by' => $request->user()->id,
         ]);
 
+        $this->notifyAttendanceConfirmed($workshop, User::find($userId));
+
         return back()->with('success', 'Asistencia marcada correctamente.');
+    }
+
+    private function notifyAttendanceConfirmed(Workshop $workshop, ?User $user): void
+    {
+        if (! $user) {
+            return;
+        }
+
+        EventAudit::emit('attendance.confirmed', $workshop, request()->user(), [
+            'destinatario' => $user->email,
+            'nombre_completo' => $user->name,
+            'taller' => $workshop->name,
+            'dia' => $workshop->day,
+            'hora_inicio' => $workshop->start_time,
+            'hora_fin' => $workshop->end_time,
+            'lugar' => $workshop->location,
+        ]);
     }
 
     public function sendQRToInstructor(Request $request, Workshop $workshop)
@@ -144,9 +164,7 @@ class AttendanceController extends Controller
         $qrSvg = $writer->writeString($scanUrl);
         $qrPngBase64 = $this->svgToPngBase64($qrSvg);
 
-        Mail::to($instructor->email)->send(
-            new WorkshopQRForInstructor($workshop, $instructor, $qrPngBase64, $scanUrl)
-        );
+        EventAudit::emit('workshop.qr_sent', $workshop, $request->user(), $this->qrPayload($workshop, $instructor, $scanUrl, $qrPngBase64));
 
         return back()->with('success', "Código QR enviado a {$instructor->email}.");
     }
@@ -172,12 +190,25 @@ class AttendanceController extends Controller
         $qrPngBase64 = $this->svgToPngBase64($qrSvg);
 
         foreach ($instructors as $instructor) {
-            Mail::to($instructor->email)->send(
-                new WorkshopQRForInstructor($workshop, $instructor, $qrPngBase64, $scanUrl)
-            );
+            EventAudit::emit('workshop.qr_sent', $workshop, $request->user(), $this->qrPayload($workshop, $instructor, $scanUrl, $qrPngBase64));
         }
 
         return back()->with('success', "Código QR enviado a {$instructors->count()} instructor(es).");
+    }
+
+    private function qrPayload(Workshop $workshop, User $instructor, string $scanUrl, string $qrPngBase64): array
+    {
+        return [
+            'destinatario' => $instructor->email,
+            'nombre_completo' => $instructor->name,
+            'taller' => $workshop->name,
+            'dia' => $workshop->day,
+            'hora_inicio' => $workshop->start_time,
+            'hora_fin' => $workshop->end_time,
+            'lugar' => $workshop->location,
+            'url_escaneo' => $scanUrl,
+            'qrImage' => 'data:image/png;base64,'.$qrPngBase64,
+        ];
     }
 
     private function svgToPngBase64(string $svg): string

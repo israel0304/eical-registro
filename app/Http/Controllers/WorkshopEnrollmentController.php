@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\WorkshopEnrollmentConfirmation;
 use App\Models\Attendance;
+use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopEnrollment;
+use App\Services\EventAudit;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 class WorkshopEnrollmentController extends Controller
@@ -36,7 +36,7 @@ class WorkshopEnrollmentController extends Controller
                     'enrolled_at' => now(),
                 ]);
 
-                Mail::to($user->email)->send(new WorkshopEnrollmentConfirmation($workshop, $user));
+                $this->notifyEnrollment($existingEnrollment, $workshop, $user);
 
                 return back()->with('success', 'Inscripción reactivada correctamente.');
             }
@@ -46,16 +46,42 @@ class WorkshopEnrollmentController extends Controller
             return back()->withErrors(['error' => 'No hay cupos disponibles en este taller.']);
         }
 
-        WorkshopEnrollment::create([
+        $enrollment = WorkshopEnrollment::create([
             'user_id' => $user->id,
             'workshop_id' => $workshop->id,
             'enrolled_at' => now(),
             'status' => 'enrolled',
         ]);
 
-        Mail::to($user->email)->send(new WorkshopEnrollmentConfirmation($workshop, $user));
+        $this->notifyEnrollment($enrollment, $workshop, $user);
 
         return back()->with('success', 'Inscrito correctamente en el taller.');
+    }
+
+    private function notifyEnrollment(WorkshopEnrollment $enrollment, Workshop $workshop, User $user): void
+    {
+        EventAudit::emit('workshop.enrollment', $enrollment, request()->user(), [
+            'destinatario' => $user->email,
+            'nombre_completo' => $user->name,
+            'taller' => $workshop->name,
+            'dia' => $workshop->day,
+            'hora_inicio' => $workshop->start_time,
+            'hora_fin' => $workshop->end_time,
+            'lugar' => $workshop->location,
+        ]);
+    }
+
+    private function notifyEnrollmentCancelled(WorkshopEnrollment $enrollment, Workshop $workshop, User $user): void
+    {
+        EventAudit::emit('workshop.enrollment_cancelled', $enrollment, request()->user(), [
+            'destinatario' => $user->email,
+            'nombre_completo' => $user->name,
+            'taller' => $workshop->name,
+            'dia' => $workshop->day,
+            'hora_inicio' => $workshop->start_time,
+            'hora_fin' => $workshop->end_time,
+            'lugar' => $workshop->location,
+        ]);
     }
 
     public function destroy(Request $request, Workshop $workshop)
@@ -85,6 +111,8 @@ class WorkshopEnrollmentController extends Controller
 
         $enrollment->update(['status' => 'cancelled']);
 
+        $this->notifyEnrollmentCancelled($enrollment, $workshop, $request->user());
+
         return back()->with('success', 'Inscripción cancelada correctamente.');
     }
 
@@ -97,6 +125,10 @@ class WorkshopEnrollmentController extends Controller
         }
 
         $enrollment->update(['status' => 'cancelled']);
+
+        if ($enrollment->user) {
+            $this->notifyEnrollmentCancelled($enrollment, $workshop, $enrollment->user);
+        }
 
         return back()->with('success', 'Inscripción cancelada correctamente.');
     }

@@ -88,6 +88,8 @@ class DatabaseSeeder extends Seeder
 
         app(PermissionSync::class)->sync();
 
+        $this->call(EmailSeeder::class);
+
         $rolePermissions = [
             2 => ['dashboard.view', 'workshops.view', 'workshops.my', 'presentations.my', 'constancias.view', 'constancias.download', 'constancias.invitaciones.download', 'gafete.view'],
             3 => ['dashboard.view', 'workshops.view', 'workshops.my', 'constancias.view', 'constancias.download', 'gafete.view'],

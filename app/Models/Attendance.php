@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\EmiteEventos;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Attendance extends Model
 {
+    use EmiteEventos;
+
     protected $fillable = [
         'user_id',
         'presentation_id',
