@@ -100,6 +100,34 @@ return [
             ],
         ],
 
+        'user.registered' => [
+            'label' => 'Registro de usuario (verificación de correo)',
+            'group' => 'Usuarios',
+            'has_trigger' => true,
+            'to_options' => [
+                'destinatario' => 'Usuario que se registra',
+            ],
+            'variables' => [
+                'nombre_completo' => 'Nombre completo del usuario',
+                'nombre' => 'Nombre del usuario',
+                'url_verificacion' => 'Enlace de verificación de correo',
+            ],
+        ],
+
+        'user.password_reset' => [
+            'label' => 'Restablecer contraseña',
+            'group' => 'Usuarios',
+            'has_trigger' => true,
+            'to_options' => [
+                'destinatario' => 'Usuario que solicita el restablecimiento',
+            ],
+            'variables' => [
+                'nombre_completo' => 'Nombre completo del usuario',
+                'nombre' => 'Nombre del usuario',
+                'url_restablecer' => 'Enlace para restablecer la contraseña',
+            ],
+        ],
+
         // Eventos de ciclo de vida: se auditan automáticamente vía trait
         // (solo registro en event_log; sin disparador de correo).
 

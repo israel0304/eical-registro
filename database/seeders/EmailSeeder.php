@@ -86,6 +86,50 @@ HTML,
 <p>Saludos,<br>El equipo</p>
 HTML,
             ],
+            'user.registered' => [
+                'name' => 'Bienvenida y verificación de correo',
+                'subject' => 'Verifica tu correo electrónico',
+                'default_trigger' => true,
+                'body_html' => <<<'HTML'
+<h2>¡Bienvenido!</h2>
+
+<p>Hola <strong>{{ nombre_completo }}</strong>,</p>
+
+<p>Gracias por registrarte en el sistema de registro del Encuentro de Innovación, Ciencia, Tecnología, Academia y Saberes (EICAL).</p>
+
+<p>Para verificar tu correo electrónico, haz clic en el siguiente enlace:</p>
+
+<p><a href="{{ url_verificacion }}">Verificar mi correo</a></p>
+
+<p>Este enlace expirará en 60 minutos.</p>
+
+<p>Si no esperabas este correo, puedes ignorarlo.</p>
+
+<p>Saludos,<br>El equipo</p>
+HTML,
+            ],
+            'user.password_reset' => [
+                'name' => 'Restablecer contraseña',
+                'subject' => 'Restablece tu contraseña',
+                'default_trigger' => true,
+                'body_html' => <<<'HTML'
+<h2>Restablece tu contraseña</h2>
+
+<p>Hola <strong>{{ nombre_completo }}</strong>,</p>
+
+<p>Recibimos una solicitud para restablecer la contraseña de tu cuenta.</p>
+
+<p>Para continuar, haz clic en el siguiente enlace:</p>
+
+<p><a href="{{ url_restablecer }}">Restablecer mi contraseña</a></p>
+
+<p>Este enlace expirará en 60 minutos.</p>
+
+<p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
+
+<p>Saludos,<br>El equipo</p>
+HTML,
+            ],
             'workshop.enrollment_cancelled' => [
                 'name' => 'Inscripción a taller cancelada',
                 'subject' => 'Inscripción cancelada: {{ taller }}',
