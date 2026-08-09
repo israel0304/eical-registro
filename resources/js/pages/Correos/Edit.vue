@@ -101,6 +101,18 @@ const previewError = ref('');
 
 let previewTimer: ReturnType<typeof setTimeout> | null = null;
 
+const getCookie = (name: string) => {
+    try {
+        const row = document.cookie
+            .split('; ')
+            .find((entry) => entry.startsWith(`${name}=`));
+
+        return row ? decodeURIComponent(row.slice(name.length + 1)) : '';
+    } catch {
+        return '';
+    }
+};
+
 const schedulePreview = () => {
     if (previewTimer) clearTimeout(previewTimer);
     previewTimer = setTimeout(runPreview, 500);
@@ -114,9 +126,8 @@ const runPreview = async () => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') ?? '',
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': getCookie('XSRF-TOKEN'),
             },
             body: JSON.stringify({
                 event_key: props.template.event_key,
@@ -124,6 +135,12 @@ const runPreview = async () => {
                 body_html: form.body_html,
             }),
         });
+        if (response.status === 419) {
+            previewError.value = 'Sesión expirada. Recarga la página.';
+            window.setTimeout(() => window.location.reload(), 1500);
+            previewing.value = false;
+            return;
+        }
         if (!response.ok) {
             previewError.value =
                 'No se pudo actualizar la vista previa (código ' +
