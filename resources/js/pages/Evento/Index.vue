@@ -17,6 +17,7 @@ const props = defineProps<{
         evento_nombre: string;
         evento_checkin_enabled: boolean;
         evento_checkin_time_restricted: boolean;
+        evento_checkin_grace_hours: number;
         evento_min_dias: number;
         evento_fecha_inicio: string | null;
         evento_fecha_fin: string | null;
@@ -35,6 +36,7 @@ const form = useForm({
     evento_checkin_enabled: props.settings.evento_checkin_enabled,
     evento_checkin_time_restricted:
         props.settings.evento_checkin_time_restricted,
+    evento_checkin_grace_hours: props.settings.evento_checkin_grace_hours,
     evento_min_dias: props.settings.evento_min_dias,
     evento_fecha_inicio: props.settings.evento_fecha_inicio ?? '',
     evento_fecha_fin: props.settings.evento_fecha_fin ?? '',
@@ -284,6 +286,30 @@ const deleteAttendance = (attendance: any) => {
                                 />
                                 Restricción horaria
                             </label>
+                            <div>
+                                <label
+                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                    Margen de restricción horaria (horas)
+                                </label>
+                                <input
+                                    v-model.number="
+                                        form.evento_checkin_grace_hours
+                                    "
+                                    type="number"
+                                    min="0"
+                                    max="24"
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                />
+                                <p
+                                    class="mt-1 text-xs text-gray-400 dark:text-gray-500"
+                                >
+                                    Permite registrar asistencia por QR N horas
+                                    antes del inicio y N horas después del fin
+                                    del taller. También aplica a la cancelación
+                                    de inscripciones.
+                                </p>
+                            </div>
                             <p class="text-xs text-gray-400 dark:text-gray-500">
                                 Desactiva para permitir registrar asistencias
                                 fuera de las fechas del evento (pruebas).

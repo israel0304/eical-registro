@@ -56,8 +56,10 @@ class AttendanceController extends Controller
             $startTime = $workshop->start_time;
             $endTime = $workshop->end_time;
 
-            $start = Carbon::parse("{$eventDate} {$startTime}", EventSettings::timezone());
-            $end = Carbon::parse("{$eventDate} {$endTime}", EventSettings::timezone());
+            $start = Carbon::parse("{$eventDate} {$startTime}", EventSettings::timezone())
+                ->subHours(EventSettings::checkinGraceHours());
+            $end = Carbon::parse("{$eventDate} {$endTime}", EventSettings::timezone())
+                ->addHours(EventSettings::checkinGraceHours());
 
             if ($now->lt($start) || $now->gt($end)) {
                 return Inertia::render('Workshops/Scan', [

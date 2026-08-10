@@ -73,6 +73,7 @@ class EventoController extends Controller
                 'evento_nombre' => EventSettings::nombre(),
                 'evento_checkin_enabled' => EventSettings::checkinEnabled(),
                 'evento_checkin_time_restricted' => EventSettings::checkinTimeRestricted(),
+                'evento_checkin_grace_hours' => EventSettings::checkinGraceHours(),
                 'evento_min_dias' => EventSettings::minDays(),
                 'evento_fecha_inicio' => EventSettings::startDate(),
                 'evento_fecha_fin' => EventSettings::endDate(),
@@ -102,6 +103,7 @@ class EventoController extends Controller
             'evento_nombre' => ['required', 'string', 'max:255'],
             'evento_checkin_enabled' => ['nullable', 'boolean'],
             'evento_checkin_time_restricted' => ['nullable', 'boolean'],
+            'evento_checkin_grace_hours' => ['required', 'integer', 'min:0', 'max:24'],
             'evento_min_dias' => ['required', 'integer', 'min:1', 'max:31', function ($attribute, $value, $fail) use ($request) {
                 $start = $request->input('evento_fecha_inicio');
                 $end = $request->input('evento_fecha_fin');
@@ -127,6 +129,7 @@ class EventoController extends Controller
         Setting::updateOrCreate(['key' => 'evento_nombre'], ['value' => $validated['evento_nombre']]);
         Setting::updateOrCreate(['key' => 'evento_checkin_enabled'], ['value' => (bool) ($validated['evento_checkin_enabled'] ?? false) ? '1' : '0']);
         Setting::updateOrCreate(['key' => 'evento_checkin_time_restricted'], ['value' => (bool) ($validated['evento_checkin_time_restricted'] ?? true) ? '1' : '0']);
+        Setting::updateOrCreate(['key' => 'evento_checkin_grace_hours'], ['value' => (string) $validated['evento_checkin_grace_hours']]);
         Setting::updateOrCreate(['key' => 'evento_min_dias'], ['value' => (string) $validated['evento_min_dias']]);
         Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => $validated['evento_fecha_inicio'] ?? '']);
         Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => $validated['evento_fecha_fin'] ?? '']);

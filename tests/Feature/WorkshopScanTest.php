@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Role;
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopEnrollment;
@@ -100,5 +101,130 @@ class WorkshopScanTest extends TestCase
             'user_id' => $user->id,
             'workshop_id' => $workshop->id,
         ]);
+    }
+
+    public function test_scan_allows_attendance_up_to_grace_hours_before_start(): void
+    {
+        Mail::fake();
+
+        $user = $this->user();
+        $tz = 'America/Mexico_City';
+        $start = now($tz)->addHour();
+        $end = now($tz)->addHours(2);
+        $workshop = $this->restrictedWorkshop(
+            $user,
+            $start->toDateString(),
+            $start->format('H:i'),
+            $end->format('H:i'),
+        );
+        $this->enroll($user, $workshop);
+
+        $this->actingAs($user)
+            ->get(route('workshops.scan', $workshop))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Workshops/Scan')
+                ->where('success', true));
+    }
+
+    public function test_scan_allows_attendance_up_to_grace_hours_after_end(): void
+    {
+        Mail::fake();
+
+        $user = $this->user();
+        $tz = 'America/Mexico_City';
+        $start = now($tz)->subHours(3);
+        $end = now($tz)->subHour();
+        $workshop = $this->restrictedWorkshop(
+            $user,
+            $start->toDateString(),
+            $start->format('H:i'),
+            $end->format('H:i'),
+        );
+        $this->enroll($user, $workshop);
+
+        $this->actingAs($user)
+            ->get(route('workshops.scan', $workshop))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Workshops/Scan')
+                ->where('success', true));
+    }
+
+    public function test_scan_rejects_attendance_beyond_grace_before_start(): void
+    {
+        Mail::fake();
+
+        $user = $this->user();
+        $tz = 'America/Mexico_City';
+        $start = now($tz)->addHours(3);
+        $end = now($tz)->addHours(4);
+        $workshop = $this->restrictedWorkshop(
+            $user,
+            $start->toDateString(),
+            $start->format('H:i'),
+            $end->format('H:i'),
+        );
+        $this->enroll($user, $workshop);
+
+        $this->actingAs($user)
+            ->get(route('workshops.scan', $workshop))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Workshops/Scan')
+                ->where('success', false)
+                ->where('message', 'Fuera del horario permitido para este taller.'));
+    }
+
+    public function test_scan_rejects_attendance_beyond_grace_after_end(): void
+    {
+        Mail::fake();
+
+        $user = $this->user();
+        $tz = 'America/Mexico_City';
+        $start = now($tz)->subHours(5);
+        $end = now($tz)->subHours(3);
+        $workshop = $this->restrictedWorkshop(
+            $user,
+            $start->toDateString(),
+            $start->format('H:i'),
+            $end->format('H:i'),
+        );
+        $this->enroll($user, $workshop);
+
+        $this->actingAs($user)
+            ->get(route('workshops.scan', $workshop))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Workshops/Scan')
+                ->where('success', false)
+                ->where('message', 'Fuera del horario permitido para este taller.'));
+    }
+
+    public function test_scan_uses_configured_grace_hours(): void
+    {
+        Mail::fake();
+
+        Setting::updateOrCreate(['key' => 'evento_checkin_grace_hours'], ['value' => '0']);
+
+        $user = $this->user();
+        $tz = 'America/Mexico_City';
+        $start = now($tz)->addHour();
+        $end = now($tz)->addHours(2);
+        $workshop = $this->restrictedWorkshop(
+            $user,
+            $start->toDateString(),
+            $start->format('H:i'),
+            $end->format('H:i'),
+        );
+        $this->enroll($user, $workshop);
+
+        $this->actingAs($user)
+            ->get(route('workshops.scan', $workshop))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Workshops/Scan')
+                ->where('success', false)
+                ->where('message', 'Fuera del horario permitido para este taller.'));
     }
 }
