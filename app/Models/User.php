@@ -243,6 +243,13 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function permissionKeys(): array
     {
+        if ($this->isAdmin()) {
+            return collect(config('permissions'))
+                ->flatMap(fn (array $permissions) => array_keys($permissions))
+                ->values()
+                ->all();
+        }
+
         return Permission::query()
             ->whereHas('roles', fn ($q) => $q
                 ->whereIn('roles.id', $this->roles()->pluck('roles.id'))
