@@ -195,4 +195,21 @@ class ParticipationTypeControllerTest extends TestCase
             'manual_generable' => true,
         ]);
     }
+
+    public function test_admin_can_create_carta_kind(): void
+    {
+        $this->actingAs($this->admin());
+
+        $this->post('/admin/constancias/tipos', $this->storePayload([
+            'key' => 'carta_invitacion_speaker',
+            'label' => 'Carta de Invitación - Speaker',
+            'kind' => 'carta',
+        ]))->assertRedirect();
+
+        $this->assertDatabaseHas('participation_types', [
+            'key' => 'carta_invitacion_speaker',
+            'event_kind' => 'event',
+            'kind' => 'carta',
+        ]);
+    }
 }

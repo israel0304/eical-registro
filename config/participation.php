@@ -24,6 +24,9 @@ return [
             'simposio' => 'Simposio',
             'mesa_dialogo' => 'Mesa de diálogo',
         ],
+        'event' => [
+            'carta' => 'Carta de invitación',
+        ],
     ],
 
     'role_rules' => [
