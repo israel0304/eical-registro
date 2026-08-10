@@ -429,12 +429,26 @@ HTML;
         align-items: center;
         justify-content: center;
         min-height: 100vh;
+        min-height: 100dvh;
         padding: 24px 16px;
         box-sizing: border-box;
     }
+    .certificate-stage {
+        width: calc(min(100vw - 48px, (100vh - 160px) * ({$width} / {$height})));
+        height: calc(min(100vh - 160px, (100vw - 48px) * ({$height} / {$width})));
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    }
     .certificate {
-        transform-origin: center;
-        transform: scale(max(0.2, min(calc((100vw - 48px) / {$width}), calc((100vh - 160px) / {$height}))));
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: {$width}px;
+        height: {$height}px;
+        margin: 0;
+        transform-origin: top left;
+        transform: scale(calc(min(100vw - 48px, (100vh - 160px) * ({$width} / {$height})) / {$width}));
     }
 }
 CSS;
@@ -485,9 +499,11 @@ JS;
 <body>
     {$pdfButton}
     {$previewOpen}
-    <div class="certificate">
-        {$background}
-        {$elementHtml}
+    <div class="certificate-stage">
+        <div class="certificate">
+            {$background}
+            {$elementHtml}
+        </div>
     </div>
     {$previewClose}
     {$fitScript}
@@ -865,12 +881,26 @@ HTML;
         align-items: center;
         justify-content: center;
         min-height: 100vh;
+        min-height: 100dvh;
         padding: 24px 16px;
         box-sizing: border-box;
     }
+    .badge-stage {
+        width: calc(min(100vw - 48px, (100vh - 160px) * ({$width} / {$height})));
+        height: calc(min(100vh - 160px, (100vw - 48px) * ({$height} / {$width})));
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    }
     .badge {
-        transform-origin: center;
-        transform: scale(max(0.2, min(calc((100vw - 48px) / {$width}), calc((100vh - 160px) / {$height}))));
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: {$width}px;
+        height: {$height}px;
+        margin: 0;
+        transform-origin: top left;
+        transform: scale(calc(min(100vw - 48px, (100vh - 160px) * ({$width} / {$height})) / {$width}));
     }
 }
 CSS;
@@ -906,7 +936,8 @@ CSS;
 <body>
     {$printButton}
     {$previewOpen}
-    <div class="badge">
+    <div class="badge-stage">
+        <div class="badge">
         <div class="badge-header">
             <span class="title">{$metadata['evento']}</span>
             <span class="subtitle">Acceso</span>
@@ -919,6 +950,7 @@ CSS;
         <div class="badge-event">Asistente al evento</div>
         <img class="badge-qr" src="{$qr}" alt="QR" />
         <div class="badge-qr-caption">Escanear en acceso</div>
+        </div>
     </div>
     {$previewClose}
 </body>
