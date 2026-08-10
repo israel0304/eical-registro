@@ -208,6 +208,12 @@ class CertificateRenderer
 
         if ($certificate->metadata === null) {
             $certificate->update(['metadata' => $metadata]);
+        } else {
+            $missing = array_diff_key($metadata, $certificate->metadata);
+
+            if ($missing !== []) {
+                $certificate->update(['metadata' => array_merge($certificate->metadata, $missing)]);
+            }
         }
 
         if ($certificate->folio === null) {
@@ -767,6 +773,7 @@ HTML;
             'tipo_participacion' => $type->label,
             'evento' => (string) $eventName,
             'fecha_evento' => $event->day ? $this->formatSpanishDate($event->day) : '',
+            'location' => $event->location,
             'folio' => '',
         ];
     }
@@ -778,6 +785,7 @@ HTML;
             'tipo_participacion' => $type->label,
             'evento' => $this->eventName(),
             'fecha_evento' => '',
+            'location' => null,
             'folio' => '',
         ];
     }
@@ -796,6 +804,7 @@ HTML;
             'fecha_evento' => $this->eventDateRange(),
             'institucion' => (string) ($user->affiliation ?? ''),
             'pais' => (string) ($user->country ?? ''),
+            'location' => null,
             'folio' => '',
         ];
     }

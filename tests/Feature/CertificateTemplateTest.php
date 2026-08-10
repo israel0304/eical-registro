@@ -220,6 +220,26 @@ class CertificateTemplateTest extends TestCase
             ->assertSee($certificate->folio);
     }
 
+    public function test_public_verification_page_renders_for_event_constancia()
+    {
+        $user = $this->admin();
+        ParticipationType::create([
+            'key' => 'evento_asistencia',
+            'label' => 'Asistente al evento',
+            'event_kind' => 'event',
+            'is_active' => true,
+        ]);
+
+        $certificate = app(CertificateRenderer::class)->issueEvent($user);
+
+        $this->assertNotNull($certificate);
+        $this->get('/constancias/verificar/'.$certificate->folio)
+            ->assertOk()
+            ->assertSee($user->name)
+            ->assertSee($certificate->folio)
+            ->assertSee($certificate->metadata['evento']);
+    }
+
     public function test_public_verification_page_returns_404_for_unknown_folio()
     {
         $this->get('/constancias/verificar/NO-EXISTE')->assertNotFound();
