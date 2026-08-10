@@ -3,22 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Certificate;
-use App\Services\CertificateRenderer;
 
 class CertificateVerificationController extends Controller
 {
-    public function show(string $folio, CertificateRenderer $renderer)
+    public function show(string $folio)
     {
         $certificate = Certificate::query()
-            ->with(['user', 'participationType', 'event'])
+            ->with(['user', 'participationType'])
             ->where('folio', $folio)
             ->firstOrFail();
 
-        $event = $certificate->event;
         $metadata = $certificate->metadata ?? [];
-        $eventName = $metadata['evento'] ?? ($event?->name ?? $event?->title ?? '—');
-        $eventDate = $metadata['fecha_evento'] ?? ($event?->day ? $renderer->formatSpanishDate($event->day) : '—');
-        $eventLocation = $event?->location ?? null;
+        $eventName = $metadata['evento'] ?? '—';
+        $eventDate = $metadata['fecha_evento'] ?? '—';
+        $eventLocation = $metadata['location'] ?? null;
 
         return view('certificates.verificar', [
             'certificate' => $certificate,
