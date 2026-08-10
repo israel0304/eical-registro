@@ -41,10 +41,10 @@ class PermissionSync
     {
         return [
             2 => ['dashboard.view', 'workshops.view', 'workshops.my', 'presentations.view', 'presentations.my', 'constancias.view', 'constancias.download', 'constancias.invitaciones.download', 'gafete.view'],
-            3 => ['dashboard.view', 'workshops.view', 'workshops.my', 'constancias.view', 'constancias.download', 'gafete.view'],
-            4 => ['dashboard.view', 'workshops.view', 'workshops.my', 'constancias.view', 'constancias.download', 'gafete.view'],
-            5 => ['dashboard.view', 'constancias.view', 'constancias.download', 'gafete.view', 'conferences.view'],
-            6 => ['dashboard.view', 'constancias.view', 'constancias.download', 'gafete.view', 'asignaciones.view'],
+            3 => ['dashboard.view', 'workshops.view', 'workshops.my', 'constancias.view', 'constancias.download', 'constancias.invitaciones.download', 'gafete.view'],
+            4 => ['dashboard.view', 'workshops.view', 'workshops.my', 'constancias.view', 'constancias.download', 'constancias.invitaciones.download', 'gafete.view'],
+            5 => ['dashboard.view', 'constancias.view', 'constancias.download', 'constancias.invitaciones.download', 'gafete.view', 'conferences.view'],
+            6 => ['dashboard.view', 'constancias.view', 'constancias.download', 'constancias.invitaciones.download', 'gafete.view', 'asignaciones.view'],
         ];
     }
 

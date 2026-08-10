@@ -114,6 +114,7 @@ class CertificateRenderer
     {
         $type = ParticipationType::query()
             ->where('event_kind', 'event')
+            ->whereNull('kind')
             ->where('is_active', true)
             ->first();
 
@@ -155,8 +156,10 @@ class CertificateRenderer
 
     /**
      * Find or create a generic invitation letter certificate for the user.
+     * When $event is provided, the letter is tied to that specific activity
+     * (presentation/workshop/conference) and stored under its own scope.
      */
-    public function issueCarta(User $user, ParticipationType $type, string $rolLabel): ?Certificate
+    public function issueCarta(User $user, ParticipationType $type, string $rolLabel, Workshop|Presentation|Conference|null $event = null): ?Certificate
     {
         if (! $type->is_active) {
             return null;
@@ -167,14 +170,18 @@ class CertificateRenderer
             ->where('is_default', true)
             ->first();
 
-        $metadata = $this->buildCartaMetadata($user, $type, $rolLabel);
+        $metadata = $this->buildCartaMetadata($user, $type, $rolLabel, $event);
+
+        [$eventType, $eventId] = $event === null
+            ? ['event', 0]
+            : [$this->eventTypeName($event), $event->id];
 
         $certificate = Certificate::query()->firstOrCreate(
             [
                 'user_id' => $user->id,
                 'participation_type_id' => $type->id,
-                'event_type' => 'event',
-                'event_id' => 0,
+                'event_type' => $eventType,
+                'event_id' => $eventId,
             ],
             [
                 'template_id' => $template?->id,
@@ -198,6 +205,38 @@ class CertificateRenderer
         }
 
         return 'Participante';
+    }
+
+    /**
+     * Role label for an activity-linked invitation letter, resolved from the
+     * user's participation in that specific activity.
+     */
+    public function activityRolLabel(User $user, Workshop|Presentation|Conference $event): string
+    {
+        if ($event instanceof Workshop) {
+            return $event->instructors()->where('users.id', $user->id)->exists() ? 'Instructor' : self::ROLE_LABELS['Asistente'];
+        }
+
+        if ($event instanceof Presentation) {
+            return 'Ponente';
+        }
+
+        if ($event instanceof Conference) {
+            $role = $event->members()->where('users.id', $user->id)->first()?->pivot->role;
+
+            return $role === 'moderator' ? 'Moderador' : 'Speaker';
+        }
+
+        return 'Participante';
+    }
+
+    private function eventTypeName(Workshop|Presentation|Conference $event): string
+    {
+        return match (true) {
+            $event instanceof Presentation => 'presentation',
+            $event instanceof Conference => 'conference',
+            default => 'workshop',
+        };
     }
 
     private function finalize(Certificate $certificate, ?CertificateTemplate $template, array $metadata): Certificate
@@ -750,6 +789,8 @@ HTML;
             '{institucion}' => $metadata['institucion'] ?? $metadata['afiliacion'] ?? '',
             '{pais}' => $metadata['pais'] ?? '',
             '{rol}' => $metadata['rol'] ?? '',
+            '{ponencia}' => $metadata['ponencia'] ?? '',
+            '{actividad}' => $metadata['actividad'] ?? $metadata['ponencia'] ?? '',
             '{iniciales}' => $metadata['iniciales'] ?? '',
         ];
 
@@ -790,9 +831,19 @@ HTML;
         ];
     }
 
-    private function buildCartaMetadata(User $user, ParticipationType $type, string $rolLabel): array
+    private function buildCartaMetadata(User $user, ParticipationType $type, string $rolLabel, Workshop|Presentation|Conference|null $event = null): array
     {
         $nombre = trim($user->first_name.' '.$user->last_name);
+
+        $ponencia = '';
+        $actividad = '';
+        $fechaEvento = $this->eventDateRange();
+
+        if ($event !== null) {
+            $actividad = $this->activityTitle($event);
+            $ponencia = $event instanceof Presentation ? $event->title : '';
+            $fechaEvento = $event->day ? $this->formatSpanishDate($event->day) : '';
+        }
 
         return [
             'nombre' => $nombre,
@@ -801,12 +852,23 @@ HTML;
             'tipo_participacion' => $type->label,
             'evento' => $this->eventName(),
             'nombre_evento' => $this->eventName(),
-            'fecha_evento' => $this->eventDateRange(),
+            'fecha_evento' => $fechaEvento,
             'institucion' => (string) ($user->affiliation ?? ''),
             'pais' => (string) ($user->country ?? ''),
+            'ponencia' => $ponencia,
+            'actividad' => $actividad,
             'location' => null,
             'folio' => '',
         ];
+    }
+
+    private function activityTitle(Workshop|Presentation|Conference $event): string
+    {
+        return match (true) {
+            $event instanceof Presentation => (string) $event->title,
+            $event instanceof Conference => (string) $event->title,
+            default => (string) $event->name,
+        };
     }
 
     private function eventDateRange(): string

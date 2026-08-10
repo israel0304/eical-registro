@@ -9,7 +9,7 @@ import {
     Users,
     Mail,
 } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const page = usePage();
@@ -30,12 +30,19 @@ const props = defineProps<{
         fecha_inicio: string | null;
         fecha_fin: string | null;
     };
-    invitationLetter?: {
+    invitationLetters?: {
+        id: number;
+        key: string;
+        label: string;
         rol: string;
-        tipo_participacion: string;
         folio: string | null;
         downloaded: boolean;
-    } | null;
+    }[];
+    invitationActivities?: {
+        presentations: { id: number; title: string; day: string | null }[];
+        workshops: { id: number; name: string; day: string | null }[];
+        conferences: { id: number; title: string; day: string | null }[];
+    };
     user: any;
 }>();
 
@@ -67,8 +74,68 @@ const downloadEvento = () => {
     window.open('/constancias/evento/download', '_blank');
 };
 
-const downloadInvitacion = () => {
-    window.open('/constancias/invitacion/descargar', '_blank');
+const downloadInvitacion = (typeId: number) => {
+    window.open('/constancias/invitacion/descargar?type=' + typeId, '_blank');
+};
+
+type CartaLetter = NonNullable<
+    NonNullable<typeof props.invitationLetters>[number]
+>;
+
+const activityDialog = ref<CartaLetter | null>(null);
+const selectedActivity = ref<{
+    event_type: string;
+    id: number;
+    label: string;
+} | null>(null);
+
+const availableActivities = computed(() => {
+    const list: { event_type: string; id: number; label: string }[] = [];
+    for (const p of props.invitationActivities?.presentations ?? []) {
+        list.push({
+            event_type: 'presentation',
+            id: p.id,
+            label: (p.title || 'Ponencia') + (p.day ? ' (' + p.day + ')' : ''),
+        });
+    }
+    for (const w of props.invitationActivities?.workshops ?? []) {
+        list.push({
+            event_type: 'workshop',
+            id: w.id,
+            label: (w.name || 'Taller') + (w.day ? ' (' + w.day + ')' : ''),
+        });
+    }
+    for (const c of props.invitationActivities?.conferences ?? []) {
+        list.push({
+            event_type: 'conference',
+            id: c.id,
+            label:
+                (c.title || 'Conferencia') + (c.day ? ' (' + c.day + ')' : ''),
+        });
+    }
+    return list;
+});
+
+const openActivityDialog = (letter: CartaLetter) => {
+    activityDialog.value = letter;
+    selectedActivity.value = null;
+};
+
+const downloadInvitacionConActividad = () => {
+    const letter = activityDialog.value;
+    const activity = selectedActivity.value;
+    if (!letter || !activity) return;
+    window.open(
+        '/constancias/invitacion/descargar?type=' +
+            letter.id +
+            '&event_type=' +
+            activity.event_type +
+            '&event_id=' +
+            activity.id,
+        '_blank',
+    );
+    activityDialog.value = null;
+    selectedActivity.value = null;
 };
 
 const roleLabel = (role: string | null) =>
@@ -82,7 +149,7 @@ const hasAnyCertificates = computed(() => {
         !!props.conferenceCertificates?.length ||
         !!props.eventCertificate ||
         !!props.eventAttendance?.has ||
-        !!props.invitationLetter
+        !!props.invitationLetters?.length
     );
 });
 
@@ -118,47 +185,61 @@ const missingDays = computed(() => {
                 Mis Constancias
             </h1>
 
-            <!-- Carta de Invitación -->
-            <div v-if="invitationLetter">
-                <div
-                    class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+            <!-- Cartas de Invitación -->
+            <div v-if="invitationLetters?.length">
+                <h2
+                    class="mb-4 text-xl font-normal tracking-tight text-gray-800 dark:text-gray-200"
                 >
-                    <div class="flex items-start gap-4">
-                        <div
-                            class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/30"
-                        >
-                            <Mail
-                                class="h-6 w-6 text-sky-600 dark:text-sky-400"
-                            />
+                    Cartas de Invitación
+                </h2>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div
+                        v-for="letter in invitationLetters"
+                        :key="letter.id"
+                        class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+                    >
+                        <div class="flex items-start gap-4">
+                            <div
+                                class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/30"
+                            >
+                                <Mail
+                                    class="h-6 w-6 text-sky-600 dark:text-sky-400"
+                                />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h2
+                                    class="text-sm font-semibold text-gray-900 dark:text-white"
+                                >
+                                    {{ letter.label }}
+                                </h2>
+                                <p
+                                    class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                                >
+                                    Invitación como {{ letter.rol }}.
+                                </p>
+                                <p
+                                    v-if="letter.folio"
+                                    class="mt-1 font-mono text-[11px] text-sky-600 dark:text-sky-400"
+                                >
+                                    Folio: {{ letter.folio }}
+                                </p>
+                            </div>
                         </div>
-                        <div class="min-w-0 flex-1">
-                            <h2
-                                class="text-sm font-semibold text-gray-900 dark:text-white"
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <button
+                                @click="downloadInvitacion(letter.id)"
+                                class="inline-flex items-center justify-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100 sm:w-auto dark:border-sky-800 dark:bg-sky-900/30 dark:text-sky-300"
                             >
-                                Carta de Invitación
-                            </h2>
-                            <p
-                                class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                                <Download class="h-4 w-4" /> Descargar
+                            </button>
+                            <button
+                                v-if="availableActivities.length"
+                                @click="openActivityDialog(letter)"
+                                class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
                             >
-                                {{ invitationLetter.tipo_participacion }}
-                                como
-                                {{ invitationLetter.rol }}.
-                            </p>
-                            <p
-                                v-if="invitationLetter.folio"
-                                class="mt-1 font-mono text-[11px] text-sky-600 dark:text-sky-400"
-                            >
-                                Folio: {{ invitationLetter.folio }}
-                            </p>
+                                Con actividad…
+                            </button>
                         </div>
-                    </div>
-                    <div class="mt-4">
-                        <button
-                            @click="downloadInvitacion"
-                            class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100 sm:w-auto dark:border-sky-800 dark:bg-sky-900/30 dark:text-sky-300"
-                        >
-                            <Download class="h-4 w-4" /> Descargar Carta
-                        </button>
                     </div>
                 </div>
             </div>
@@ -521,6 +602,63 @@ const missingDays = computed(() => {
                                 activación
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                v-if="activityDialog"
+                class="fixed inset-0 z-[60] overflow-y-auto"
+                role="dialog"
+                aria-modal="true"
+            >
+                <div
+                    class="fixed inset-0 bg-black/50 transition-opacity"
+                    @click="activityDialog = null"
+                ></div>
+                <div
+                    class="relative z-10 mx-auto mt-24 w-full max-w-md rounded-2xl border bg-white p-6 text-left shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                    <h2
+                        class="text-lg font-semibold text-gray-900 dark:text-white"
+                    >
+                        Carta con actividad
+                    </h2>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        {{ activityDialog.label }}: elige la actividad que se
+                        incluirá en la carta.
+                    </p>
+                    <select
+                        v-model="selectedActivity"
+                        class="mt-4 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                    >
+                        <option :value="null" disabled>
+                            Selecciona una actividad
+                        </option>
+                        <option
+                            v-for="act in availableActivities"
+                            :key="act.event_type + '-' + act.id"
+                            :value="act"
+                        >
+                            {{ act.label }}
+                        </option>
+                    </select>
+                    <div class="mt-6 flex justify-end gap-3">
+                        <button
+                            type="button"
+                            @click="activityDialog = null"
+                            class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            :disabled="!selectedActivity"
+                            @click="downloadInvitacionConActividad"
+                            class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-sky-700 disabled:opacity-50"
+                        >
+                            Descargar
+                        </button>
                     </div>
                 </div>
             </div>

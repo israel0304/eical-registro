@@ -212,6 +212,8 @@ class InvitationTemplateController extends Controller
             ['key' => '{fecha_evento}', 'label' => 'Fechas del evento (inicio - fin)'],
             ['key' => '{institucion}', 'label' => 'Institución / Afiliación'],
             ['key' => '{pais}', 'label' => 'País'],
+            ['key' => '{ponencia}', 'label' => 'Título de la ponencia (si aplica)'],
+            ['key' => '{actividad}', 'label' => 'Nombre de la actividad vinculada'],
             ['key' => '{qr}', 'label' => 'Código QR de verificación'],
         ];
     }
