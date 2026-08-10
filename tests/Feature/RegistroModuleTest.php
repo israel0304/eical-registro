@@ -9,6 +9,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
+use App\Models\Workshop;
 use App\Services\CertificateRenderer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -859,6 +860,37 @@ class RegistroModuleTest extends TestCase
         $this->assertSame('event', $certificate->event_type);
         $this->assertNotNull($certificate->folio);
         $this->assertStringStartsWith('EICAL-', $certificate->folio);
+    }
+
+    public function test_staff_can_send_attendance_qr_to_instructor()
+    {
+        $user = $this->userWith('Administrator', ['workshops.attendance', 'workshops.qr.send']);
+        $this->actingAs($user);
+
+        $workshop = Workshop::create([
+            'name' => 'Taller QR',
+            'description' => 'test',
+            'capacity' => 10,
+            'location' => 'Aula 1',
+            'day' => now()->format('Y-m-d'),
+            'start_time' => '09:00',
+            'end_time' => '11:00',
+            'qr_time_restricted' => false,
+            'created_by' => $user->id,
+        ]);
+
+        $instructor = User::factory()->create(['email' => 'instructor@test.com']);
+        $workshop->instructors()->attach($instructor->id);
+
+        $this->post("/admin/workshops/{$workshop->id}/send-qr", ['user_id' => $instructor->id])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('event_logs', [
+            'event_key' => 'workshop.qr_sent',
+            'subject_type' => 'workshop',
+            'subject_id' => $workshop->id,
+            'status' => 'recorded',
+        ]);
     }
 
     public function test_csv_import_creates_users_with_activation_link()

@@ -1029,7 +1029,7 @@ HTML;
         return 'EICAL-'.date('Y').'-'.str_pad((string) $certificate->id, 4, '0', STR_PAD_LEFT);
     }
 
-    private function qrDataUri(string $data, bool $png = false): string
+    public function qrDataUri(string $data, bool $png = false): string
     {
         if ($png) {
             return $this->pngDataUri($data);
