@@ -440,4 +440,40 @@ class CorreosModuleTest extends TestCase
             'status' => 'sent',
         ]);
     }
+
+    public function test_email_with_qr_embeds_image_as_inline_cid(): void
+    {
+        $template = EmailTemplate::create([
+            'event_key' => 'workshop.qr_sent',
+            'name' => 'QR para instructor',
+            'subject' => 'QR: {{ taller }}',
+            'body_html' => '<h2>Código QR</h2><p><img src="{{ qrImage }}" width="250" height="250" /></p>',
+        ]);
+
+        $png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
+        $mailable = new EmailTemplateMailable($template, [
+            'destinatario' => 'instructor@test.com',
+            'nombre_completo' => 'Ana Instructor',
+            'taller' => 'Taller QR',
+            'url_escaneo' => 'https://eical.test/workshops/1/scan',
+            'qrImage' => 'data:image/png;base64,'.$png,
+        ]);
+
+        $mailer = Mail::mailer('array');
+        $transport = $mailer->getSymfonyTransport();
+        $mailer->to('instructor@test.com')->send($mailable);
+
+        $sent = $transport->messages()[0]->getOriginalMessage();
+        $html = $sent->getHtmlBody();
+
+        $this->assertStringContainsString('cid:', $html);
+        $this->assertStringNotContainsString('data:image/png;base64', $html);
+
+        $image = collect($sent->getAttachments())->first();
+        $this->assertNotNull($image);
+        $this->assertSame('inline', $image->getDisposition());
+        $this->assertStringContainsString($image->getContentId(), $html);
+        $this->assertSame($png, str_replace(["\r", "\n"], '', $image->bodyToString()));
+    }
 }
