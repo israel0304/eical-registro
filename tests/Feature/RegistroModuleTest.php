@@ -177,7 +177,7 @@ class RegistroModuleTest extends TestCase
 
         $this->assertStringContainsString('@media screen', $content);
         $this->assertStringContainsString('100vw', $content);
-        $this->assertStringContainsString('transform: scale(calc(min(', $content);
+        $this->assertStringContainsString('fitStage', $content);
         $this->assertStringContainsString('badge-stage', $content);
     }
 

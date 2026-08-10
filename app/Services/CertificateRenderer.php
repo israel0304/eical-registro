@@ -448,7 +448,6 @@ HTML;
         height: {$height}px;
         margin: 0;
         transform-origin: top left;
-        transform: scale(calc(min(100vw - 48px, (100vh - 160px) * ({$width} / {$height})) / {$width}));
     }
 }
 CSS;
@@ -472,9 +471,21 @@ CSS;
             el.style.fontSize = Math.min(size * (el.clientWidth * 0.96 / measured), maxSize) + 'px';
         });
     }
-    document.addEventListener('DOMContentLoaded', fit);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
-    window.addEventListener('beforeprint', fit);
+    function fitStage(reset) {
+        document.querySelectorAll('.certificate-stage, .badge-stage').forEach(function (stage) {
+            var doc = stage.firstElementChild;
+            if (!doc) return;
+            var W = doc.offsetWidth;
+            var H = doc.offsetHeight;
+            if (!W || !H) return;
+            doc.style.transform = reset ? '' : 'scale(' + Math.min((window.innerWidth - 48) / W, (window.innerHeight - 160) / H) + ')';
+        });
+    }
+    document.addEventListener('DOMContentLoaded', function () { fit(); fitStage(); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { fit(); fitStage(); });
+    window.addEventListener('resize', function () { fit(); fitStage(); });
+    window.addEventListener('beforeprint', function () { fit(); fitStage(true); });
+    window.addEventListener('afterprint', function () { fit(); fitStage(); });
 })();
 </script>
 JS;
@@ -900,7 +911,6 @@ HTML;
         height: {$height}px;
         margin: 0;
         transform-origin: top left;
-        transform: scale(calc(min(100vw - 48px, (100vh - 160px) * ({$width} / {$height})) / {$width}));
     }
 }
 CSS;
@@ -953,6 +963,25 @@ CSS;
         </div>
     </div>
     {$previewClose}
+<script>
+(function () {
+    function fitStage(reset) {
+        document.querySelectorAll('.certificate-stage, .badge-stage').forEach(function (stage) {
+            var doc = stage.firstElementChild;
+            if (!doc) return;
+            var W = doc.offsetWidth;
+            var H = doc.offsetHeight;
+            if (!W || !H) return;
+            doc.style.transform = reset ? '' : 'scale(' + Math.min((window.innerWidth - 48) / W, (window.innerHeight - 160) / H) + ')';
+        });
+    }
+    document.addEventListener('DOMContentLoaded', function () { fitStage(); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitStage);
+    window.addEventListener('resize', fitStage);
+    window.addEventListener('beforeprint', function () { fitStage(true); });
+    window.addEventListener('afterprint', fitStage);
+})();
+</script>
 </body>
 </html>
 HTML;
