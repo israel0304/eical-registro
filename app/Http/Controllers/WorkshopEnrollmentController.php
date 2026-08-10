@@ -104,10 +104,11 @@ class WorkshopEnrollmentController extends Controller
             return back()->withErrors(['error' => 'No puedes cancelar: ya tienes asistencia confirmada en este taller.']);
         }
 
-        $workshopStart = Carbon::parse("{$workshop->day} {$workshop->start_time}", EventSettings::timezone());
+        $windowStart = Carbon::parse("{$workshop->day} {$workshop->start_time}", EventSettings::timezone())
+            ->subHours(EventSettings::checkinGraceHours());
 
-        if (now()->gte($workshopStart->subMinutes(10))) {
-            return back()->withErrors(['error' => 'No puedes cancelar: faltan 10 minutos o menos para el inicio del taller.']);
+        if (now()->gte($windowStart)) {
+            return back()->withErrors(['error' => 'No puedes cancelar: el taller está dentro del margen de registro ('.EventSettings::checkinGraceHours().' h antes del inicio) o en curso.']);
         }
 
         $enrollment->update(['status' => 'cancelled']);

@@ -29,6 +29,11 @@ class EventSettings
         return (string) config('events.timezone', 'America/Mexico_City');
     }
 
+    public static function checkinGraceHours(): int
+    {
+        return max(0, (int) self::get('evento_checkin_grace_hours', 2));
+    }
+
     public static function minDays(): int
     {
         return max(1, (int) self::get('evento_min_dias', 2));
