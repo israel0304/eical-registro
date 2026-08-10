@@ -90,15 +90,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call(EmailSeeder::class);
 
-        $rolePermissions = [
-            2 => ['dashboard.view', 'workshops.view', 'workshops.my', 'presentations.my', 'constancias.view', 'constancias.download', 'constancias.invitaciones.download', 'gafete.view'],
-            3 => ['dashboard.view', 'workshops.view', 'workshops.my', 'constancias.view', 'constancias.download', 'gafete.view'],
-            4 => ['dashboard.view', 'workshops.view', 'workshops.my', 'constancias.view', 'constancias.download', 'gafete.view'],
-            5 => ['dashboard.view', 'constancias.view', 'constancias.download', 'gafete.view'],
-            6 => ['dashboard.view', 'constancias.view', 'constancias.download', 'gafete.view', 'asignaciones.view'],
-        ];
-
-        foreach ($rolePermissions as $roleId => $keys) {
+        foreach (PermissionSync::rolePermissionMap() as $roleId => $keys) {
             Role::find($roleId)?->permissions()->sync(
                 Permission::whereIn('key', $keys)->pluck('id')
             );
