@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopEnrollment;
 use App\Services\EventAudit;
+use App\Support\EventSettings;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -103,7 +104,7 @@ class WorkshopEnrollmentController extends Controller
             return back()->withErrors(['error' => 'No puedes cancelar: ya tienes asistencia confirmada en este taller.']);
         }
 
-        $workshopStart = Carbon::parse("{$workshop->day} {$workshop->start_time}");
+        $workshopStart = Carbon::parse("{$workshop->day} {$workshop->start_time}", EventSettings::timezone());
 
         if (now()->gte($workshopStart->subMinutes(10))) {
             return back()->withErrors(['error' => 'No puedes cancelar: faltan 10 minutos o menos para el inicio del taller.']);

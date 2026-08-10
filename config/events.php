@@ -4,6 +4,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Zona horaria del evento
+    |--------------------------------------------------------------------------
+    |
+    | Zona en la que se interpretan los horarios (día/hora) de talleres,
+    | ponencias y conferencias. El resto de la aplicación corre en UTC.
+    |
+    */
+
+    'timezone' => env('EVENT_TIMEZONE', 'America/Mexico_City'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Catálogo de eventos
     |--------------------------------------------------------------------------
     |

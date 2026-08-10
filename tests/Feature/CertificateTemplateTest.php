@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\CertificateTemplate;
 use App\Models\ParticipationType;
+use App\Models\Presentation;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Workshop;
@@ -281,5 +282,84 @@ class CertificateTemplateTest extends TestCase
         $this->actingAs($other);
 
         $this->get('/constancias/'.$certificate->id.'/pdf')->assertForbidden();
+    }
+
+    public function test_issue_prefers_certificate_kind_template_over_invitation(): void
+    {
+        $user = $this->admin();
+
+        $type = ParticipationType::create([
+            'key' => 'ponencia',
+            'label' => 'Ponente',
+            'event_kind' => 'presentation',
+            'role' => 'presented_author',
+            'is_active' => true,
+        ]);
+
+        $invitation = CertificateTemplate::create([
+            'name' => 'Carta de Invitación',
+            'kind' => 'invitation',
+            'participation_type_id' => $type->id,
+            'is_default' => true,
+            'width' => 1800,
+            'height' => 1200,
+        ]);
+
+        $certificateTemplate = CertificateTemplate::create([
+            'name' => 'Constancia de ponencia',
+            'kind' => 'certificate',
+            'participation_type_id' => $type->id,
+            'is_default' => true,
+            'width' => 1800,
+            'height' => 1200,
+        ]);
+
+        $presentation = Presentation::create([
+            'title' => 'Ponencia de prueba',
+            'day' => '2026-08-05',
+        ]);
+        $presentation->authors()->attach($user->id, ['author_order' => 1, 'presented' => true, 'presented_at' => now()]);
+
+        $certificate = app(CertificateRenderer::class)->issue($user, 'presentation', $presentation);
+
+        $this->assertNotNull($certificate);
+        $this->assertSame($certificateTemplate->id, $certificate->template_id);
+        $this->assertNotSame($invitation->id, $certificate->template_id);
+    }
+
+    public function test_issue_carta_prefers_invitation_kind_template_over_certificate(): void
+    {
+        $user = $this->admin();
+
+        $type = ParticipationType::create([
+            'key' => 'ponencia',
+            'label' => 'Ponente',
+            'event_kind' => 'presentation',
+            'role' => 'presented_author',
+            'is_active' => true,
+        ]);
+
+        $invitation = CertificateTemplate::create([
+            'name' => 'Carta de Invitación',
+            'kind' => 'invitation',
+            'participation_type_id' => $type->id,
+            'is_default' => true,
+            'width' => 816,
+            'height' => 1056,
+        ]);
+
+        CertificateTemplate::create([
+            'name' => 'Constancia de ponencia',
+            'kind' => 'certificate',
+            'participation_type_id' => $type->id,
+            'is_default' => true,
+            'width' => 1800,
+            'height' => 1200,
+        ]);
+
+        $certificate = app(CertificateRenderer::class)->issueCarta($user, $type, 'Ponente');
+
+        $this->assertNotNull($certificate);
+        $this->assertSame($invitation->id, $certificate->template_id);
     }
 }
