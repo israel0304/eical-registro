@@ -8,6 +8,7 @@ use App\Models\Workshop;
 use App\Models\WorkshopEnrollment;
 use App\Services\CertificateRenderer;
 use App\Services\EventAudit;
+use App\Support\EventSettings;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -55,8 +56,8 @@ class AttendanceController extends Controller
             $startTime = $workshop->start_time;
             $endTime = $workshop->end_time;
 
-            $start = Carbon::parse("{$eventDate} {$startTime}");
-            $end = Carbon::parse("{$eventDate} {$endTime}");
+            $start = Carbon::parse("{$eventDate} {$startTime}", EventSettings::timezone());
+            $end = Carbon::parse("{$eventDate} {$endTime}", EventSettings::timezone());
 
             if ($now->lt($start) || $now->gt($end)) {
                 return Inertia::render('Workshops/Scan', [

@@ -89,7 +89,7 @@ class CertificateRenderer
             return null;
         }
 
-        $template = $type->templates()->where('is_default', true)->first();
+        $template = $this->defaultTemplateFor($type, 'certificate');
 
         $certificate = Certificate::query()->firstOrCreate(
             [
@@ -135,7 +135,7 @@ class CertificateRenderer
             return null;
         }
 
-        $template = $type->templates()->where('is_default', true)->first();
+        $template = $this->defaultTemplateFor($type, 'certificate');
         $metadata = $this->buildEventMetadata($user, $type);
 
         $certificate = Certificate::query()->firstOrCreate(
@@ -165,10 +165,7 @@ class CertificateRenderer
             return null;
         }
 
-        $template = $type->templates()
-            ->where('kind', 'invitation')
-            ->where('is_default', true)
-            ->first();
+        $template = $this->defaultTemplateFor($type, 'invitation');
 
         $metadata = $this->buildCartaMetadata($user, $type, $rolLabel, $event);
 
@@ -568,9 +565,26 @@ JS;
 HTML;
     }
 
+    /**
+     * Plantilla default del tipo de participación. Se prefiere la plantilla
+     * cuyo `kind` coincide con el documento solicitado (certificate o
+     * invitation); si no existe, se usa cualquier plantilla default.
+     */
+    private function defaultTemplateFor(?ParticipationType $type, string $kind): ?CertificateTemplate
+    {
+        if ($type === null) {
+            return null;
+        }
+
+        return $type->templates()
+            ->where('kind', $kind)
+            ->where('is_default', true)
+            ->first() ?? $type->templates()->where('is_default', true)->first();
+    }
+
     private function resolveTemplate(Certificate $certificate, bool $fallback = false): CertificateTemplate
     {
-        $template = $certificate->template ?? $certificate->participationType?->templates()->where('is_default', true)->first();
+        $template = $certificate->template ?? $this->defaultTemplateFor($certificate->participationType, 'certificate');
 
         if ($template === null && $fallback) {
             return $this->fallbackTemplate();
