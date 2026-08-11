@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Conference;
 use App\Models\Presentation;
+use App\Models\User;
 use App\Models\Workshop;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -32,6 +33,11 @@ class AppServiceProvider extends ServiceProvider
             'workshop' => Workshop::class,
             'presentation' => Presentation::class,
             'conference' => Conference::class,
+            // Tipos sentinela sin modelo asociado: se guardan con event_id = 0,
+            // por lo que el morphTo los resuelve como null en lugar de lanzar
+            // "Class ... not found" (certificados de asistencia al evento y staff).
+            'event' => Conference::class,
+            'staff' => User::class,
         ]);
 
         $this->registerPermissionGates();
