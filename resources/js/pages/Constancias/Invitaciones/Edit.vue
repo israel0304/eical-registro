@@ -47,20 +47,18 @@ const props = defineProps<{
         id: number;
         name: string;
         description: string | null;
-        participation_type_id: number | null;
+        role_id: number | null;
         is_default: boolean;
+        is_active: boolean;
         background_path: string | null;
         width: number;
         height: number;
         elements: any[];
     };
     variables: { key: string; label: string }[];
-    participationTypes?: {
+    roles?: {
         id: number;
-        key: string;
-        label: string;
-        event_kind: string;
-        role: string;
+        name: string;
     }[];
 }>();
 
@@ -69,8 +67,9 @@ const basePath = '/admin/constancias/invitaciones/plantillas';
 const form = useForm({
     name: props.template.name,
     description: props.template.description ?? '',
-    participation_type_id: props.template.participation_type_id ?? '',
+    role_id: props.template.role_id ?? '',
     is_default: props.template.is_default,
+    is_active: props.template.is_active ?? true,
     width: props.template.width,
     height: props.template.height,
     background: null as File | null,
@@ -582,18 +581,18 @@ onMounted(() => {
                                 <label
                                     class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
                                 >
-                                    Tipo de participación
+                                    Rol
                                 </label>
                                 <select
-                                    v-model="form.participation_type_id"
+                                    v-model="form.role_id"
                                     class="w-full rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                 >
                                     <option
-                                        v-for="type in participationTypes ?? []"
-                                        :key="type.id"
-                                        :value="type.id"
+                                        v-for="role in roles ?? []"
+                                        :key="role.id"
+                                        :value="role.id"
                                     >
-                                        {{ type.label }}
+                                        {{ role.name }}
                                     </option>
                                 </select>
                             </div>
@@ -606,6 +605,16 @@ onMounted(() => {
                                     class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 />
                                 Plantilla por defecto
+                            </label>
+                            <label
+                                class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300"
+                            >
+                                <input
+                                    v-model="form.is_active"
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                Plantilla activa (permite descargar la carta)
                             </label>
                         </div>
                     </div>

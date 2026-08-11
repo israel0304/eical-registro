@@ -7,6 +7,7 @@ use App\Models\Certificate;
 use App\Models\Conference;
 use App\Models\ParticipationType;
 use App\Models\Presentation;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Services\CertificateRenderer;
@@ -69,34 +70,30 @@ class ConstanciaController extends Controller
             ->keyBy(fn ($certificate) => $certificate->event_type.'-'.$certificate->event_id);
 
         $invitationLetters = [];
-        if ($user->hasPermission('constancias.invitaciones.download')) {
-            $cartaTypes = ParticipationType::query()
-                ->where('event_kind', 'event')
-                ->where('kind', 'carta')
-                ->where('is_active', true)
-                ->orderBy('label')
-                ->get();
+        foreach ($user->roles()->orderBy('roles.id')->get() as $role) {
+            $template = $this->renderer->invitationTemplateFor($role);
 
-            $cartaCertificates = Certificate::query()
+            if ($template === null) {
+                continue;
+            }
+
+            $rolLabel = $this->renderer->cartaRoleLabel($role);
+
+            $cartaCertificate = Certificate::query()
                 ->where('user_id', $user->id)
+                ->where('role_id', $role->id)
                 ->where('event_type', 'event')
                 ->where('event_id', 0)
-                ->whereIn('participation_type_id', $cartaTypes->pluck('id'))
-                ->get()
-                ->keyBy('participation_type_id');
+                ->first();
 
-            foreach ($cartaTypes as $cartaType) {
-                $cartaCertificate = $cartaCertificates->get($cartaType->id);
-
-                $invitationLetters[] = [
-                    'id' => $cartaType->id,
-                    'key' => $cartaType->key,
-                    'label' => $cartaType->label,
-                    'rol' => $this->renderer->cartaRolLabel($user),
-                    'folio' => $cartaCertificate?->folio,
-                    'downloaded' => $cartaCertificate?->downloaded_at !== null,
-                ];
-            }
+            $invitationLetters[] = [
+                'id' => $role->id,
+                'key' => $role->name,
+                'label' => 'Carta de Invitación - '.$rolLabel,
+                'rol' => $rolLabel,
+                'folio' => $cartaCertificate?->folio,
+                'downloaded' => $cartaCertificate?->downloaded_at !== null,
+            ];
         }
 
         $eventAttendanceType = ParticipationType::query()
@@ -146,24 +143,6 @@ class ConstanciaController extends Controller
             $conference->member_role = $conference->members->first()?->pivot->role;
         }
 
-        $invitationActivities = [
-            'presentations' => $presentationCertificates->map(fn (Presentation $p) => [
-                'id' => $p->id,
-                'title' => $p->title,
-                'day' => $p->day,
-            ])->values(),
-            'workshops' => $instructorWorkshops->map(fn (Workshop $w) => [
-                'id' => $w->id,
-                'name' => $w->name,
-                'day' => $w->day,
-            ])->values(),
-            'conferences' => $conferenceCertificates->map(fn (Conference $c) => [
-                'id' => $c->id,
-                'title' => $c->title,
-                'day' => $c->day,
-            ])->values(),
-        ];
-
         return Inertia::render('Constancias/Index', [
             'completedWorkshops' => $completedWorkshops,
             'instructorWorkshops' => $instructorWorkshops,
@@ -172,7 +151,6 @@ class ConstanciaController extends Controller
             'eventCertificate' => $eventCertificate,
             'eventAttendance' => $eventAttendance,
             'invitationLetters' => $invitationLetters,
-            'invitationActivities' => $invitationActivities,
             'user' => $user,
         ]);
     }
@@ -181,33 +159,19 @@ class ConstanciaController extends Controller
     {
         $user = $request->user();
 
-        if (! $user->hasPermission('constancias.invitaciones.download')) {
-            return back()->withErrors(['error' => 'No tienes autorización para descargar una carta de invitación.']);
+        $role = Role::find($request->integer('role'));
+
+        if ($role === null || ! $user->roles()->where('roles.id', $role->id)->exists()) {
+            return back()->withErrors(['error' => 'El rol seleccionado no es válido.']);
         }
 
-        $type = $this->resolveCartaType($request->input('type'));
+        $template = $this->renderer->invitationTemplateFor($role);
 
-        if ($type === null) {
-            return back()->withErrors(['error' => 'El tipo de carta de invitación no está configurado.']);
+        if ($template === null) {
+            return back()->withErrors(['error' => 'La carta de invitación no está disponible para tu rol.']);
         }
 
-        $event = null;
-        $rolLabel = $this->renderer->cartaRolLabel($user);
-
-        $eventType = $request->input('event_type');
-        $eventId = (int) $request->input('event_id', 0);
-
-        if ($eventType !== null && $eventId > 0) {
-            $event = $this->resolveCartaActivity($user, (string) $eventType, $eventId);
-
-            if ($event === null) {
-                return back()->withErrors(['error' => 'No tienes una actividad válida para generar esta carta de invitación.']);
-            }
-
-            $rolLabel = $this->renderer->activityRolLabel($user, $event);
-        }
-
-        $certificate = $this->renderer->issueCarta($user, $type, $rolLabel, $event);
+        $certificate = $this->renderer->issueCarta($user, $role);
 
         if ($certificate === null) {
             return back()->withErrors(['error' => 'No fue posible generar la carta de invitación.']);
@@ -216,55 +180,6 @@ class ConstanciaController extends Controller
         $certificate->update(['downloaded_at' => now()]);
 
         return $this->respondWithHtml($certificate);
-    }
-
-    private function resolveCartaType(mixed $type): ?ParticipationType
-    {
-        $query = ParticipationType::query()
-            ->where('event_kind', 'event')
-            ->where('kind', 'carta')
-            ->where('is_active', true);
-
-        if (is_numeric($type)) {
-            $query->where('id', (int) $type);
-        } else {
-            $query->where('key', $type ?: 'carta_invitacion');
-        }
-
-        return $query->first();
-    }
-
-    private function resolveCartaActivity(User $user, string $eventType, int $eventId): Workshop|Presentation|Conference|null
-    {
-        if ($eventType === 'presentation') {
-            $presentation = Presentation::find($eventId);
-            $presented = $presentation !== null && $presentation->authors()
-                ->where('users.id', $user->id)
-                ->wherePivot('presented', true)
-                ->exists();
-
-            return $presented ? $presentation : null;
-        }
-
-        if ($eventType === 'workshop') {
-            $workshop = Workshop::find($eventId);
-            $instructor = $workshop !== null && $workshop->instructors()
-                ->where('users.id', $user->id)
-                ->exists();
-
-            return $instructor ? $workshop : null;
-        }
-
-        if ($eventType === 'conference') {
-            $conference = Conference::find($eventId);
-            $member = $conference !== null && $conference->members()
-                ->where('users.id', $user->id)
-                ->exists();
-
-            return $member ? $conference : null;
-        }
-
-        return null;
     }
 
     public function downloadEvento(Request $request)

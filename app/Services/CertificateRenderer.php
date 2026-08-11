@@ -8,6 +8,7 @@ use App\Models\CertificateTemplateElement;
 use App\Models\Conference;
 use App\Models\ParticipationType;
 use App\Models\Presentation;
+use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\Workshop;
@@ -155,33 +156,29 @@ class CertificateRenderer
     }
 
     /**
-     * Find or create a generic invitation letter certificate for the user.
-     * When $event is provided, the letter is tied to that specific activity
-     * (presentation/workshop/conference) and stored under its own scope.
+     * Find or create an invitation letter certificate for the user's role.
+     * A letter is only issued when the role has an active invitation template.
      */
-    public function issueCarta(User $user, ParticipationType $type, string $rolLabel, Workshop|Presentation|Conference|null $event = null): ?Certificate
+    public function issueCarta(User $user, Role $role): ?Certificate
     {
-        if (! $type->is_active) {
+        $template = $this->invitationTemplateFor($role);
+
+        if ($template === null) {
             return null;
         }
 
-        $template = $this->defaultTemplateFor($type, 'invitation');
-
-        $metadata = $this->buildCartaMetadata($user, $type, $rolLabel, $event);
-
-        [$eventType, $eventId] = $event === null
-            ? ['event', 0]
-            : [$this->eventTypeName($event), $event->id];
+        $metadata = $this->buildCartaMetadata($user, $role);
 
         $certificate = Certificate::query()->firstOrCreate(
             [
                 'user_id' => $user->id,
-                'participation_type_id' => $type->id,
-                'event_type' => $eventType,
-                'event_id' => $eventId,
+                'participation_type_id' => null,
+                'role_id' => $role->id,
+                'event_type' => 'event',
+                'event_id' => 0,
             ],
             [
-                'template_id' => $template?->id,
+                'template_id' => $template->id,
                 'metadata' => $metadata,
             ],
         );
@@ -190,50 +187,42 @@ class CertificateRenderer
     }
 
     /**
-     * Role label shown in the invitation letter, resolved from the first
-     * role of the user that holds the invitation-letter permission.
+     * Resolve the active invitation template for a role. Prefers the default
+     * active template, falling back to any active template of the role and
+     * finally to a generic active invitation template (role_id null).
      */
-    public function cartaRolLabel(User $user): string
+    public function invitationTemplateFor(Role $role): ?CertificateTemplate
     {
-        foreach ($user->roles as $role) {
-            if ($role->permissions->contains('key', 'constancias.invitaciones.download')) {
-                return self::ROLE_LABELS[$role->name] ?? $role->name;
-            }
-        }
-
-        return 'Participante';
+        return CertificateTemplate::query()
+            ->where('kind', 'invitation')
+            ->where('role_id', $role->id)
+            ->where('is_active', true)
+            ->where('is_default', true)
+            ->first()
+            ?? CertificateTemplate::query()
+                ->where('kind', 'invitation')
+                ->where('role_id', $role->id)
+                ->where('is_active', true)
+                ->first()
+            ?? CertificateTemplate::query()
+                ->where('kind', 'invitation')
+                ->whereNull('role_id')
+                ->where('is_active', true)
+                ->where('is_default', true)
+                ->first()
+            ?? CertificateTemplate::query()
+                ->where('kind', 'invitation')
+                ->whereNull('role_id')
+                ->where('is_active', true)
+                ->first();
     }
 
     /**
-     * Role label for an activity-linked invitation letter, resolved from the
-     * user's participation in that specific activity.
+     * Label shown on the invitation letter, resolved from the role name.
      */
-    public function activityRolLabel(User $user, Workshop|Presentation|Conference $event): string
+    public function cartaRoleLabel(Role $role): string
     {
-        if ($event instanceof Workshop) {
-            return $event->instructors()->where('users.id', $user->id)->exists() ? 'Instructor' : self::ROLE_LABELS['Asistente'];
-        }
-
-        if ($event instanceof Presentation) {
-            return 'Ponente';
-        }
-
-        if ($event instanceof Conference) {
-            $role = $event->members()->where('users.id', $user->id)->first()?->pivot->role;
-
-            return $role === 'moderator' ? 'Moderador' : 'Speaker';
-        }
-
-        return 'Participante';
-    }
-
-    private function eventTypeName(Workshop|Presentation|Conference $event): string
-    {
-        return match (true) {
-            $event instanceof Presentation => 'presentation',
-            $event instanceof Conference => 'conference',
-            default => 'workshop',
-        };
+        return self::ROLE_LABELS[$role->name] ?? $role->name;
     }
 
     private function finalize(Certificate $certificate, ?CertificateTemplate $template, array $metadata): Certificate
@@ -507,10 +496,26 @@ CSS;
             var canvas = document.createElement('canvas');
             var ctx = canvas.getContext('2d');
             ctx.font = (style.fontWeight === 'normal' ? '' : style.fontWeight + ' ') + size + 'px ' + style.fontFamily;
-            var measured = ctx.measureText(el.textContent).width;
-            if (!measured) return;
             var maxSize = parseFloat(el.getAttribute('data-max-font-size')) || size;
-            el.style.fontSize = Math.min(size * (el.clientWidth * 0.96 / measured), maxSize) + 'px';
+            var brs = el.querySelectorAll('br');
+            if (brs.length) {
+                var maxLine = '', buf = '', nodes = el.childNodes, i;
+                for (i = 0; i < nodes.length; i++) {
+                    if (nodes[i].nodeName === 'BR') { if (buf.length > maxLine.length) maxLine = buf; buf = ''; }
+                    else { buf += (nodes[i].textContent || ''); }
+                }
+                if (buf.length > maxLine.length) maxLine = buf;
+                var widthFit = size;
+                var measured = ctx.measureText(maxLine || el.textContent).width;
+                if (!measured) return;
+                widthFit = size * (el.clientWidth * 0.96 / measured);
+                var heightFit = el.clientHeight ? (el.clientHeight / ((brs.length + 1) * 1.25)) : widthFit;
+                el.style.fontSize = Math.min(widthFit, heightFit, maxSize) + 'px';
+            } else {
+                var measured = ctx.measureText(el.textContent).width;
+                if (!measured) return;
+                el.style.fontSize = Math.min(size * (el.clientWidth * 0.96 / measured), maxSize) + 'px';
+            }
         });
     }
     function fitStage(reset) {
@@ -714,12 +719,14 @@ HTML;
         $maxFontSize = $fontSize;
 
         if ($fontSize > 0 && ! empty($element['auto_fit']) && ! empty($element['width']) && $content !== '') {
-            $boxWidth = (float) $element['width'] * $scale;
-            $measured = $this->measuredTextWidth($content, $element['font_family'] ?? null, $element['font_weight'] ?? null, $fontSize);
-
-            if ($measured > 0) {
-                $fontSize = $fontSize * (($boxWidth * 0.75 * 0.96) / $measured);
-            }
+            $fontSize = $this->autoFitFontSize(
+                $content,
+                (float) $element['width'] * $scale,
+                isset($element['height']) ? (float) $element['height'] * $scale : 0.0,
+                $element['font_family'] ?? null,
+                $element['font_weight'] ?? null,
+                $fontSize,
+            );
         }
 
         if ($maxFontSize > 0) {
@@ -762,6 +769,50 @@ HTML;
         $font = $metrics->getFont($fontFamily ?: 'sans-serif', $this->fontStyle($fontWeight));
 
         return $metrics->getTextWidth($text, $font, $sizePx * 0.75);
+    }
+
+    /**
+     * Reduce el tamaño de fuente para que el contenido quepa en la caja.
+     * Contenido de una línea: ajusta por ancho (comportamiento previo).
+     * Contenido multilínea ({titulo_actividad}): ajusta por ancho y alto.
+     */
+    private function autoFitFontSize(string $content, float $boxWidth, float $boxHeight, ?string $fontFamily, ?string $fontWeight, float $fontSize): float
+    {
+        if (! str_contains($content, '<br>') && ! str_contains($content, "\n")) {
+            $measured = $this->measuredTextWidth($content, $fontFamily, $fontWeight, $fontSize);
+
+            if ($measured <= 0) {
+                return $fontSize;
+            }
+
+            return $fontSize * (($boxWidth * 0.75 * 0.96) / $measured);
+        }
+
+        $lines = array_values(array_filter(
+            array_map('trim', preg_split('/<br\s*\/?>/i', $content) ?: []),
+            fn ($line) => $line !== '',
+        ));
+
+        if ($lines === []) {
+            return $fontSize;
+        }
+
+        $maxLineWidth = 0.0;
+        foreach ($lines as $line) {
+            $measured = $this->measuredTextWidth($line, $fontFamily, $fontWeight, $fontSize);
+            $maxLineWidth = max($maxLineWidth, $measured);
+        }
+
+        if ($maxLineWidth <= 0) {
+            return $fontSize;
+        }
+
+        $factorByWidth = ($boxWidth * 0.75 * 0.96) / $maxLineWidth;
+        $factorByHeight = $boxHeight > 0
+            ? $boxHeight / (count($lines) * 1.25 * $fontSize)
+            : PHP_FLOAT_MAX;
+
+        return $fontSize * min($factorByWidth, $factorByHeight);
     }
 
     private function fontStyle(?string $fontWeight): string
@@ -812,6 +863,15 @@ HTML;
             $content = str_replace($key, htmlspecialchars((string) $value, ENT_QUOTES), $content);
         }
 
+        if (str_contains($content, '{titulo_actividad}')) {
+            $titles = array_map(
+                fn ($t) => htmlspecialchars((string) $t, ENT_QUOTES),
+                $metadata['trabajos'] ?? [],
+            );
+
+            $content = str_replace('{titulo_actividad}', implode('<br>', $titles), $content);
+        }
+
         return $content;
     }
 
@@ -845,43 +905,62 @@ HTML;
         ];
     }
 
-    private function buildCartaMetadata(User $user, ParticipationType $type, string $rolLabel, Workshop|Presentation|Conference|null $event = null): array
+    private function buildCartaMetadata(User $user, Role $role): array
     {
         $nombre = trim($user->first_name.' '.$user->last_name);
-
-        $ponencia = '';
-        $actividad = '';
-        $fechaEvento = $this->eventDateRange();
-
-        if ($event !== null) {
-            $actividad = $this->activityTitle($event);
-            $ponencia = $event instanceof Presentation ? $event->title : '';
-            $fechaEvento = $event->day ? $this->formatSpanishDate($event->day) : '';
-        }
+        $trabajos = $this->workTitlesForRole($user, $role);
 
         return [
             'nombre' => $nombre,
             'nombre_completo' => $nombre,
-            'rol' => $rolLabel,
-            'tipo_participacion' => $type->label,
+            'rol' => $this->cartaRoleLabel($role),
+            'tipo_participacion' => $this->cartaRoleLabel($role),
             'evento' => $this->eventName(),
             'nombre_evento' => $this->eventName(),
-            'fecha_evento' => $fechaEvento,
+            'fecha_evento' => $this->eventDateRange(),
             'institucion' => (string) ($user->affiliation ?? ''),
             'pais' => (string) ($user->country ?? ''),
-            'ponencia' => $ponencia,
-            'actividad' => $actividad,
+            'ponencia' => $trabajos[0] ?? '',
+            'actividad' => $trabajos[0] ?? '',
+            'trabajos' => $trabajos,
             'location' => null,
             'folio' => '',
         ];
     }
 
-    private function activityTitle(Workshop|Presentation|Conference $event): string
+    /**
+     * Títulos de los trabajos del usuario según su rol, usados por la
+     * variable {titulo_actividad}. Devuelve una lista vacía cuando el rol
+     * no tiene trabajos asociados.
+     */
+    private function workTitlesForRole(User $user, Role $role): array
     {
-        return match (true) {
-            $event instanceof Presentation => (string) $event->title,
-            $event instanceof Conference => (string) $event->title,
-            default => (string) $event->name,
+        return match ($role->name) {
+            'Ponente' => $user->presentations()
+                ->wherePivot('presented', true)
+                ->orderBy('day')
+                ->pluck('title')
+                ->map(fn ($t) => (string) $t)
+                ->all(),
+            'Instructor' => Workshop::query()
+                ->whereHas('instructors', fn ($q) => $q->where('users.id', $user->id))
+                ->orderBy('day')
+                ->pluck('name')
+                ->map(fn ($t) => (string) $t)
+                ->all(),
+            'Speaker' => Conference::query()
+                ->whereHas('speakers', fn ($q) => $q->where('users.id', $user->id))
+                ->orderBy('day')
+                ->pluck('title')
+                ->map(fn ($t) => (string) $t)
+                ->all(),
+            'Moderator' => Conference::query()
+                ->whereHas('moderators', fn ($q) => $q->where('users.id', $user->id))
+                ->orderBy('day')
+                ->pluck('title')
+                ->map(fn ($t) => (string) $t)
+                ->all(),
+            default => [],
         };
     }
 

@@ -327,37 +327,23 @@ class CertificateTemplateTest extends TestCase
         $this->assertNotSame($invitation->id, $certificate->template_id);
     }
 
-    public function test_issue_carta_prefers_invitation_kind_template_over_certificate(): void
+    public function test_issue_carta_uses_active_role_invitation_template(): void
     {
         $user = $this->admin();
 
-        $type = ParticipationType::create([
-            'key' => 'ponencia',
-            'label' => 'Ponente',
-            'event_kind' => 'presentation',
-            'role' => 'presented_author',
-            'is_active' => true,
-        ]);
+        $role = Role::find(2) ?? Role::query()->forceCreate(['id' => 2, 'name' => 'Ponente']);
 
         $invitation = CertificateTemplate::create([
             'name' => 'Carta de Invitación',
             'kind' => 'invitation',
-            'participation_type_id' => $type->id,
+            'role_id' => $role->id,
+            'is_active' => true,
             'is_default' => true,
             'width' => 816,
             'height' => 1056,
         ]);
 
-        CertificateTemplate::create([
-            'name' => 'Constancia de ponencia',
-            'kind' => 'certificate',
-            'participation_type_id' => $type->id,
-            'is_default' => true,
-            'width' => 1800,
-            'height' => 1200,
-        ]);
-
-        $certificate = app(CertificateRenderer::class)->issueCarta($user, $type, 'Ponente');
+        $certificate = app(CertificateRenderer::class)->issueCarta($user, $role);
 
         $this->assertNotNull($certificate);
         $this->assertSame($invitation->id, $certificate->template_id);

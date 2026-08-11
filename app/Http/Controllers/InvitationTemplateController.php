@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CertificateTemplate;
-use App\Models\ParticipationType;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -18,21 +18,19 @@ class InvitationTemplateController extends Controller
 
         $templates = CertificateTemplate::query()
             ->kind('invitation')
-            ->with('participationType')
+            ->with('role')
             ->withCount('elements')
-            ->orderBy('participation_type_id')
+            ->orderBy('role_id')
             ->orderBy('is_default', 'desc')
             ->get();
 
-        $participationTypes = ParticipationType::query()
-            ->where('is_active', true)
-            ->orderBy('event_kind')
-            ->orderBy('role')
+        $roles = Role::query()
+            ->orderBy('id')
             ->get();
 
         return Inertia::render('Constancias/Invitaciones/Index', [
             'templates' => $templates,
-            'participationTypes' => $participationTypes,
+            'roles' => $roles,
         ]);
     }
 
@@ -43,15 +41,16 @@ class InvitationTemplateController extends Controller
         $validated = $this->validateTemplate($request);
 
         if ($validated['is_default'] ?? false) {
-            $this->clearDefault($validated['participation_type_id'] ?? null);
+            $this->clearDefault($validated['role_id']);
         }
 
         $template = CertificateTemplate::create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'kind' => 'invitation',
-            'participation_type_id' => $validated['participation_type_id'] ?? null,
+            'role_id' => $validated['role_id'],
             'is_default' => (bool) ($validated['is_default'] ?? false),
+            'is_active' => (bool) ($validated['is_active'] ?? true),
             'width' => $validated['width'] ?? 816,
             'height' => $validated['height'] ?? 1056,
             'background_path' => $this->storeBackground($request, null),
@@ -65,18 +64,16 @@ class InvitationTemplateController extends Controller
         abort_unless($request->user()->can('constancias.templates.manage'), 403);
         abort_if($template->kind !== 'invitation', 404);
 
-        $template->load('elements', 'participationType');
+        $template->load('elements', 'role');
 
-        $participationTypes = ParticipationType::query()
-            ->where('is_active', true)
-            ->orderBy('event_kind')
-            ->orderBy('role')
+        $roles = Role::query()
+            ->orderBy('id')
             ->get();
 
         return Inertia::render('Constancias/Invitaciones/Edit', [
             'template' => $template,
             'variables' => $this->availableVariables(),
-            'participationTypes' => $participationTypes,
+            'roles' => $roles,
         ]);
     }
 
@@ -88,15 +85,16 @@ class InvitationTemplateController extends Controller
         $validated = $this->validateTemplate($request);
 
         if ($validated['is_default'] ?? false) {
-            $this->clearDefault($validated['participation_type_id'] ?? null, $template->id);
+            $this->clearDefault($validated['role_id'], $template->id);
         }
 
         $template->update([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'kind' => 'invitation',
-            'participation_type_id' => $validated['participation_type_id'] ?? null,
+            'role_id' => $validated['role_id'],
             'is_default' => (bool) ($validated['is_default'] ?? false),
+            'is_active' => (bool) ($validated['is_active'] ?? $template->is_active),
             'width' => $validated['width'] ?? $template->width,
             'height' => $validated['height'] ?? $template->height,
             'background_path' => $this->storeBackground($request, $template),
@@ -133,6 +131,23 @@ class InvitationTemplateController extends Controller
         return back()->with('success', 'Plantilla de carta guardada.');
     }
 
+    public function toggleActive(Request $request, CertificateTemplate $template)
+    {
+        abort_unless($request->user()->can('constancias.templates.manage'), 403);
+        abort_if($template->kind !== 'invitation', 404);
+
+        $validated = $request->validate([
+            'is_active' => ['required', 'boolean'],
+        ]);
+
+        $template->update(['is_active' => $validated['is_active']]);
+
+        return back()->with(
+            'success',
+            $validated['is_active'] ? 'Plantilla activada.' : 'Plantilla desactivada.',
+        );
+    }
+
     public function destroy(Request $request, CertificateTemplate $template)
     {
         abort_unless($request->user()->can('constancias.templates.manage'), 403);
@@ -148,8 +163,9 @@ class InvitationTemplateController extends Controller
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'participation_type_id' => ['required', 'exists:participation_types,id'],
+            'role_id' => ['required', 'exists:roles,id'],
             'is_default' => ['nullable', 'boolean'],
+            'is_active' => ['nullable', 'boolean'],
             'width' => ['nullable', 'integer', 'min:200', 'max:5000'],
             'height' => ['nullable', 'integer', 'min:200', 'max:5000'],
             'background' => ['nullable', 'image', 'mimes:png', 'max:5120'],
@@ -188,13 +204,9 @@ class InvitationTemplateController extends Controller
         return $path;
     }
 
-    private function clearDefault(?int $participationTypeId, ?int $except = null): void
+    private function clearDefault(int $roleId, ?int $except = null): void
     {
-        $query = CertificateTemplate::query()->kind('invitation')->where('is_default', true);
-
-        if ($participationTypeId !== null) {
-            $query->where('participation_type_id', $participationTypeId);
-        }
+        $query = CertificateTemplate::query()->kind('invitation')->where('role_id', $roleId)->where('is_default', true);
 
         if ($except !== null) {
             $query->where('id', '!=', $except);
@@ -214,6 +226,9 @@ class InvitationTemplateController extends Controller
             ['key' => '{pais}', 'label' => 'País'],
             ['key' => '{ponencia}', 'label' => 'Título de la ponencia (si aplica)'],
             ['key' => '{actividad}', 'label' => 'Nombre de la actividad vinculada'],
+            ['key' => '{titulo_actividad}', 'label' => 'Título de la actividad (ponencia/taller/conferencia/trabajo)'],
+            ['key' => '{dni}', 'label' => 'DNI'],
+            ['key' => '{folio}', 'label' => 'Folio'],
             ['key' => '{qr}', 'label' => 'Código QR de verificación'],
         ];
     }

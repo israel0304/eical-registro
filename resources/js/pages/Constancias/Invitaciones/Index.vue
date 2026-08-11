@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { Plus, Pencil, Trash2, CheckCircle2 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const props = defineProps<{
     templates: any[];
-    participationTypes: any[];
+    roles: any[];
 }>();
 
 const showModal = ref(false);
@@ -15,7 +15,7 @@ const backgroundPreview = ref<string | null>(null);
 const form = useForm({
     name: '',
     description: '',
-    participation_type_id: '' as number | string,
+    role_id: '' as number | string,
     is_default: false,
     width: 816,
     height: 1056,
@@ -29,8 +29,7 @@ const openCreateModal = () => {
     form.reset();
     form.width = 816;
     form.height = 1056;
-    form.participation_type_id =
-        props.participationTypes.find((t) => t.is_active)?.id ?? '';
+    form.role_id = props.roles[0]?.id ?? '';
     showModal.value = true;
 };
 
@@ -62,14 +61,14 @@ const deleteTemplate = (id: number) => {
 
 const templateEditUrl = (id: number) => basePath + '/' + id + '/edit';
 
-const participationTypeLabel = (id: number | null) => {
-    if (!id) return 'Sin tipo';
-    return props.participationTypes.find((t) => t.id === id)?.label ?? 'Tipo';
-};
+const roleLabel = (template: any) => template.role?.name ?? 'Sin rol';
 
-const activeTypes = computed(() =>
-    props.participationTypes.filter((t) => t.is_active),
-);
+const toggleActive = (template: any) => {
+    router.patch(basePath + '/' + template.id + '/activar', {
+        is_active: !template.is_active,
+        preserveScroll: true,
+    });
+};
 </script>
 
 <template>
@@ -112,8 +111,17 @@ const activeTypes = computed(() =>
             >
                 <div class="overflow-x-auto">
                     <table
-                        class="min-w-full divide-y divide-gray-200 dark:divide-zinc-800"
+                        class="w-full table-fixed divide-y divide-gray-200 dark:divide-zinc-800"
                     >
+                        <colgroup>
+                            <col class="w-[32%]" />
+                            <col class="w-[12%]" />
+                            <col class="w-[14%]" />
+                            <col class="w-[10%]" />
+                            <col class="w-[10%]" />
+                            <col class="w-[12%]" />
+                            <col class="w-[10%]" />
+                        </colgroup>
                         <thead class="bg-gray-50 dark:bg-zinc-800/50">
                             <tr>
                                 <th
@@ -124,7 +132,7 @@ const activeTypes = computed(() =>
                                 <th
                                     class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300"
                                 >
-                                    Tipo participación
+                                    Rol
                                 </th>
                                 <th
                                     class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300"
@@ -141,6 +149,11 @@ const activeTypes = computed(() =>
                                 >
                                     Defecto
                                 </th>
+                                <th
+                                    class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300"
+                                >
+                                    Activa
+                                </th>
                                 <th class="relative px-5 py-3">
                                     <span class="sr-only">Acciones</span>
                                 </th>
@@ -155,13 +168,13 @@ const activeTypes = computed(() =>
                             >
                                 <td class="px-5 py-3">
                                     <div
-                                        class="text-sm font-medium text-gray-900 dark:text-white"
+                                        class="max-w-[240px] truncate text-sm font-medium text-gray-900 dark:text-white"
                                     >
                                         {{ template.name }}
                                     </div>
                                     <div
                                         v-if="template.description"
-                                        class="text-xs text-gray-400"
+                                        class="max-w-[240px] truncate text-xs text-gray-400"
                                     >
                                         {{ template.description }}
                                     </div>
@@ -169,11 +182,7 @@ const activeTypes = computed(() =>
                                 <td
                                     class="px-5 py-3 text-sm text-gray-600 dark:text-gray-400"
                                 >
-                                    {{
-                                        participationTypeLabel(
-                                            template.participation_type_id,
-                                        )
-                                    }}
+                                    {{ roleLabel(template) }}
                                 </td>
                                 <td
                                     class="px-5 py-3 text-sm text-gray-600 dark:text-gray-400"
@@ -197,18 +206,44 @@ const activeTypes = computed(() =>
                                         >—</span
                                     >
                                 </td>
+                                <td class="px-5 py-3">
+                                    <button
+                                        type="button"
+                                        @click="toggleActive(template)"
+                                        :title="
+                                            template.is_active
+                                                ? 'Desactivar plantilla'
+                                                : 'Activar plantilla'
+                                        "
+                                        :class="
+                                            template.is_active
+                                                ? 'bg-green-600'
+                                                : 'bg-gray-300 dark:bg-zinc-600'
+                                        "
+                                        class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
+                                    >
+                                        <span
+                                            :class="
+                                                template.is_active
+                                                    ? 'translate-x-4'
+                                                    : 'translate-x-0'
+                                            "
+                                            class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                                        />
+                                    </button>
+                                </td>
                                 <td
                                     class="px-5 py-3 text-right whitespace-nowrap"
                                 >
                                     <Link
                                         :href="templateEditUrl(template.id)"
-                                        class="mr-1 rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-indigo-400"
+                                        class="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-600 shadow-sm transition-colors hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-indigo-400"
                                     >
                                         <Pencil class="h-4 w-4" />
                                     </Link>
                                     <button
                                         @click="deleteTemplate(template.id)"
-                                        class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-red-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-red-400"
+                                        class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-600 shadow-sm transition-colors hover:text-red-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-red-400"
                                     >
                                         <Trash2 class="h-4 w-4" />
                                     </button>
@@ -216,7 +251,7 @@ const activeTypes = computed(() =>
                             </tr>
                             <tr v-if="templates.length === 0">
                                 <td
-                                    colspan="6"
+                                    colspan="7"
                                     class="px-5 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
                                 >
                                     No hay plantillas de carta. Crea la primera
@@ -320,29 +355,29 @@ const activeTypes = computed(() =>
                                 <label
                                     class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
                                 >
-                                    Tipo de participación *
+                                    Rol *
                                 </label>
                                 <select
-                                    v-model="form.participation_type_id"
+                                    v-model="form.role_id"
                                     required
                                     class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                 >
                                     <option value="" disabled>
-                                        Selecciona un tipo
+                                        Selecciona un rol
                                     </option>
                                     <option
-                                        v-for="type in activeTypes"
-                                        :key="type.id"
-                                        :value="type.id"
+                                        v-for="role in roles"
+                                        :key="role.id"
+                                        :value="role.id"
                                     >
-                                        {{ type.label }} ({{ type.key }})
+                                        {{ role.name }}
                                     </option>
                                 </select>
                                 <p
-                                    v-if="form.errors.participation_type_id"
+                                    v-if="form.errors.role_id"
                                     class="mt-1 text-xs text-red-500"
                                 >
-                                    {{ form.errors.participation_type_id }}
+                                    {{ form.errors.role_id }}
                                 </p>
                             </div>
 
@@ -417,7 +452,7 @@ const activeTypes = computed(() =>
                                 <span
                                     class="text-xs font-medium text-gray-700 dark:text-gray-300"
                                 >
-                                    Plantilla por defecto para este tipo
+                                    Plantilla por defecto para este rol
                                 </span>
                             </label>
 
