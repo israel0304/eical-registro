@@ -450,6 +450,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('admin/constancias/invitaciones/plantillas', [InvitationTemplateController::class, 'store'])->name('constancias.invitaciones.templates.store');
         Route::get('admin/constancias/invitaciones/plantillas/{template}/edit', [InvitationTemplateController::class, 'edit'])->name('constancias.invitaciones.templates.edit');
         Route::put('admin/constancias/invitaciones/plantillas/{template}', [InvitationTemplateController::class, 'update'])->name('constancias.invitaciones.templates.update');
+        Route::patch('admin/constancias/invitaciones/plantillas/{template}/activar', [InvitationTemplateController::class, 'toggleActive'])->name('constancias.invitaciones.templates.activate');
         Route::delete('admin/constancias/invitaciones/plantillas/{template}', [InvitationTemplateController::class, 'destroy'])->name('constancias.invitaciones.templates.destroy');
     });
 

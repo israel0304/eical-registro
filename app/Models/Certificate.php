@@ -15,6 +15,7 @@ class Certificate extends Model
         'folio',
         'user_id',
         'participation_type_id',
+        'role_id',
         'template_id',
         'event_id',
         'event_type',
@@ -35,6 +36,11 @@ class Certificate extends Model
     public function participationType(): BelongsTo
     {
         return $this->belongsTo(ParticipationType::class);
+    }
+
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
     }
 
     public function template(): BelongsTo

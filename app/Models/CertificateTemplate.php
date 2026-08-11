@@ -17,7 +17,9 @@ class CertificateTemplate extends Model
         'description',
         'kind',
         'participation_type_id',
+        'role_id',
         'is_default',
+        'is_active',
         'background_path',
         'width',
         'height',
@@ -25,6 +27,7 @@ class CertificateTemplate extends Model
 
     protected $casts = [
         'is_default' => 'boolean',
+        'is_active' => 'boolean',
         'width' => 'integer',
         'height' => 'integer',
     ];
@@ -32,6 +35,11 @@ class CertificateTemplate extends Model
     public function participationType(): BelongsTo
     {
         return $this->belongsTo(ParticipationType::class);
+    }
+
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
     }
 
     public function scopeKind($query, string $kind)
