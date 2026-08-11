@@ -32,7 +32,7 @@ class CertificateTemplateController extends Controller
         );
 
         $lists = [];
-        foreach (['badge', 'certificate', 'invitation'] as $kind) {
+        foreach (['badge', 'certificate'] as $kind) {
             $lists[$kind] = CertificateTemplate::query()
                 ->kind($kind)
                 ->with('participationType')
@@ -49,7 +49,10 @@ class CertificateTemplateController extends Controller
             ->get();
 
         $eventLogs = collect();
-        $roles = collect();
+        $roles = Role::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
         if ($request->user()->hasPermission('correos.templates.manage')) {
             $eventLogs = EventLog::query()
                 ->latest()
@@ -69,17 +72,11 @@ class CertificateTemplateController extends Controller
                         'created_at' => $log->created_at?->diffForHumans(),
                     ];
                 });
-
-            $roles = Role::query()
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(['id', 'name']);
         }
 
         return Inertia::render('Plantillas/Index', [
             'badgeTemplates' => $lists['badge'],
             'certificateTemplates' => $lists['certificate'],
-            'invitationTemplates' => $lists['invitation'],
             'participationTypes' => $participationTypes,
             'emailTemplates' => EmailTemplate::query()->with('triggers')->orderBy('name')->get(),
             'emailTriggers' => EmailTrigger::query()->with('template')->orderBy('event_key')->get(),

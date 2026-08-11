@@ -16,6 +16,7 @@ import {
     CalendarDays,
     LayoutTemplate,
     ClipboardCheck,
+    Mail,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
@@ -127,6 +128,14 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: 'Plantillas',
             href: '/admin/plantillas',
             icon: LayoutTemplate,
+        });
+    }
+
+    if (can('constancias.templates.manage')) {
+        items.push({
+            title: 'Cartas de Invitación',
+            href: '/admin/constancias/invitaciones/plantillas',
+            icon: Mail,
         });
     }
 
