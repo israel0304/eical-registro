@@ -16,7 +16,6 @@ import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 const props = defineProps<{
     badgeTemplates: any[];
     certificateTemplates: any[];
-    invitationTemplates: any[];
     participationTypes: any[];
     emailTemplates: any[];
     emailTriggers: any[];
@@ -31,17 +30,12 @@ const props = defineProps<{
     };
 }>();
 
-type TabKey = 'badge' | 'certificate' | 'invitation' | 'correos';
+type TabKey = 'badge' | 'certificate' | 'correos';
 type PermissionKey = keyof typeof props.permissions;
 
 const tabs: { key: TabKey; label: string; permission: PermissionKey }[] = [
     { key: 'badge', label: 'Gafete', permission: 'gafete' },
     { key: 'certificate', label: 'Constancias', permission: 'constancias' },
-    {
-        key: 'invitation',
-        label: 'Cartas de Invitación',
-        permission: 'invitaciones',
-    },
     { key: 'correos', label: 'Correos', permission: 'correos' },
 ];
 
@@ -89,20 +83,6 @@ const kinds: Record<
         emptyTitle: 'Aún no hay plantillas.',
         emptyText: 'Crea la primera para comenzar.',
     },
-    invitation: {
-        title: 'Plantillas de Cartas de Invitación',
-        headTitle: 'Plantillas de Cartas de Invitación',
-        description:
-            'Plantillas para cartas de invitación (tamaño carta 816×1056). Editor visual drag-and-drop con variables dinámicas.',
-        basePath: '/admin/constancias/invitaciones/plantillas',
-        defaultWidth: 816,
-        defaultHeight: 1056,
-        requiresType: true,
-        aspect: 'aspect-[3/4]',
-        defaultLabel: 'Usar como plantilla por defecto de este tipo',
-        emptyTitle: 'Aún no hay plantillas.',
-        emptyText: 'Crea la primera para comenzar.',
-    },
     correos: {
         title: 'Plantillas de Correo',
         headTitle: 'Plantillas de Correo',
@@ -138,8 +118,6 @@ const templates = computed(() => {
     switch (activeTab.value) {
         case 'badge':
             return props.badgeTemplates;
-        case 'invitation':
-            return props.invitationTemplates;
         case 'correos':
             return [];
         default:
@@ -402,7 +380,7 @@ const activeTypes = computed(() =>
             </div>
 
             <p
-                v-if="activeTab === 'certificate' || activeTab === 'invitation'"
+                v-if="activeTab === 'certificate'"
                 class="text-xs text-gray-400 dark:text-gray-600"
             >
                 La página pública de verificación se accede en
