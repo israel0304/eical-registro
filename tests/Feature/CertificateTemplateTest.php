@@ -241,6 +241,47 @@ class CertificateTemplateTest extends TestCase
             ->assertSee($certificate->metadata['evento']);
     }
 
+    public function test_certificate_event_relation_resolves_sentinels_to_null()
+    {
+        $user = $this->admin();
+
+        $eventType = ParticipationType::create([
+            'key' => 'evento_asistencia',
+            'label' => 'Asistente al evento',
+            'event_kind' => 'event',
+            'is_active' => true,
+        ]);
+        $eventCertificate = app(CertificateRenderer::class)->issueType($user, $eventType, 'event', 0);
+
+        $this->assertNotNull($eventCertificate);
+        $this->assertNull($eventCertificate->event);
+
+        $staffType = ParticipationType::create([
+            'key' => 'staff',
+            'label' => 'Personal de apoyo',
+            'event_kind' => 'staff',
+            'is_active' => true,
+        ]);
+        $staffCertificate = app(CertificateRenderer::class)->issueType($user, $staffType, 'staff', 0);
+
+        $this->assertNotNull($staffCertificate);
+        $this->assertNull($staffCertificate->event);
+    }
+
+    public function test_certificate_event_relation_resolves_real_activity()
+    {
+        $user = $this->admin();
+        $type = $this->tallerType();
+        $this->makeTemplate($type);
+        $workshop = $this->attendedWorkshop($user);
+
+        $certificate = app(CertificateRenderer::class)->issue($user, 'workshop', $workshop);
+
+        $this->assertNotNull($certificate);
+        $this->assertInstanceOf(Workshop::class, $certificate->event);
+        $this->assertSame($workshop->id, $certificate->event->id);
+    }
+
     public function test_public_verification_page_returns_404_for_unknown_folio()
     {
         $this->get('/constancias/verificar/NO-EXISTE')->assertNotFound();
