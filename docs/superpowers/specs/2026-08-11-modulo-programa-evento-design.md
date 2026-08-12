@@ -1,7 +1,7 @@
 # Design Spec: Módulo de Programa del Evento
 
 ## Overview
-Build a new admin module "Programa del Evento" (sidebar section) that shows the event schedule built from a hybrid mix of **live references** to existing activities (workshops, presentations, conferences) and **manual blocks** (registro, inauguración, receso, clausura, otro). Access is role-based via two permissions (`programa.view`, `programa.manage`) assignable from the Roles module. Includes a print/PDF view.
+Build a new admin module "Programa del Evento" (sidebar section) that shows the event schedule built from a hybrid mix of **live references** to existing activities (workshops, presentations, conferences) and **manual blocks** (registro, inauguración, receso, clausura, otro). The page offers a toggle between a **list view** (grouped by day) and a **calendar view** (grid by day/hour). Access is role-based via two permissions (`programa.view`, `programa.manage`) assignable from the Roles module. Includes a print/PDF view.
 
 ## Architecture & Data Model
 
@@ -55,8 +55,10 @@ Items without day/time are not placed and are reported as incomplete/orphans.
 
 - **Sidebar**: new item "Programa del Evento" (icon `CalendarDays`), visible with `programa.view`.
 - **`resources/js/pages/Programa/Index.vue`** (AppSidebarLayout, breadcrumb "Programa del Evento"):
-  - Sections per day with sticky headers; each item shows time range, title, location, type badge (color from `block_type`; for activities "Taller/Ponencia/Conferencia").
-  - With `programa.manage`: buttons "Agregar bloque manual", "Agregar actividad" (picker modal with search against `/admin/programa/actividades`), edit/delete per item, orphans alert with cleanup option.
+  - **Toggle "Lista | Calendario"** switch between both views; same data drives both.
+  - **List view**: sections per day with sticky headers; each item shows time range, title, location, type badge (color from `block_type`; for activities "Taller/Ponencia/Conferencia").
+  - **Calendar view**: grid with one column per day and hourly time rows spanning the earliest-to-latest time present in the program; each item is positioned by `start_time`/`end_time` with height proportional to its duration, color-coded by type, and clickable to show details (and edit/delete for managers).
+  - With `programa.manage`: buttons "Agregar bloque manual", "Agregar actividad" (picker modal with search against `/admin/programa/actividades`), edit/delete per item (from both views), orphans alert with cleanup option.
   - Print button linking to `/admin/programa/imprimir`.
 - **Print view**: Blade `resources/views/programa/imprimir.blade.php` with print CSS (pattern of `certificates/verificar.blade.php`); user prints/exporta a PDF desde el navegador.
 
