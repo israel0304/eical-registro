@@ -1001,13 +1001,11 @@ HTML;
 
     private function roleLabel(User $user): string
     {
-        $role = $user->roles->first();
+        $roles = $user->roles->map(
+            fn ($role) => self::ROLE_LABELS[$role->name] ?? $role->name,
+        );
 
-        if ($role === null) {
-            return 'Participante';
-        }
-
-        return self::ROLE_LABELS[$role->name] ?? $role->name;
+        return $roles->isNotEmpty() ? $roles->join(' | ') : 'Participante';
     }
 
     private function initials(User $user): string
