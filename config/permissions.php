@@ -58,6 +58,11 @@ return [
     'Reportes' => [
         'reportes.view' => 'Ver reportes',
     ],
+    'Programa' => [
+        'programa.view' => 'Ver programa del evento',
+        'programa.manage' => 'Gestionar programa del evento',
+        'programa.print' => 'Imprimir programa del evento',
+    ],
     'Correos' => [
         'correos.templates.manage' => 'Gestionar plantillas de correo y disparadores',
     ],

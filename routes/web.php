@@ -17,6 +17,7 @@ use App\Http\Controllers\ParticipationTypeController;
 use App\Http\Controllers\PonenteActivationController;
 use App\Http\Controllers\PresentationController;
 use App\Http\Controllers\PresentationImportController;
+use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
@@ -435,6 +436,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('admin/evento', [EventoController::class, 'update'])->name('evento.update');
         Route::post('admin/evento/generar-constancias', [EventoController::class, 'generateConstancias'])->name('evento.generate-constancias');
         Route::delete('admin/evento/attendance/{attendance}', [EventoController::class, 'destroyAttendance'])->name('evento.attendance-destroy');
+    });
+
+    // Programa del evento
+    Route::middleware('can:programa.view')->group(function () {
+        Route::get('programa', [ProgramController::class, 'index'])->name('programa.index');
+        Route::get('programa/imprimir', [ProgramController::class, 'print'])->middleware('can:programa.print')->name('programa.print');
+
+        Route::middleware('can:programa.manage')->group(function () {
+            Route::post('programa', [ProgramController::class, 'store'])->name('programa.store');
+            Route::put('programa/{programItem}', [ProgramController::class, 'update'])->name('programa.update');
+            Route::delete('programa/{programItem}', [ProgramController::class, 'destroy'])->name('programa.destroy');
+        });
     });
 
     // Admin: certificate templates
