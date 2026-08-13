@@ -15,9 +15,19 @@ class WorkshopController extends Controller
 {
     public function index(Request $request)
     {
+        $status = $request->input('status', 'active');
+
         $query = Workshop::withCount(['enrollments as enrolled_count' => function ($q) {
             $q->where('status', 'enrolled');
         }])->with(['instructors', 'moderators']);
+
+        if ($status === 'active') {
+            $query->whereNull('deleted_at');
+        } elseif ($status === 'deleted') {
+            $query->onlyTrashed();
+        } elseif ($status === 'all') {
+            $query->withTrashed();
+        }
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -30,7 +40,7 @@ class WorkshopController extends Controller
 
         return Inertia::render('Workshops/Index', [
             'workshops' => $workshops,
-            'filters' => $request->only(['search']),
+            'filters' => array_merge(['status' => $status], $request->only(['search'])),
         ]);
     }
 
@@ -185,6 +195,36 @@ class WorkshopController extends Controller
         $workshop->delete();
 
         return back()->with('success', 'Taller eliminado correctamente.');
+    }
+
+    public function forceDelete(Request $request, $id)
+    {
+        abort_unless($request->user()->can('workshops.delete'), 403);
+
+        $workshop = Workshop::withTrashed()->findOrFail($id);
+
+        $enrolledCount = $workshop->enrollments()->where('status', 'enrolled')->count();
+
+        if ($enrolledCount > 0) {
+            return back()->withErrors([
+                'forceDelete' => "No se puede eliminar definitivamente. El taller tiene {$enrolledCount} inscripción(es) activa(s). Elimínelas primero.",
+            ]);
+        }
+
+        $workshop->forceDelete();
+
+        return back()->with('success', 'Taller eliminado definitivamente.');
+    }
+
+    public function restore(Request $request, $id)
+    {
+        abort_unless($request->user()->can('workshops.delete'), 403);
+
+        $workshop = Workshop::withTrashed()->findOrFail($id);
+
+        $workshop->restore();
+
+        return back()->with('success', 'Taller restaurado correctamente.');
     }
 
     private function syncModeratorRoles(array $moderatorIds): void
