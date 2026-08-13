@@ -7,6 +7,8 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopEnrollment;
+use App\Support\EventSettings;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -15,6 +17,22 @@ use Tests\TestCase;
 class WorkshopScanTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Carbon::setTestNow(
+            Carbon::parse('2026-08-10 12:00:00', EventSettings::timezone()),
+        );
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
 
     private function user(): User
     {
