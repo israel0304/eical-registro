@@ -51,6 +51,18 @@ const props = defineProps<{
     workshop: any;
 }>();
 
+const breadcrumbs = computed(() =>
+    can('workshops.view')
+        ? [
+              { title: 'Talleres', href: '/workshops' },
+              {
+                  title: props.workshop.name,
+                  href: '/workshops/' + props.workshop.id,
+              },
+          ]
+        : [],
+);
+
 const activeTab = ref<'enrolled' | 'cancelled'>('enrolled');
 const qrCanvas = ref<HTMLCanvasElement | null>(null);
 const sendForm = useForm({ user_id: null as number | null });
@@ -263,16 +275,12 @@ watch(
 </script>
 
 <template>
-    <AppLayout
-        :breadcrumbs="[
-            { title: 'Talleres', href: '/workshops' },
-            { title: workshop.name, href: '/workshops/' + workshop.id },
-        ]"
-    >
+    <AppLayout :breadcrumbs="breadcrumbs">
         <Head :title="workshop.name" />
 
         <div class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-8 py-8">
             <button
+                v-if="can('workshops.view')"
                 @click="goBack"
                 class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             >
