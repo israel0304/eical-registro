@@ -14,6 +14,7 @@ import {
     BadgeCheck,
     ScanLine,
     CalendarDays,
+    CalendarCog,
     LayoutTemplate,
     ClipboardCheck,
     Mail,
@@ -123,7 +124,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         items.push({
             title: 'Evento',
             href: '/admin/evento',
-            icon: CalendarDays,
+            icon: CalendarCog,
         });
     }
 
