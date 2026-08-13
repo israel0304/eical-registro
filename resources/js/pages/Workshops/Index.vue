@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
-import { Search, Plus, Edit, Trash2, Eye, UserPlus } from 'lucide-vue-next';
+import { Search, Plus, Edit, Trash2, Eye, UserPlus, RotateCcw, AlertTriangle } from 'lucide-vue-next';
 import { ref, watch, reactive } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
@@ -24,11 +24,12 @@ const props = defineProps<{
 
 const formFilters = useForm({
     search: props.filters?.search || '',
+    status: props.filters?.status || 'active',
 });
 
 let searchTimeout: ReturnType<typeof setTimeout>;
 watch(
-    () => formFilters.search,
+    () => [formFilters.search, formFilters.status],
     () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
@@ -38,6 +39,7 @@ watch(
             });
         }, 300);
     },
+    { deep: true },
 );
 
 const showModal = ref(false);
@@ -319,6 +321,29 @@ const deleteWorkshop = (id: number) => {
     }
 };
 
+const restoreWorkshop = (id: number) => {
+    if (confirm('¿Estás seguro de restaurar este taller?')) {
+        router.post('/workshops/' + id + '/restore', {
+            preserveScroll: true,
+        });
+    }
+};
+
+const forceDeleteWorkshop = (workshop: any) => {
+    const enrolledCount = workshop.enrolled_count || 0;
+    if (enrolledCount > 0) {
+        alert(
+            `No se puede eliminar definitivamente. El taller tiene ${enrolledCount} inscripción(es) activa(s). Elimínelas primero desde la vista de inscripciones del taller.`
+        );
+        return;
+    }
+    if (confirm('¿Estás seguro de eliminar DEFINITIVAMENTE este taller? Esta acción no se puede deshacer.')) {
+        router.post('/workshops/' + workshop.id + '/force-delete', {
+            preserveScroll: true,
+        });
+    }
+};
+
 const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const date = new Date(dateStr + 'T00:00:00');
@@ -362,6 +387,21 @@ const formatDate = (dateStr: string) => {
                                 placeholder="Nombre del taller"
                             />
                         </div>
+                    </div>
+                    <div class="flex flex-col">
+                        <label
+                            class="text-[11px] font-medium tracking-wide text-gray-600 uppercase dark:text-gray-400"
+                        >
+                            Estado
+                        </label>
+                        <select
+                            v-model="formFilters.status"
+                            class="w-full sm:w-48 rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-black focus:ring-1 focus:ring-black sm:text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-white dark:focus:ring-white"
+                        >
+                            <option value="active">Activos</option>
+                            <option value="deleted">Eliminados</option>
+                            <option value="all">Todos</option>
+                        </select>
                     </div>
                 </div>
 
@@ -430,13 +470,29 @@ const formatDate = (dateStr: string) => {
                             <tr
                                 v-for="workshop in workshops.data"
                                 :key="workshop.id"
-                                class="transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-zinc-800"
+                                :class="[
+                                    'transition-colors duration-150',
+                                    workshop.deleted_at
+                                        ? 'opacity-50 hover:bg-gray-50 dark:hover:bg-zinc-800'
+                                        : 'hover:bg-gray-50 dark:hover:bg-zinc-800',
+                                ]"
                             >
                                 <td class="px-6 py-4">
                                     <div
-                                        class="text-sm font-medium text-gray-900 dark:text-white"
+                                        :class="[
+                                            'text-sm font-medium',
+                                            workshop.deleted_at
+                                                ? 'line-through text-gray-500 dark:text-gray-400'
+                                                : 'text-gray-900 dark:text-white',
+                                        ]"
                                     >
                                         {{ workshop.name }}
+                                        <span
+                                            v-if="workshop.deleted_at"
+                                            class="ml-2 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-300"
+                                        >
+                                            Eliminado
+                                        </span>
                                     </div>
                                     <div
                                         class="text-xs text-gray-500 dark:text-gray-400"
@@ -501,18 +557,35 @@ const formatDate = (dateStr: string) => {
                                             <Eye class="h-4 w-4" />
                                         </Link>
                                         <button
-                                            v-if="can('workshops.edit')"
+                                            v-if="!workshop.deleted_at && can('workshops.edit')"
                                             @click="openEditModal(workshop)"
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
                                         >
                                             <Edit class="h-4 w-4" />
                                         </button>
                                         <button
-                                            v-if="can('workshops.delete')"
+                                            v-if="!workshop.deleted_at && can('workshops.delete')"
                                             @click="deleteWorkshop(workshop.id)"
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-gray-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
                                         >
                                             <Trash2 class="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            v-if="workshop.deleted_at && can('workshops.delete')"
+                                            @click="restoreWorkshop(workshop.id)"
+                                            class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-emerald-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-emerald-400"
+                                            title="Restaurar"
+                                        >
+                                            <RotateCcw class="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            v-if="workshop.deleted_at && can('workshops.delete')"
+                                            @click="forceDeleteWorkshop(workshop)"
+                                            class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-red-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-red-400"
+                                            title="Eliminar definitivamente"
+                                            :disabled="(workshop.enrolled_count || 0) > 0"
+                                        >
+                                            <AlertTriangle class="h-4 w-4" />
                                         </button>
                                     </div>
                                 </td>
