@@ -41,7 +41,15 @@ jobs:
         run: npm i
 
       - name: Install Dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+        env:
+          COMPOSER_PROCESS_TIMEOUT: 600
+        run: |
+          for i in 1 2 3 4 5; do
+            composer install --no-interaction --prefer-dist --optimize-autoloader && break
+            echo "composer install falló (intento $i), reintentando..."
+            sleep 10
+          done
+          test -d vendor
 
       - name: Copy Environment File
         run: cp .env.example .env
