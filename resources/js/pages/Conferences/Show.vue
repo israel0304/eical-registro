@@ -194,8 +194,7 @@ const downloadConstancia = (userId: number) => {
                         <template
                             v-if="
                                 can('conferences.activate') &&
-                                (can('conferences.view') ||
-                                    isAssignedModerator)
+                                (can('conferences.view') || isAssignedModerator)
                             "
                         >
                             <label

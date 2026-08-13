@@ -185,8 +185,12 @@ const confirmForceDelete = (user: any) => {
 
     if (workshops > 0 || conferences > 0) {
         const details = [
-            workshops > 0 ? `${workshops} taller${workshops === 1 ? '' : 'es'}` : null,
-            conferences > 0 ? `${conferences} conferencia${conferences === 1 ? '' : 's'}` : null,
+            workshops > 0
+                ? `${workshops} taller${workshops === 1 ? '' : 'es'}`
+                : null,
+            conferences > 0
+                ? `${conferences} conferencia${conferences === 1 ? '' : 's'}`
+                : null,
         ]
             .filter(Boolean)
             .join(' y ');

@@ -95,14 +95,16 @@ watch(
         if (props.trigger) {
             editingId.value = props.trigger.id;
             triggerForm.event_key = props.trigger.event_key;
-            triggerForm.email_template_id = props.trigger.email_template_id ?? '';
+            triggerForm.email_template_id =
+                props.trigger.email_template_id ?? '';
             triggerForm.to = props.trigger.to ?? '';
             triggerForm.role_id = props.trigger.role_id ?? '';
             triggerForm.is_active = props.trigger.is_active;
             recipientMode.value = props.trigger.role_id ? 'role' : 'payload';
         } else {
             editingId.value = null;
-            triggerForm.event_key = props.lockedEventKey || props.catalog[0]?.event_key || '';
+            triggerForm.event_key =
+                props.lockedEventKey || props.catalog[0]?.event_key || '';
             triggerForm.email_template_id = props.defaultTemplateId ?? '';
             triggerForm.to = '';
             triggerForm.role_id = '';
@@ -119,7 +121,7 @@ const onEventChange = () => {
     triggerForm.to = '';
     triggerForm.role_id = '';
     triggerForm.email_template_id = props.lockedEventKey
-        ? props.defaultTemplateId ?? ''
+        ? (props.defaultTemplateId ?? '')
         : '';
     recipientMode.value =
         selectedEventToOptions.value.length > 0 ? 'payload' : 'role';
@@ -228,7 +230,8 @@ const save = () => {
                                     Selecciona una plantilla
                                 </option>
                                 <option
-                                    v-for="template in matchingTemplates.length > 0
+                                    v-for="template in matchingTemplates.length >
+                                    0
                                         ? matchingTemplates
                                         : templates"
                                     :key="template.id"
@@ -295,7 +298,10 @@ const save = () => {
                                     Selecciona una opción
                                 </option>
                                 <option
-                                    v-for="[key, label] in selectedEventToOptions"
+                                    v-for="[
+                                        key,
+                                        label,
+                                    ] in selectedEventToOptions"
                                     :key="key"
                                     :value="key"
                                 >
@@ -331,9 +337,7 @@ const save = () => {
                             </div>
                         </div>
 
-                        <label
-                            class="flex cursor-pointer items-center gap-3"
-                        >
+                        <label class="flex cursor-pointer items-center gap-3">
                             <input
                                 v-model="triggerForm.is_active"
                                 type="checkbox"

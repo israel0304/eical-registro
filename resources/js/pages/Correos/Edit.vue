@@ -160,7 +160,11 @@ const runPreview = async () => {
 };
 
 const insertVariable = (key: string) => {
-    editor.value?.chain().focus().insertContent('{{ ' + key + ' }}').run();
+    editor.value
+        ?.chain()
+        .focus()
+        .insertContent('{{ ' + key + ' }}')
+        .run();
 };
 
 const setLink = () => {
@@ -229,9 +233,8 @@ const catalogByKey = computed(
 
 const activeTrigger = computed(
     () =>
-        props.triggers.find(
-            (t) => t.email_template_id === props.template.id,
-        ) ?? null,
+        props.triggers.find((t) => t.email_template_id === props.template.id) ??
+        null,
 );
 
 // ── Disparadores ─────────────────────────────────────────────────────────────
@@ -240,9 +243,7 @@ const showTriggerModal = ref(false);
 const editingTrigger = ref<EmailTrigger | null>(null);
 
 const eventTriggers = computed(() =>
-    props.triggers.filter(
-        (t) => t.email_template_id === props.template.id,
-    ),
+    props.triggers.filter((t) => t.email_template_id === props.template.id),
 );
 
 const roleName = (id: number | null) =>
@@ -254,7 +255,9 @@ const recipientLabel = (trigger: EmailTrigger) => {
     }
 
     return (
-        catalogByKey.value.get(trigger.event_key)?.to_options[trigger.to ?? ''] ??
+        catalogByKey.value.get(trigger.event_key)?.to_options[
+            trigger.to ?? ''
+        ] ??
         trigger.to ??
         '—'
     );
@@ -555,7 +558,9 @@ const previewSrcDoc = computed(() => {
                             <Braces class="h-4 w-4 text-indigo-500" />
                             Variables
                         </h3>
-                        <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                        <p
+                            class="mb-3 text-xs text-gray-500 dark:text-gray-400"
+                        >
                             Haz clic en una variable para insertarla en el
                             cursor.
                         </p>
@@ -590,7 +595,9 @@ const previewSrcDoc = computed(() => {
                             <Eye class="h-4 w-4 text-indigo-500" />
                             Vista previa en vivo
                         </h3>
-                        <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                        <p
+                            class="mb-3 text-xs text-gray-500 dark:text-gray-400"
+                        >
                             Con datos de ejemplo.
                         </p>
                         <div
@@ -638,7 +645,9 @@ const previewSrcDoc = computed(() => {
                             <Zap class="h-4 w-4 text-indigo-500" />
                             Disparadores de esta plantilla
                         </h3>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        <p
+                            class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                        >
                             Controla qué evento envía esta plantilla, el
                             destinatario y si está activa.
                         </p>
@@ -658,16 +667,14 @@ const previewSrcDoc = computed(() => {
                     <table class="w-full text-left text-sm">
                         <thead>
                             <tr
-                                class="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500 dark:border-zinc-800 dark:text-gray-400"
+                                class="border-b border-gray-200 text-xs tracking-wide text-gray-500 uppercase dark:border-zinc-800 dark:text-gray-400"
                             >
                                 <th class="px-4 py-3 font-medium">Evento</th>
                                 <th class="px-4 py-3 font-medium">
                                     Destinatario
                                 </th>
                                 <th class="px-4 py-3 font-medium">Estado</th>
-                                <th
-                                    class="px-4 py-3 text-right font-medium"
-                                >
+                                <th class="px-4 py-3 text-right font-medium">
                                     Acciones
                                 </th>
                             </tr>

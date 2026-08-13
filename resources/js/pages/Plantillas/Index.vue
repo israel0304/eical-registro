@@ -255,139 +255,149 @@ const activeTypes = computed(() =>
                 <div
                     class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
                 >
-                <div>
-                    <h1
-                        class="text-3xl font-normal tracking-tight text-gray-900 dark:text-white"
-                    >
-                        {{ activeKind.title }}
-                    </h1>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        {{ activeKind.description }}
-                    </p>
-                </div>
-                <button
-                    v-if="canManage"
-                    @click="openCreateModal"
-                    class="inline-flex shrink-0 items-center justify-center gap-2 rounded-md border border-transparent bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2"
-                >
-                    <Plus class="h-4 w-4" /> Nueva Plantilla
-                </button>
-            </div>
-
-            <!-- Templates grid -->
-            <div
-                v-if="templates.length > 0"
-                class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
-            >
-                <div
-                    v-for="template in templates"
-                    :key="template.id"
-                    class="group relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
-                >
-                    <Link :href="templateEditUrl(template.id)" class="block">
-                        <div
-                            class="flex w-full items-center justify-center overflow-hidden bg-gray-100 dark:bg-zinc-800"
-                            :class="activeKind.aspect"
+                    <div>
+                        <h1
+                            class="text-3xl font-normal tracking-tight text-gray-900 dark:text-white"
                         >
-                            <img
-                                v-if="template.background_path"
-                                :src="'/storage/' + template.background_path"
-                                :alt="template.name"
-                                class="h-full w-full object-cover"
-                            />
-                            <div
-                                v-else
-                                class="flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500"
-                            >
-                                <Image class="h-10 w-10" />
-                                <span class="text-xs">Sin fondo</span>
-                            </div>
-                            <div
-                                v-if="template.is_default"
-                                class="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                            >
-                                <CheckCircle2 class="h-3 w-3" /> Default
-                            </div>
-                        </div>
-                        <div class="p-4">
-                            <div class="flex items-start justify-between gap-2">
-                                <h3
-                                    class="text-sm font-semibold text-gray-900 dark:text-white"
-                                >
-                                    {{ template.name }}
-                                </h3>
-                                <span
-                                    class="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-zinc-800 dark:text-gray-400"
-                                >
-                                    <Layers class="h-3 w-3" />
-                                    {{ template.elements_count }}
-                                </span>
-                            </div>
-                            <p
-                                v-if="template.description"
-                                class="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400"
-                            >
-                                {{ template.description }}
-                            </p>
-                            <div
-                                v-if="activeKind.requiresType"
-                                class="mt-3 inline-flex rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
-                            >
-                                {{
-                                    participationTypeLabel(
-                                        template.participation_type_id,
-                                    )
-                                }}
-                            </div>
-                        </div>
-                    </Link>
-                    <div
+                            {{ activeKind.title }}
+                        </h1>
+                        <p
+                            class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                        >
+                            {{ activeKind.description }}
+                        </p>
+                    </div>
+                    <button
                         v-if="canManage"
-                        class="absolute top-3 right-3 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+                        @click="openCreateModal"
+                        class="inline-flex shrink-0 items-center justify-center gap-2 rounded-md border border-transparent bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2"
+                    >
+                        <Plus class="h-4 w-4" /> Nueva Plantilla
+                    </button>
+                </div>
+
+                <!-- Templates grid -->
+                <div
+                    v-if="templates.length > 0"
+                    class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                    <div
+                        v-for="template in templates"
+                        :key="template.id"
+                        class="group relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
                     >
                         <Link
                             :href="templateEditUrl(template.id)"
-                            class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
+                            class="block"
                         >
-                            <Pencil class="h-4 w-4" />
+                            <div
+                                class="flex w-full items-center justify-center overflow-hidden bg-gray-100 dark:bg-zinc-800"
+                                :class="activeKind.aspect"
+                            >
+                                <img
+                                    v-if="template.background_path"
+                                    :src="
+                                        '/storage/' + template.background_path
+                                    "
+                                    :alt="template.name"
+                                    class="h-full w-full object-cover"
+                                />
+                                <div
+                                    v-else
+                                    class="flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500"
+                                >
+                                    <Image class="h-10 w-10" />
+                                    <span class="text-xs">Sin fondo</span>
+                                </div>
+                                <div
+                                    v-if="template.is_default"
+                                    class="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                                >
+                                    <CheckCircle2 class="h-3 w-3" /> Default
+                                </div>
+                            </div>
+                            <div class="p-4">
+                                <div
+                                    class="flex items-start justify-between gap-2"
+                                >
+                                    <h3
+                                        class="text-sm font-semibold text-gray-900 dark:text-white"
+                                    >
+                                        {{ template.name }}
+                                    </h3>
+                                    <span
+                                        class="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-zinc-800 dark:text-gray-400"
+                                    >
+                                        <Layers class="h-3 w-3" />
+                                        {{ template.elements_count }}
+                                    </span>
+                                </div>
+                                <p
+                                    v-if="template.description"
+                                    class="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400"
+                                >
+                                    {{ template.description }}
+                                </p>
+                                <div
+                                    v-if="activeKind.requiresType"
+                                    class="mt-3 inline-flex rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                                >
+                                    {{
+                                        participationTypeLabel(
+                                            template.participation_type_id,
+                                        )
+                                    }}
+                                </div>
+                            </div>
                         </Link>
-                        <button
-                            @click="deleteTemplate(template.id)"
-                            class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-red-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-red-400"
+                        <div
+                            v-if="canManage"
+                            class="absolute top-3 right-3 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
                         >
-                            <Trash2 class="h-4 w-4" />
-                        </button>
+                            <Link
+                                :href="templateEditUrl(template.id)"
+                                class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
+                            >
+                                <Pencil class="h-4 w-4" />
+                            </Link>
+                            <button
+                                @click="deleteTemplate(template.id)"
+                                class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-red-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-red-400"
+                            >
+                                <Trash2 class="h-4 w-4" />
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div
-                v-else
-                class="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-            >
-                <LayoutTemplate
-                    class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600"
-                />
-                <p class="mt-4 text-gray-500 dark:text-gray-400">
-                    {{ activeKind.emptyTitle }}
-                </p>
+                <div
+                    v-else
+                    class="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                    <LayoutTemplate
+                        class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600"
+                    />
+                    <p class="mt-4 text-gray-500 dark:text-gray-400">
+                        {{ activeKind.emptyTitle }}
+                    </p>
+                    <p
+                        v-if="canManage"
+                        class="mt-1 text-sm text-gray-400 dark:text-gray-500"
+                    >
+                        {{ activeKind.emptyText }}
+                    </p>
+                </div>
+
                 <p
-                    v-if="canManage"
-                    class="mt-1 text-sm text-gray-400 dark:text-gray-500"
+                    v-if="activeTab === 'certificate'"
+                    class="text-xs text-gray-400 dark:text-gray-600"
                 >
-                    {{ activeKind.emptyText }}
+                    La página pública de verificación se accede en
+                    <code
+                        class="rounded bg-gray-100 px-1 py-0.5 dark:bg-zinc-800"
+                        >/constancias/verificar/{folio}</code
+                    >
                 </p>
-            </div>
-
-            <p
-                v-if="activeTab === 'certificate'"
-                class="text-xs text-gray-400 dark:text-gray-600"
-            >
-                La página pública de verificación se accede en
-                <code class="rounded bg-gray-100 px-1 py-0.5 dark:bg-zinc-800"
-                    >/constancias/verificar/{folio}</code
-                >
-            </p>
             </template>
         </div>
 
