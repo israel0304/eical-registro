@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Services\PermissionSync;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -91,11 +92,15 @@ class RoleController extends Controller
 
     private function validateRequest(Request $request, ?Role $role = null): array
     {
+        app(PermissionSync::class)->sync();
+
         return $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:roles,name,'.$role?->id],
             'is_active' => ['nullable', 'boolean'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string', 'exists:permissions,key'],
+        ], [
+            'permissions.*' => 'Uno de los permisos seleccionados no es válido.',
         ]);
     }
 
