@@ -111,6 +111,14 @@ const mainNavItems = computed<NavItem[]>(() => {
         items.push({ title: 'Check-in', href: '/checkin', icon: ScanLine });
     }
 
+    if (can('programa.view')) {
+        items.push({
+            title: 'Programa',
+            href: '/programa',
+            icon: CalendarDays,
+        });
+    }
+
     if (can('constancias.evento.manage')) {
         items.push({
             title: 'Evento',

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\EmiteEventos;
+use App\Models\Concerns\EnlazaPrograma;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Conference extends Model
 {
-    use EmiteEventos, HasFactory, SoftDeletes;
+    use EmiteEventos, EnlazaPrograma, HasFactory, SoftDeletes;
+
+    protected static string $programActivityType = 'conference';
 
     public const KINDS = ['magistral', 'especial', 'simposio', 'mesa_dialogo'];
 
