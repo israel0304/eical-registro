@@ -99,6 +99,29 @@ class PresentationController extends Controller
         $isAssignedModerator = $presentation->moderators()->where('users.id', $user->id)->exists();
         $isAuthor = $presentation->authors()->where('users.id', $user->id)->exists();
 
+        if ($request->has('authors_presented')) {
+            abort_unless($user->can('presentations.presented'), 403);
+
+            $request->validate([
+                'authors_presented' => 'array',
+                'authors_presented.*.user_id' => 'required|exists:users,id',
+                'authors_presented.*.presented' => 'required|boolean',
+            ]);
+
+            foreach ($request->input('authors_presented') as $item) {
+                $presentation->authors()->updateExistingPivot($item['user_id'], [
+                    'presented' => $item['presented'],
+                    'presented_at' => $item['presented'] ? now() : null,
+                ]);
+            }
+
+            if (! $request->inertia()) {
+                return response()->json(['ok' => true]);
+            }
+
+            return to_route('presentations.index')->with('success', 'Ponencia actualizada correctamente.');
+        }
+
         if ($user->can('presentations.edit')) {
             $validated = $request->validate([
                 'title' => 'sometimes|string|max:255',
@@ -128,34 +151,7 @@ class PresentationController extends Controller
                 $presentation->moderators()->sync($moderatorIds);
                 $this->syncModeratorRoles($moderatorIds);
             }
-
-            if ($request->has('authors_presented')) {
-                $request->validate([
-                    'authors_presented' => 'array',
-                    'authors_presented.*.user_id' => 'required|exists:users,id',
-                    'authors_presented.*.presented' => 'required|boolean',
-                ]);
-
-                foreach ($request->input('authors_presented') as $item) {
-                    $presentation->authors()->updateExistingPivot($item['user_id'], [
-                        'presented' => $item['presented'],
-                        'presented_at' => $item['presented'] ? now() : null,
-                    ]);
-                }
-            }
-        } elseif ($isAssignedModerator && $request->has('authors_presented')) {
-            $request->validate([
-                'authors_presented' => 'array',
-                'authors_presented.*.user_id' => 'required|exists:users,id',
-                'authors_presented.*.presented' => 'required|boolean',
-            ]);
-
-            foreach ($request->input('authors_presented') as $item) {
-                $presentation->authors()->updateExistingPivot($item['user_id'], [
-                    'presented' => $item['presented'],
-                    'presented_at' => $item['presented'] ? now() : null,
-                ]);
-            }
+        } elseif ($isAssignedModerator) {
             $validated = [];
         } elseif ($user->hasPermission('presentations.my') && $isAuthor) {
             $validated = $request->validate([
@@ -171,10 +167,6 @@ class PresentationController extends Controller
 
         if (! empty($validated)) {
             $presentation->update($validated);
-        }
-
-        if ($request->has('authors_presented') && ! $request->inertia()) {
-            return response()->json(['ok' => true]);
         }
 
         return to_route('presentations.index')->with('success', 'Ponencia actualizada correctamente.');

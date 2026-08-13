@@ -30,6 +30,7 @@ const isAssignedModerator = computed(() => {
 const canManage = computed(
     () => can('presentations.edit') || isAssignedModerator.value,
 );
+const canPresented = computed(() => can('presentations.presented'));
 
 const goBack = () => {
     router.get('/presentations');
@@ -245,41 +246,41 @@ const disciplinesList = computed(() => {
                             </span>
                         </div>
 
-                        <template v-if="canManage">
-                            <label
-                                class="flex cursor-pointer items-center gap-1 text-xs text-gray-600 dark:text-gray-400"
-                            >
-                                <input
-                                    type="checkbox"
-                                    :checked="author.pivot?.presented"
-                                    :disabled="toggling !== null"
-                                    @change="
-                                        togglePresented(
-                                            author.id,
-                                            ($event.target as HTMLInputElement)
-                                                .checked,
-                                        )
-                                    "
-                                    class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                />
-                                Presentó
-                            </label>
-                            <button
-                                v-if="
-                                    author.pivot?.presented &&
-                                    can('constancias.download')
+                        <label
+                            v-if="canPresented"
+                            class="flex cursor-pointer items-center gap-1 text-xs text-gray-600 dark:text-gray-400"
+                        >
+                            <input
+                                type="checkbox"
+                                :checked="author.pivot?.presented"
+                                :disabled="toggling !== null"
+                                @change="
+                                    togglePresented(
+                                        author.id,
+                                        ($event.target as HTMLInputElement)
+                                            .checked,
+                                    )
                                 "
-                                type="button"
-                                @click="downloadConstancia(author.id)"
-                                class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300"
-                            >
-                                <Download class="h-3 w-3" />
-                                Constancia
-                            </button>
-                        </template>
+                                class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            Presentó
+                        </label>
+                        <button
+                            v-if="
+                                canManage &&
+                                author.pivot?.presented &&
+                                can('constancias.download')
+                            "
+                            type="button"
+                            @click="downloadConstancia(author.id)"
+                            class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300"
+                        >
+                            <Download class="h-3 w-3" />
+                            Constancia
+                        </button>
 
                         <span
-                            v-else-if="author.pivot?.presented"
+                            v-if="!canPresented && author.pivot?.presented"
                             class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-200"
                         >
                             Presentada
