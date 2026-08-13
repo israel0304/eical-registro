@@ -158,8 +158,10 @@ HTML, 200, ['Content-Type' => 'text/html']);
             'Moderator' => 'Moderador',
         ];
 
-        $role = $user->roles->first();
+        $roles = $user->roles->map(
+            fn ($role) => $labels[$role->name] ?? $role->name,
+        );
 
-        return $role ? ($labels[$role->name] ?? $role->name) : 'Participante';
+        return $roles->isNotEmpty() ? $roles->join(' | ') : 'Participante';
     }
 }

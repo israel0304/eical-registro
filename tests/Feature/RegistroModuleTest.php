@@ -143,6 +143,17 @@ class RegistroModuleTest extends TestCase
         $this->assertStringContainsString('print-color-adjust: exact', $response->getContent());
     }
 
+    public function test_badge_shows_all_user_roles()
+    {
+        $user = $this->userWith('Asistente', ['gafete.view']);
+        $user->roles()->syncWithoutDetaching([Role::firstOrCreate(['name' => 'Ponente'])->id]);
+        $this->actingAs($user);
+
+        $this->get('/gafete')->assertOk();
+        $this->assertStringContainsString('Asistente | Ponente', $this->get('/gafete/imprimir')->getContent());
+        $this->assertStringContainsString('Asistente | Ponente', $this->get('/gafete')->getContent());
+    }
+
     public function test_user_can_download_badge_pdf()
     {
         $user = $this->userWith('Asistente', ['gafete.view']);
