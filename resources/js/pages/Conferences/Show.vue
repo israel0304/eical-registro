@@ -24,6 +24,18 @@ const canManage = computed(
     () => can('conferences.edit') || isAssignedModerator.value,
 );
 
+const breadcrumbs = computed(() =>
+    can('conferences.view')
+        ? [
+              { title: 'Conferencias', href: '/conferences' },
+              {
+                  title: props.conference.title,
+                  href: '/conferences/' + props.conference.id,
+              },
+          ]
+        : [],
+);
+
 const goBack = () => {
     router.get('/conferences');
 };
@@ -77,19 +89,12 @@ const downloadConstancia = (userId: number) => {
 </script>
 
 <template>
-    <AppLayout
-        :breadcrumbs="[
-            { title: 'Conferencias', href: '/conferences' },
-            {
-                title: conference.title,
-                href: '/conferences/' + conference.id,
-            },
-        ]"
-    >
+    <AppLayout :breadcrumbs="breadcrumbs">
         <Head :title="conference.title" />
 
         <div class="mx-auto min-h-screen w-full max-w-4xl space-y-6 px-8 py-8">
             <button
+                v-if="can('conferences.view')"
                 @click="goBack"
                 class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             >

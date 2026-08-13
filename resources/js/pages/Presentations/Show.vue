@@ -32,6 +32,18 @@ const canManage = computed(
 );
 const canPresented = computed(() => can('presentations.presented'));
 
+const breadcrumbs = computed(() =>
+    can('presentations.view')
+        ? [
+              { title: 'Ponencias', href: '/presentations' },
+              {
+                  title: props.presentation.title,
+                  href: '/presentations/' + props.presentation.id,
+              },
+          ]
+        : [],
+);
+
 const goBack = () => {
     router.get('/presentations');
 };
@@ -94,19 +106,12 @@ const disciplinesList = computed(() => {
 </script>
 
 <template>
-    <AppLayout
-        :breadcrumbs="[
-            { title: 'Ponencias', href: '/presentations' },
-            {
-                title: presentation.title,
-                href: '/presentations/' + presentation.id,
-            },
-        ]"
-    >
+    <AppLayout :breadcrumbs="breadcrumbs">
         <Head :title="presentation.title" />
 
         <div class="mx-auto min-h-screen w-full max-w-4xl space-y-6 px-8 py-8">
             <button
+                v-if="can('presentations.view')"
                 @click="goBack"
                 class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             >
