@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Models\Presentation;
 use App\Models\ProgramItem;
 use App\Models\Role;
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\Workshop;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ProgramaTest extends TestCase
@@ -115,6 +117,40 @@ class ProgramaTest extends TestCase
             'location' => 'Auditorio A',
             'title' => null,
         ]);
+    }
+
+    public function test_program_shows_activities_outside_event_date_range(): void
+    {
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => '2026-09-23']);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => '2026-09-25']);
+
+        $admin = $this->admin();
+        $this->workshopFor($admin, ['day' => '2026-08-13']);
+
+        $this->actingAs($admin)
+            ->get('/programa')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Programa/Index')
+                ->has('groups', 1)
+                ->where('groups.0.label', '13 de agosto de 2026')
+                ->has('groups.0.items', 1)
+                ->where('groups.0.items.0.title', 'Taller de prueba'));
+    }
+
+    public function test_program_shows_items_without_event_date_range_configured(): void
+    {
+        $admin = $this->admin();
+        $this->workshopFor($admin);
+
+        $this->actingAs($admin)
+            ->get('/programa')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Programa/Index')
+                ->has('groups', 1)
+                ->where('groups.0.label', '5 de octubre de 2026')
+                ->where('groups.0.items.0.title', 'Taller de prueba'));
     }
 
     public function test_updating_workshop_schedule_syncs_program_item(): void

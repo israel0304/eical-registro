@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ProgramItem;
 use App\Support\EventSettings;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 class ProgramService
@@ -31,27 +32,33 @@ class ProgramService
 
     /**
      * @param  Collection<int, ProgramItem>  $items
+     *
+     * Se muestran todos los días que tengan items, estén o no dentro del
+     * rango de fechas del evento. Los días dentro del rango llevan la
+     * etiqueta "Día N de M"; los de fuera muestran su fecha en español.
      */
     public static function groupByDay(Collection $items): Collection
     {
         $days = collect(EventSettings::eventDays());
 
-        $groups = $items
+        return $items
             ->groupBy(fn (ProgramItem $item) => $item->day?->format('Y-m-d') ?? 'sin-dia')
-            ->sortBy(function (Collection $group, string $key) use ($days) {
-                $index = $days->search($key);
-
-                return $index === false ? PHP_INT_MAX : $index;
-            });
-
-        return $days
-            ->mapWithKeys(fn (string $day) => [
-                $day => [
-                    'label' => EventSettings::dayLabel($day),
-                    'items' => $groups->get($day, collect()),
-                ],
+            ->reject(fn (Collection $group, string $key) => $key === 'sin-dia')
+            ->sortKeys()
+            ->map(fn (Collection $group, string $key) => [
+                'label' => $days->contains($key)
+                    ? EventSettings::dayLabel($key)
+                    : static::formatDayLabel($key),
+                'items' => $group,
             ])
-            ->reject(fn (array $group) => $group['items']->isEmpty());
+            ->values();
+    }
+
+    private static function formatDayLabel(string $day): string
+    {
+        return CarbonImmutable::parse($day)
+            ->locale('es')
+            ->translatedFormat('j \\d\\e F \\d\\e Y');
     }
 
     /**
