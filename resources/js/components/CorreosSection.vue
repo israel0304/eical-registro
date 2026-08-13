@@ -139,7 +139,9 @@ const recipientLabel = (trigger: EmailTrigger) => {
     }
 
     return (
-        catalogByKey.value.get(trigger.event_key)?.to_options[trigger.to ?? ''] ??
+        catalogByKey.value.get(trigger.event_key)?.to_options[
+            trigger.to ?? ''
+        ] ??
         trigger.to ??
         '—'
     );
@@ -170,7 +172,9 @@ const toggleTrigger = (trigger: EmailTrigger) => {
 };
 
 const deleteTrigger = (trigger: EmailTrigger) => {
-    if (confirm(`¿Eliminar el disparador «${eventLabel(trigger.event_key)}»?`)) {
+    if (
+        confirm(`¿Eliminar el disparador «${eventLabel(trigger.event_key)}»?`)
+    ) {
         router.delete('/admin/correos/disparadores/' + trigger.id, {
             preserveScroll: true,
         });
@@ -313,10 +317,7 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                     >
                         Asunto: {{ template.subject }}
                     </p>
-                    <div
-                        v-if="canManage"
-                        class="mt-4 flex items-center gap-2"
-                    >
+                    <div v-if="canManage" class="mt-4 flex items-center gap-2">
                         <Link
                             :href="
                                 '/admin/correos/plantillas/' +
@@ -341,7 +342,9 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                 v-else
                 class="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
             >
-                <Mail class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
+                <Mail
+                    class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600"
+                />
                 <p class="mt-4 text-gray-500 dark:text-gray-400">
                     Aún no hay plantillas de correo.
                 </p>
@@ -387,13 +390,16 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                 <table class="w-full text-left text-sm">
                     <thead>
                         <tr
-                            class="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500 dark:border-zinc-800 dark:text-gray-400"
+                            class="border-b border-gray-200 text-xs tracking-wide text-gray-500 uppercase dark:border-zinc-800 dark:text-gray-400"
                         >
                             <th class="px-5 py-3 font-medium">Evento</th>
                             <th class="px-5 py-3 font-medium">Plantilla</th>
                             <th class="px-5 py-3 font-medium">Destinatario</th>
                             <th class="px-5 py-3 font-medium">Estado</th>
-                            <th v-if="canManage" class="px-5 py-3 text-right font-medium">
+                            <th
+                                v-if="canManage"
+                                class="px-5 py-3 text-right font-medium"
+                            >
                                 Acciones
                             </th>
                         </tr>
@@ -404,13 +410,19 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                             :key="trigger.id"
                             class="border-b border-gray-100 last:border-0 dark:border-zinc-800"
                         >
-                            <td class="px-5 py-3 font-medium text-gray-900 dark:text-white">
+                            <td
+                                class="px-5 py-3 font-medium text-gray-900 dark:text-white"
+                            >
                                 {{ eventLabel(trigger.event_key) }}
                             </td>
-                            <td class="px-5 py-3 text-gray-600 dark:text-gray-400">
+                            <td
+                                class="px-5 py-3 text-gray-600 dark:text-gray-400"
+                            >
                                 {{ trigger.template?.name ?? 'Sin plantilla' }}
                             </td>
-                            <td class="px-5 py-3 text-gray-600 dark:text-gray-400">
+                            <td
+                                class="px-5 py-3 text-gray-600 dark:text-gray-400"
+                            >
                                 {{ recipientLabel(trigger) }}
                             </td>
                             <td class="px-5 py-3">
@@ -442,11 +454,17 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                                             : 'text-gray-400'
                                     "
                                 >
-                                    {{ trigger.is_active ? 'Activo' : 'Inactivo' }}
+                                    {{
+                                        trigger.is_active
+                                            ? 'Activo'
+                                            : 'Inactivo'
+                                    }}
                                 </span>
                             </td>
                             <td v-if="canManage" class="px-5 py-3">
-                                <div class="flex items-center justify-end gap-1">
+                                <div
+                                    class="flex items-center justify-end gap-1"
+                                >
                                     <button
                                         @click="openEditTriggerModal(trigger)"
                                         class="rounded-md border border-gray-300 bg-white p-1.5 text-gray-500 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
@@ -470,7 +488,9 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                 v-else
                 class="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
             >
-                <Zap class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
+                <Zap
+                    class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600"
+                />
                 <p class="mt-4 text-gray-500 dark:text-gray-400">
                     No hay disparadores configurados.
                 </p>
@@ -505,7 +525,7 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                 <table class="w-full text-left text-sm">
                     <thead>
                         <tr
-                            class="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500 dark:border-zinc-800 dark:text-gray-400"
+                            class="border-b border-gray-200 text-xs tracking-wide text-gray-500 uppercase dark:border-zinc-800 dark:text-gray-400"
                         >
                             <th class="px-5 py-3 font-medium">Evento</th>
                             <th class="px-5 py-3 font-medium">Estado</th>
@@ -550,7 +570,9 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                                     {{ log.message }}
                                 </p>
                             </td>
-                            <td class="px-5 py-3 text-gray-600 dark:text-gray-400">
+                            <td
+                                class="px-5 py-3 text-gray-600 dark:text-gray-400"
+                            >
                                 {{ log.subject_type }}
                                 <span
                                     v-if="log.subject_id"
@@ -559,10 +581,14 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                                     #{{ log.subject_id }}
                                 </span>
                             </td>
-                            <td class="px-5 py-3 text-gray-600 dark:text-gray-400">
+                            <td
+                                class="px-5 py-3 text-gray-600 dark:text-gray-400"
+                            >
                                 {{ log.actor_name ?? '—' }}
                             </td>
-                            <td class="px-5 py-3 text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-5 py-3 text-gray-500 dark:text-gray-400"
+                            >
                                 {{ log.created_at }}
                             </td>
                         </tr>
@@ -574,7 +600,9 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                 v-else
                 class="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
             >
-                <Activity class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
+                <Activity
+                    class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600"
+                />
                 <p class="mt-4 text-gray-500 dark:text-gray-400">
                     Aún no hay eventos registrados.
                 </p>
@@ -614,7 +642,9 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                         >
                             <ul class="mt-1 list-inside list-disc">
                                 <li
-                                    v-for="(message, key) in templateForm.errors"
+                                    v-for="(
+                                        message, key
+                                    ) in templateForm.errors"
                                     :key="key"
                                 >
                                     {{ message }}
@@ -711,9 +741,7 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                             </div>
                         </div>
 
-                        <div
-                            class="mt-6 flex items-center justify-end gap-3"
-                        >
+                        <div class="mt-6 flex items-center justify-end gap-3">
                             <button
                                 type="button"
                                 @click="showTemplateModal = false"

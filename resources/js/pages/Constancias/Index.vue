@@ -70,10 +70,7 @@ const downloadEvento = () => {
 };
 
 const downloadInvitacion = (roleId: number) => {
-    window.open(
-        '/constancias/invitacion/descargar?role=' + roleId,
-        '_blank',
-    );
+    window.open('/constancias/invitacion/descargar?role=' + roleId, '_blank');
 };
 
 const roleLabel = (role: string | null) =>
