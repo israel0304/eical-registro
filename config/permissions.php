@@ -29,6 +29,7 @@ return [
         'presentations.edit' => 'Editar ponencias',
         'presentations.delete' => 'Eliminar ponencias',
         'presentations.import' => 'Importar ponencias desde OJS',
+        'presentations.presented' => 'Presentó',
     ],
     'Conferencias' => [
         'conferences.view' => 'Ver conferencias',
