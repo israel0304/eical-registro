@@ -854,6 +854,7 @@ HTML;
             '{evento}' => $metadata['evento'] ?? '',
             '{nombre_evento}' => $metadata['nombre_evento'] ?? $metadata['evento'] ?? '',
             '{fecha_evento}' => $metadata['fecha_evento'] ?? '',
+            '{fecha}' => $metadata['fecha'] ?? '',
             '{folio}' => $metadata['folio'] ?? '',
             '{dni}' => $metadata['dni'] ?? '',
             '{afiliacion}' => $metadata['afiliacion'] ?? '',
@@ -925,6 +926,7 @@ HTML;
             'evento' => $this->eventName(),
             'nombre_evento' => $this->eventName(),
             'fecha_evento' => $this->eventDateRange(),
+            'fecha' => $this->eventStartDate(),
             'institucion' => (string) ($user->affiliation ?? ''),
             'pais' => (string) ($user->country ?? ''),
             'ponencia' => $trabajos[0] ?? '',
@@ -1015,6 +1017,17 @@ HTML;
         }
 
         return $startText.' – '.$this->formatSpanishDate($end);
+    }
+
+    private function eventStartDate(): string
+    {
+        $start = EventSettings::startDate();
+
+        if ($start === null) {
+            return '';
+        }
+
+        return $this->formatSpanishDate($start);
     }
 
     private function buildBadgeMetadata(User $user): array
