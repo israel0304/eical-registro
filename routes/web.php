@@ -467,6 +467,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('admin/constancias/invitaciones/plantillas/{template}', [InvitationTemplateController::class, 'update'])->name('constancias.invitaciones.templates.update');
         Route::patch('admin/constancias/invitaciones/plantillas/{template}/activar', [InvitationTemplateController::class, 'toggleActive'])->name('constancias.invitaciones.templates.activate');
         Route::delete('admin/constancias/invitaciones/plantillas/{template}', [InvitationTemplateController::class, 'destroy'])->name('constancias.invitaciones.templates.destroy');
+        Route::post('admin/constancias/invitaciones/plantillas/upload-image', [InvitationTemplateController::class, 'uploadImage'])->name('constancias.invitaciones.templates.upload-image');
     });
 
     // Admin: participation types

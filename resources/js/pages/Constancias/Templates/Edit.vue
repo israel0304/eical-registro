@@ -35,6 +35,7 @@ interface ElementModel {
     height: number | null;
     font_size: number | null;
     auto_fit: boolean;
+    word_wrap: boolean;
     font_weight: string | null;
     font_family: string | null;
     color: string | null;
@@ -102,6 +103,7 @@ const elements = ref<ElementModel[]>(
         height: el.height ? Number(el.height) : null,
         font_size: el.font_size ? Number(el.font_size) : null,
         auto_fit: Boolean(el.auto_fit ?? false),
+        word_wrap: el.word_wrap !== false,
         font_weight: el.font_weight ?? null,
         font_family: el.font_family ?? null,
         color: el.color ?? null,
@@ -219,6 +221,7 @@ const addElement = (type: 'text' | 'qr' | 'image') => {
         height: type === 'text' ? 60 : 200,
         font_size: type === 'text' ? 42 : null,
         auto_fit: false,
+        word_wrap: true,
         font_weight: type === 'text' ? 'bold' : null,
         font_family: type === 'text' ? 'Georgia, serif' : null,
         color: type === 'text' ? '#000000' : null,
@@ -338,6 +341,7 @@ const save = () => {
         height: el.height,
         font_size: el.font_size,
         auto_fit: el.auto_fit,
+        word_wrap: el.word_wrap,
         font_weight: el.font_weight,
         font_family: el.font_family,
         color: el.color,
@@ -886,6 +890,16 @@ onMounted(() => {
                                     class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 />
                                 Ajustar automáticamente
+                            </label>
+                            <label
+                                class="mt-1 flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300"
+                            >
+                                <input
+                                    v-model="selected.word_wrap"
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                Permitir salto de línea
                             </label>
                             <div class="mt-3 grid grid-cols-2 gap-2">
                                 <div>

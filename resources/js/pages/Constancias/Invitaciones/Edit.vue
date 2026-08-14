@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import axios from 'axios';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { useElementSize } from '@vueuse/core';
 import {
@@ -11,6 +12,7 @@ import {
     Save,
     Trash2,
     Type,
+    Upload,
 } from 'lucide-vue-next';
 import QRCode from 'qrcode';
 import {
@@ -26,7 +28,7 @@ import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 interface ElementModel {
     _uid: string;
     id: number | null;
-    type: 'text' | 'qr';
+    type: 'text' | 'qr' | 'image';
     content: string | null;
     variable: string | null;
     x: number;
@@ -35,6 +37,7 @@ interface ElementModel {
     height: number | null;
     font_size: number | null;
     auto_fit: boolean;
+    word_wrap: boolean;
     font_weight: string | null;
     font_family: string | null;
     color: string | null;
@@ -95,6 +98,7 @@ const elements = ref<ElementModel[]>(
         height: el.height ? Number(el.height) : null,
         font_size: el.font_size ? Number(el.font_size) : null,
         auto_fit: Boolean(el.auto_fit ?? false),
+        word_wrap: el.word_wrap !== false,
         font_weight: el.font_weight ?? null,
         font_family: el.font_family ?? null,
         color: el.color ?? null,
@@ -144,11 +148,12 @@ const SAMPLE: Record<string, string> = {
     '{fecha_evento}': '12 al 15 de agosto de 2026',
     '{institucion}': 'Centro de Investigación y de Estudios Avanzados del IPN',
     '{pais}': 'México',
+    '{autores}': 'María Fernanda López, Juan Pérez, Carlos García',
 };
 
 const previewText = (content: string | null) =>
     (content ?? '').replace(
-        /\{nombre_completo\}|\{rol\}|\{nombre_evento\}|\{fecha_evento\}|\{institucion\}|\{pais\}/g,
+        /\{nombre_completo\}|\{rol\}|\{nombre_evento\}|\{fecha_evento\}|\{institucion\}|\{pais\}|\{autores\}/g,
         (m) => SAMPLE[m] ?? m,
     );
 
@@ -185,7 +190,7 @@ const qrFor = (el: ElementModel) => {
     return qrPreviews[el._uid];
 };
 
-const addElement = (type: 'text' | 'qr') => {
+const addElement = (type: 'text' | 'qr' | 'image') => {
     const maxZ = elements.value.reduce(
         (max, el) => Math.max(max, el.z_index),
         0,
@@ -202,6 +207,7 @@ const addElement = (type: 'text' | 'qr') => {
         height: type === 'text' ? 60 : 200,
         font_size: type === 'text' ? 42 : null,
         auto_fit: false,
+        word_wrap: true,
         font_weight: type === 'text' ? 'bold' : null,
         font_family: type === 'text' ? 'Georgia, serif' : null,
         color: type === 'text' ? '#000000' : null,
@@ -309,6 +315,31 @@ const insertVariable = (key: string) => {
     selected.value.content = (selected.value.content ?? '') + key;
 };
 
+// Image upload
+const uploadingImage = ref(false);
+const uploadImage = async (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    uploadingImage.value = true;
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await axios.post(
+            '/admin/constancias/invitaciones/plantillas/upload-image',
+            formData,
+        );
+        if (selected.value) {
+            selected.value.content = res.data.url;
+        }
+    } catch {
+        // ignore
+    } finally {
+        uploadingImage.value = false;
+        input.value = '';
+    }
+};
+
 // Save
 const save = () => {
     const serverElements = elements.value.map((el, i) => ({
@@ -321,6 +352,7 @@ const save = () => {
         height: el.height,
         font_size: el.font_size,
         auto_fit: el.auto_fit,
+        word_wrap: el.word_wrap,
         font_weight: el.font_weight,
         font_family: el.font_family,
         color: el.color,
@@ -359,6 +391,13 @@ const elementStyle = (el: ElementModel) => {
         if (el.font_family) style.fontFamily = el.font_family;
         if (el.color) style.color = el.color;
         style.textAlign = el.text_align;
+        if (!el.word_wrap) {
+            style.whiteSpace = 'nowrap';
+            style.overflow = 'hidden';
+        }
+    }
+    if (el.type === 'image') {
+        style.overflow = 'hidden';
     }
     return style;
 };
@@ -496,6 +535,12 @@ onMounted(() => {
                         >
                             <QrCode class="h-4 w-4" /> Agregar QR
                         </button>
+                        <button
+                            @click="addElement('image')"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:border-indigo-400 hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:text-indigo-400"
+                        >
+                            <Image class="h-4 w-4" /> Agregar imagen
+                        </button>
                     </div>
 
                     <div class="mt-4">
@@ -517,15 +562,17 @@ onMounted(() => {
                                 @click="selectedUid = el._uid"
                             >
                                 <component
-                                    :is="el.type === 'qr' ? QrCode : Type"
+                                    :is="el.type === 'qr' ? QrCode : el.type === 'image' ? Image : Type"
                                     class="h-4 w-4 shrink-0"
                                 />
                                 <span class="flex-1 truncate">
                                     {{
                                         el.type === 'qr'
                                             ? 'QR'
-                                            : previewText(el.content) ||
-                                              '(vacío)'
+                                            : el.type === 'image'
+                                              ? 'Imagen'
+                                              : previewText(el.content) ||
+                                                '(vacío)'
                                     }}
                                 </span>
                                 <span
@@ -652,18 +699,24 @@ onMounted(() => {
                                 :style="elementStyle(el)"
                                 @pointerdown="onElementPointerDown($event, el)"
                             >
-                                <img
-                                    v-if="el.type === 'qr'"
-                                    :src="qrFor(el)"
-                                    class="pointer-events-none h-full w-full"
-                                    draggable="false"
-                                />
-                                <div
-                                    v-else
-                                    class="pointer-events-none min-h-full whitespace-pre-line"
-                                >
-                                    {{ previewText(el.content) }}
-                                </div>
+                            <img
+                                v-if="el.type === 'qr'"
+                                :src="qrFor(el)"
+                                class="pointer-events-none h-full w-full"
+                                draggable="false"
+                            />
+                            <img
+                                v-else-if="el.type === 'image'"
+                                :src="el.content || ''"
+                                class="pointer-events-none h-full w-full object-contain"
+                                draggable="false"
+                            />
+                            <div
+                                v-else
+                                class="pointer-events-none min-h-full whitespace-pre-line"
+                            >
+                                {{ previewText(el.content) }}
+                            </div>
                                 <div
                                     v-if="selectedUid === el._uid"
                                     class="pointer-events-none absolute -inset-1 rounded border-2 border-indigo-500"
@@ -679,15 +732,17 @@ onMounted(() => {
                 >
                     <template v-if="selected">
                         <div class="mb-3 flex items-center justify-between">
-                            <h3
-                                class="text-sm font-semibold text-gray-900 dark:text-white"
-                            >
-                                {{
-                                    selected.type === 'qr'
-                                        ? 'Código QR'
-                                        : 'Texto'
-                                }}
-                            </h3>
+                        <h3
+                            class="text-sm font-semibold text-gray-900 dark:text-white"
+                        >
+                            {{
+                                selected.type === 'qr'
+                                    ? 'Código QR'
+                                    : selected.type === 'image'
+                                      ? 'Imagen'
+                                      : 'Texto'
+                            }}
+                        </h3>
                             <div class="flex items-center gap-1">
                                 <button
                                     @click="duplicateElement(selected._uid)"
@@ -852,6 +907,16 @@ onMounted(() => {
                                 />
                                 Ajustar automáticamente
                             </label>
+                            <label
+                                class="mt-1 flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300"
+                            >
+                                <input
+                                    v-model="selected.word_wrap"
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                Permitir salto de línea
+                            </label>
                             <div class="mt-3 grid grid-cols-2 gap-2">
                                 <div>
                                     <label
@@ -883,6 +948,35 @@ onMounted(() => {
                             </div>
                         </template>
 
+                        <template v-else-if="selected.type === 'image'">
+                            <div class="mt-3">
+                                <label
+                                    class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
+                                >
+                                    Imagen
+                                </label>
+                                <label
+                                    class="mt-1 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-500 transition-colors hover:border-indigo-400 hover:text-indigo-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-400 dark:hover:border-indigo-500"
+                                >
+                                    <Upload class="h-5 w-5" />
+                                    <span v-if="uploadingImage">Subiendo...</span>
+                                    <span v-else>
+                                        {{ selected.content ? 'Cambiar imagen' : 'Seleccionar imagen' }}
+                                    </span>
+                                    <input
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                                        class="hidden"
+                                        @change="uploadImage"
+                                    />
+                                </label>
+                                <img
+                                    v-if="selected.content"
+                                    :src="selected.content"
+                                    class="mt-2 max-h-32 w-full rounded-md border border-gray-200 object-contain dark:border-zinc-700"
+                                />
+                            </div>
+                        </template>
                         <template v-else-if="selected.type === 'qr'">
                             <div class="mt-3">
                                 <label
