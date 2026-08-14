@@ -21,6 +21,7 @@ class CertificateTemplateElement extends Model
         'height',
         'font_size',
         'auto_fit',
+        'word_wrap',
         'font_weight',
         'font_family',
         'color',
@@ -35,6 +36,7 @@ class CertificateTemplateElement extends Model
         'height' => 'integer',
         'font_size' => 'integer',
         'auto_fit' => 'boolean',
+        'word_wrap' => 'boolean',
         'z_index' => 'integer',
     ];
 

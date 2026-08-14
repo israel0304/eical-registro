@@ -703,9 +703,11 @@ HTML;
             $originalWidth = $element['width'] ?: 200;
             $width = $originalWidth * $scale;
             $height = ($element['height'] ?: $originalWidth) * $scale;
+            $src = ! empty($element['content']) ? e($element['content']) : ($photo ?? '');
+            $alt = ! empty($element['content']) ? 'Imagen' : 'Foto del participante';
             $style = "position:absolute;left:{$left}px;top:{$top}px;width:{$width}px;height:{$height}px;z-index:{$z};object-fit:cover;border-radius:8px;";
 
-            return '<img src="'.($photo ?? '').'" alt="Foto del participante" style="'.$style.'" />';
+            return '<img src="'.$src.'" alt="'.$alt.'" style="'.$style.'" />';
         }
 
         $width = $element['width'] ? (int) round($element['width'] * $scale).'px' : 'auto';
@@ -726,6 +728,7 @@ HTML;
                 $element['font_family'] ?? null,
                 $element['font_weight'] ?? null,
                 $fontSize,
+                $element['word_wrap'] ?? true,
             );
         }
 
@@ -739,6 +742,9 @@ HTML;
             if (! empty($element['auto_fit'])) {
                 $style .= 'white-space:nowrap;';
             }
+        }
+        if (! ($element['word_wrap'] ?? true)) {
+            $style .= 'white-space:nowrap;overflow:hidden;';
         }
         if (! empty($element['font_weight'])) {
             $style .= "font-weight:{$element['font_weight']};";
@@ -776,9 +782,9 @@ HTML;
      * Contenido de una línea: ajusta por ancho (comportamiento previo).
      * Contenido multilínea ({titulo_actividad}): ajusta por ancho y alto.
      */
-    private function autoFitFontSize(string $content, float $boxWidth, float $boxHeight, ?string $fontFamily, ?string $fontWeight, float $fontSize): float
+    private function autoFitFontSize(string $content, float $boxWidth, float $boxHeight, ?string $fontFamily, ?string $fontWeight, float $fontSize, bool $wordWrap = true): float
     {
-        if (! str_contains($content, '<br>') && ! str_contains($content, "\n")) {
+        if (! $wordWrap || (! str_contains($content, '<br>') && ! str_contains($content, "\n"))) {
             $measured = $this->measuredTextWidth($content, $fontFamily, $fontWeight, $fontSize);
 
             if ($measured <= 0) {
@@ -857,6 +863,7 @@ HTML;
             '{ponencia}' => $metadata['ponencia'] ?? '',
             '{actividad}' => $metadata['actividad'] ?? $metadata['ponencia'] ?? '',
             '{iniciales}' => $metadata['iniciales'] ?? '',
+            '{autores}' => $metadata['autores'] ?? '',
         ];
 
         foreach ($replacements as $key => $value) {
@@ -923,6 +930,7 @@ HTML;
             'ponencia' => $trabajos[0] ?? '',
             'actividad' => $trabajos[0] ?? '',
             'trabajos' => $trabajos,
+            'autores' => implode(', ', array_unique($this->authorNamesForRole($user, $role))),
             'location' => null,
             'folio' => '',
         ];
@@ -962,6 +970,33 @@ HTML;
                 ->all(),
             default => [],
         };
+    }
+
+    /**
+     * Nombres de todos los autores/coautores de las actividades del usuario
+     * según su rol. Usado por la variable {autores}.
+     */
+    private function authorNamesForRole(User $user, Role $role): array
+    {
+        $names = match ($role->name) {
+            'Ponente' => User::whereHas('presentations', fn ($q) => $q
+                ->whereIn('presentations.id', $user->presentations()
+                    ->wherePivot('presented', true)
+                    ->pluck('presentations.id'))
+            )->get()->map(fn ($u) => trim($u->first_name.' '.$u->last_name))->all(),
+            'Instructor' => User::whereHas('workshops', fn ($q) => $q
+                ->whereIn('workshops.id', Workshop::whereHas('instructors', fn ($q) => $q->where('users.id', $user->id))->pluck('id'))
+            )->get()->map(fn ($u) => trim($u->first_name.' '.$u->last_name))->all(),
+            'Speaker' => User::whereHas('conferences', fn ($q) => $q
+                ->whereIn('conferences.id', Conference::whereHas('speakers', fn ($q) => $q->where('users.id', $user->id))->pluck('id'))
+            )->get()->map(fn ($u) => trim($u->first_name.' '.$u->last_name))->all(),
+            'Moderator' => User::whereHas('conferences', fn ($q) => $q
+                ->whereIn('conferences.id', Conference::whereHas('moderators', fn ($q) => $q->where('users.id', $user->id))->pluck('id'))
+            )->get()->map(fn ($u) => trim($u->first_name.' '.$u->last_name))->all(),
+            default => [],
+        };
+
+        return $names;
     }
 
     private function eventDateRange(): string

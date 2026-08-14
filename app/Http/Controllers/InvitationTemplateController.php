@@ -116,6 +116,7 @@ class InvitationTemplateController extends Controller
                 'height' => ! empty($element['height']) ? (int) $element['height'] : null,
                 'font_size' => ! empty($element['font_size']) ? (int) $element['font_size'] : null,
                 'auto_fit' => ! empty($element['auto_fit']),
+                'word_wrap' => ! empty($element['word_wrap']),
                 'font_weight' => $element['font_weight'] ?? null,
                 'font_family' => $element['font_family'] ?? null,
                 'color' => $element['color'] ?? null,
@@ -158,6 +159,19 @@ class InvitationTemplateController extends Controller
         return back()->with('success', 'Plantilla de carta eliminada.');
     }
 
+    public function uploadImage(Request $request)
+    {
+        abort_unless($request->user()->can('constancias.templates.manage'), 403);
+
+        $request->validate([
+            'file' => ['required', 'image', 'mimes:png,jpg,jpeg,svg,webp', 'max:5120'],
+        ]);
+
+        $path = $request->file('file')->store('invitation-images', 'public');
+
+        return response()->json(['url' => Storage::url($path)]);
+    }
+
     private function validateTemplate(Request $request): array
     {
         return $request->validate([
@@ -179,6 +193,7 @@ class InvitationTemplateController extends Controller
             'elements.*.height' => ['nullable', 'numeric'],
             'elements.*.font_size' => ['nullable', 'integer', 'min:4', 'max:400'],
             'elements.*.auto_fit' => ['nullable', 'boolean'],
+            'elements.*.word_wrap' => ['nullable', 'boolean'],
             'elements.*.font_weight' => ['nullable', 'string', 'max:100'],
             'elements.*.font_family' => ['nullable', 'string', 'max:200'],
             'elements.*.color' => ['nullable', 'string', 'max:50'],
@@ -227,6 +242,7 @@ class InvitationTemplateController extends Controller
             ['key' => '{ponencia}', 'label' => 'Título de la ponencia (si aplica)'],
             ['key' => '{actividad}', 'label' => 'Nombre de la actividad vinculada'],
             ['key' => '{titulo_actividad}', 'label' => 'Título de la actividad (ponencia/taller/conferencia/trabajo)'],
+            ['key' => '{autores}', 'label' => 'Autores de la actividad'],
             ['key' => '{dni}', 'label' => 'DNI'],
             ['key' => '{folio}', 'label' => 'Folio'],
             ['key' => '{qr}', 'label' => 'Código QR de verificación'],
