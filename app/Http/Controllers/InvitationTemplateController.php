@@ -197,7 +197,7 @@ class InvitationTemplateController extends Controller
             'elements.*.font_weight' => ['nullable', 'string', 'max:100'],
             'elements.*.font_family' => ['nullable', 'string', 'max:200'],
             'elements.*.color' => ['nullable', 'string', 'max:50'],
-            'elements.*.text_align' => ['nullable', Rule::in(['left', 'center', 'right'])],
+            'elements.*.text_align' => ['nullable', Rule::in(['left', 'center', 'right', 'justify'])],
             'elements.*.z_index' => ['nullable', 'integer'],
         ]);
     }
