@@ -149,11 +149,12 @@ const SAMPLE: Record<string, string> = {
     '{institucion}': 'Centro de Investigación y de Estudios Avanzados del IPN',
     '{pais}': 'México',
     '{autores}': 'María Fernanda López, Juan Pérez, Carlos García',
+    '{fecha}': '13 de agosto de 2026',
 };
 
 const previewText = (content: string | null) =>
     (content ?? '').replace(
-        /\{nombre_completo\}|\{rol\}|\{nombre_evento\}|\{fecha_evento\}|\{institucion\}|\{pais\}|\{autores\}/g,
+        /\{nombre_completo\}|\{rol\}|\{nombre_evento\}|\{fecha_evento\}|\{fecha\}|\{institucion\}|\{pais\}|\{autores\}/g,
         (m) => SAMPLE[m] ?? m,
     );
 
