@@ -183,6 +183,11 @@ class CertificateRenderer
             ],
         );
 
+        $certificate->update([
+            'template_id' => $template->id,
+            'metadata' => $metadata,
+        ]);
+
         return $this->finalize($certificate, $template, $metadata);
     }
 
@@ -705,7 +710,7 @@ HTML;
             $height = ($element['height'] ?: $originalWidth) * $scale;
             $src = ! empty($element['content']) ? e($element['content']) : ($photo ?? '');
             $alt = ! empty($element['content']) ? 'Imagen' : 'Foto del participante';
-            $style = "position:absolute;left:{$left}px;top:{$top}px;width:{$width}px;height:{$height}px;z-index:{$z};object-fit:cover;border-radius:8px;";
+            $style = "position:absolute;left:{$left}px;top:{$top}px;width:{$width}px;height:{$height}px;z-index:{$z};object-fit:contain;border-radius:8px;";
 
             return '<img src="'.$src.'" alt="'.$alt.'" style="'.$style.'" />';
         }
@@ -923,10 +928,10 @@ HTML;
             'nombre_completo' => $nombre,
             'rol' => $this->cartaRoleLabel($role),
             'tipo_participacion' => $this->cartaRoleLabel($role),
-            'evento' => $this->eventName(),
+            'evento' => $trabajos[0] ?? '',
             'nombre_evento' => $this->eventName(),
             'fecha_evento' => $this->eventDateRange(),
-            'fecha' => $this->eventStartDate(),
+            'fecha' => $this->formatSpanishDate($user->created_at->toDateString()),
             'institucion' => (string) ($user->affiliation ?? ''),
             'pais' => (string) ($user->country ?? ''),
             'ponencia' => $trabajos[0] ?? '',
@@ -947,7 +952,6 @@ HTML;
     {
         return match ($role->name) {
             'Ponente' => $user->presentations()
-                ->wherePivot('presented', true)
                 ->orderBy('day')
                 ->pluck('title')
                 ->map(fn ($t) => (string) $t)
@@ -982,9 +986,7 @@ HTML;
     {
         $names = match ($role->name) {
             'Ponente' => User::whereHas('presentations', fn ($q) => $q
-                ->whereIn('presentations.id', $user->presentations()
-                    ->wherePivot('presented', true)
-                    ->pluck('presentations.id'))
+                ->whereIn('presentations.id', $user->presentations()->pluck('presentations.id'))
             )->get()->map(fn ($u) => trim($u->first_name.' '.$u->last_name))->all(),
             'Instructor' => User::whereHas('workshops', fn ($q) => $q
                 ->whereIn('workshops.id', Workshop::whereHas('instructors', fn ($q) => $q->where('users.id', $user->id))->pluck('id'))
@@ -1017,17 +1019,6 @@ HTML;
         }
 
         return $startText.' – '.$this->formatSpanishDate($end);
-    }
-
-    private function eventStartDate(): string
-    {
-        $start = EventSettings::startDate();
-
-        if ($start === null) {
-            return '';
-        }
-
-        return $this->formatSpanishDate($start);
     }
 
     private function buildBadgeMetadata(User $user): array
