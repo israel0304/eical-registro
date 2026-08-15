@@ -690,7 +690,7 @@ onMounted(() => {
                                 <img
                                     v-else-if="el.type === 'image'"
                                     :src="SAMPLE_PHOTO"
-                                    class="pointer-events-none h-full w-full rounded-lg object-cover"
+                                    class="pointer-events-none h-full w-full rounded-lg object-contain"
                                     draggable="false"
                                 />
                                 <div

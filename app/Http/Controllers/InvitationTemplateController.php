@@ -235,9 +235,10 @@ class InvitationTemplateController extends Controller
         return [
             ['key' => '{nombre_completo}', 'label' => 'Nombre completo'],
             ['key' => '{rol}', 'label' => 'Rol de participación'],
+            ['key' => '{evento}', 'label' => 'Título de la actividad asignada'],
             ['key' => '{nombre_evento}', 'label' => 'Nombre del evento'],
             ['key' => '{fecha_evento}', 'label' => 'Fechas del evento (inicio - fin)'],
-            ['key' => '{fecha}', 'label' => 'Fecha del evento (día de inicio)'],
+            ['key' => '{fecha}', 'label' => 'Fecha de registro del participante'],
             ['key' => '{institucion}', 'label' => 'Institución / Afiliación'],
             ['key' => '{pais}', 'label' => 'País'],
             ['key' => '{ponencia}', 'label' => 'Título de la ponencia (si aplica)'],

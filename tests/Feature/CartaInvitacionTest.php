@@ -271,6 +271,190 @@ class CartaInvitacionTest extends TestCase
         $this->assertSame('Ponente', $certificate->metadata['rol'] ?? null);
     }
 
+    public function test_carta_evento_shows_assigned_activity_title(): void
+    {
+        $role = $this->role('Ponente', 2);
+        $template = $this->invitationTemplate($role);
+        $template->elements()->delete();
+        $template->elements()->create([
+            'type' => 'text',
+            'content' => '{evento}',
+            'x' => 100,
+            'y' => 300,
+            'width' => 600,
+            'height' => 60,
+            'font_size' => 18,
+            'text_align' => 'center',
+            'z_index' => 1,
+        ]);
+
+        $user = $this->userWithRole();
+
+        $presentation = Presentation::create([
+            'title' => 'Modelización matemática de caída libre',
+            'day' => '2026-08-05',
+            'location' => 'Sala 3',
+        ]);
+        $presentation->authors()->attach($user->id, ['author_order' => 1, 'presented' => false]);
+
+        $this->actingAs($user)
+            ->get('/constancias/invitacion/descargar?role='.$role->id)
+            ->assertOk()
+            ->assertSee('Modelización matemática de caída libre', false);
+
+        $certificate = Certificate::query()
+            ->where('user_id', $user->id)
+            ->where('event_type', 'event')
+            ->first();
+
+        $this->assertSame('Modelización matemática de caída libre', $certificate->metadata['evento'] ?? null);
+        $this->assertSame('Modelización matemática de caída libre', $certificate->metadata['trabajos'][0] ?? null);
+    }
+
+    public function test_carta_fecha_is_user_registration_date(): void
+    {
+        $role = $this->role('Ponente', 2);
+        $template = $this->invitationTemplate($role);
+        $template->elements()->delete();
+        $template->elements()->create([
+            'type' => 'text',
+            'content' => '{fecha}',
+            'x' => 100,
+            'y' => 300,
+            'width' => 600,
+            'height' => 60,
+            'font_size' => 18,
+            'text_align' => 'center',
+            'z_index' => 1,
+        ]);
+
+        $user = $this->userWithRole();
+        $user->forceFill(['created_at' => '2026-07-02 10:00:00'])->save();
+
+        $this->actingAs($user)
+            ->get('/constancias/invitacion/descargar?role='.$role->id)
+            ->assertOk()
+            ->assertSee('2 de julio de 2026', false);
+
+        $certificate = Certificate::query()
+            ->where('user_id', $user->id)
+            ->where('event_type', 'event')
+            ->first();
+
+        $this->assertSame('2 de julio de 2026', $certificate->metadata['fecha'] ?? null);
+    }
+
+    public function test_carta_autores_includes_authors_when_not_presented(): void
+    {
+        $role = $this->role('Ponente', 2);
+        $template = $this->invitationTemplate($role);
+        $template->elements()->delete();
+        $template->elements()->create([
+            'type' => 'text',
+            'content' => '{autores}',
+            'x' => 100,
+            'y' => 300,
+            'width' => 600,
+            'height' => 60,
+            'font_size' => 18,
+            'text_align' => 'center',
+            'z_index' => 1,
+        ]);
+
+        $user = $this->userWithRole();
+
+        $coauthor = User::factory()->create([
+            'first_name' => 'Juan',
+            'last_name' => 'Pérez',
+        ]);
+        $coauthor->roles()->sync([$role->id]);
+
+        $presentation = Presentation::create([
+            'title' => 'Modelización matemática de caída libre',
+            'day' => '2026-08-05',
+            'location' => 'Sala 3',
+        ]);
+        $presentation->authors()->attach($user->id, ['author_order' => 1, 'presented' => false]);
+        $presentation->authors()->attach($coauthor->id, ['author_order' => 2, 'presented' => false]);
+
+        $this->actingAs($user)
+            ->get('/constancias/invitacion/descargar?role='.$role->id)
+            ->assertOk()
+            ->assertSee('María López', false)
+            ->assertSee('Juan Pérez', false);
+
+        $certificate = Certificate::query()
+            ->where('user_id', $user->id)
+            ->where('event_type', 'event')
+            ->first();
+
+        $autores = $certificate->metadata['autores'] ?? '';
+        $this->assertStringContainsString('María López', $autores);
+        $this->assertStringContainsString('Juan Pérez', $autores);
+    }
+
+    public function test_carta_metadata_refreshes_on_redownload(): void
+    {
+        $role = $this->role('Ponente', 2);
+        $template = $this->invitationTemplate($role);
+        $template->elements()->delete();
+        $template->elements()->create([
+            'type' => 'text',
+            'content' => '{evento}',
+            'x' => 100,
+            'y' => 300,
+            'width' => 600,
+            'height' => 60,
+            'font_size' => 18,
+            'text_align' => 'center',
+            'z_index' => 1,
+        ]);
+
+        $user = $this->userWithRole();
+
+        $url = '/constancias/invitacion/descargar?role='.$role->id;
+        $this->actingAs($user)->get($url)->assertOk();
+
+        $certificate = Certificate::query()->where('user_id', $user->id)->where('event_type', 'event')->first();
+        $this->assertSame('', $certificate->metadata['evento'] ?? '');
+
+        $presentation = Presentation::create([
+            'title' => 'Modelización matemática de caída libre',
+            'day' => '2026-08-05',
+            'location' => 'Sala 3',
+        ]);
+        $presentation->authors()->attach($user->id, ['author_order' => 1, 'presented' => false]);
+
+        $this->actingAs($user)->get($url)->assertOk();
+
+        $certificate->refresh();
+        $this->assertSame('Modelización matemática de caída libre', $certificate->metadata['evento'] ?? null);
+        $this->assertNotNull($certificate->folio);
+    }
+
+    public function test_carta_image_elements_render_with_contain_fit(): void
+    {
+        $role = $this->role('Ponente', 2);
+        $template = $this->invitationTemplate($role);
+        $template->elements()->delete();
+        $template->elements()->create([
+            'type' => 'image',
+            'content' => '/storage/invitation-images/logo.png',
+            'x' => 100,
+            'y' => 100,
+            'width' => 200,
+            'height' => 200,
+            'z_index' => 1,
+        ]);
+
+        $user = $this->userWithRole();
+
+        $this->actingAs($user)
+            ->get('/constancias/invitacion/descargar?role='.$role->id)
+            ->assertOk()
+            ->assertSee('object-fit:contain', false);
+    }
+
     public function test_multiple_roles_are_listed_on_my_certificates(): void
     {
         $ponente = $this->role('Ponente', 2);

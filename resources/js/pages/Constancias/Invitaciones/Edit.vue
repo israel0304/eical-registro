@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import axios from 'axios';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { useElementSize } from '@vueuse/core';
+import axios from 'axios';
 import {
     ArrowDown,
     ArrowUp,
@@ -144,6 +144,7 @@ onBeforeUnmount(() => {
 const SAMPLE: Record<string, string> = {
     '{nombre_completo}': 'María Fernanda López',
     '{rol}': 'Ponente',
+    '{evento}': 'Inteligencia Artificial en la Educación',
     '{nombre_evento}': 'EICAL 2026',
     '{fecha_evento}': '12 al 15 de agosto de 2026',
     '{institucion}': 'Centro de Investigación y de Estudios Avanzados del IPN',
@@ -154,7 +155,7 @@ const SAMPLE: Record<string, string> = {
 
 const previewText = (content: string | null) =>
     (content ?? '').replace(
-        /\{nombre_completo\}|\{rol\}|\{nombre_evento\}|\{fecha_evento\}|\{fecha\}|\{institucion\}|\{pais\}|\{autores\}/g,
+        /\{nombre_completo\}|\{rol\}|\{evento\}|\{nombre_evento\}|\{fecha_evento\}|\{fecha\}|\{institucion\}|\{pais\}|\{autores\}/g,
         (m) => SAMPLE[m] ?? m,
     );
 
