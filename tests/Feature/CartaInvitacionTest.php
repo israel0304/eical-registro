@@ -9,6 +9,7 @@ use App\Models\Presentation;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CartaInvitacionTest extends TestCase
@@ -453,6 +454,43 @@ class CartaInvitacionTest extends TestCase
             ->get('/constancias/invitacion/descargar?role='.$role->id)
             ->assertOk()
             ->assertSee('object-fit:contain', false);
+    }
+
+    public function test_carta_pdf_embeds_images_as_data_uri(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('invitation-images/logo.png', base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+        ));
+
+        $role = $this->role('Ponente', 2);
+        $template = $this->invitationTemplate($role);
+        $template->elements()->create([
+            'type' => 'image',
+            'content' => '/storage/invitation-images/logo.png',
+            'x' => 100,
+            'y' => 100,
+            'width' => 200,
+            'height' => 200,
+            'z_index' => 2,
+        ]);
+
+        $user = $this->userWithRole();
+
+        $this->actingAs($user)
+            ->get('/constancias/invitacion/descargar?role='.$role->id)
+            ->assertOk()
+            ->assertSee('data:image/png;base64,', false);
+
+        $certificate = Certificate::where('user_id', $user->id)->firstOrFail();
+
+        $response = $this->actingAs($user)
+            ->get('/constancias/'.$certificate->id.'/pdf');
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $response->assertHeader('Content-Disposition', 'attachment; filename=constancia_'.$certificate->folio.'.pdf');
+        $this->assertStringStartsWith('%PDF', $response->getContent());
     }
 
     public function test_multiple_roles_are_listed_on_my_certificates(): void

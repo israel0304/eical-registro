@@ -708,7 +708,7 @@ HTML;
             $originalWidth = $element['width'] ?: 200;
             $width = $originalWidth * $scale;
             $height = ($element['height'] ?: $originalWidth) * $scale;
-            $src = ! empty($element['content']) ? e($element['content']) : ($photo ?? '');
+            $src = ! empty($element['content']) ? e($this->resolveImageDataUri($element['content'])) : ($photo ?? '');
             $alt = ! empty($element['content']) ? 'Imagen' : 'Foto del participante';
             $style = "position:absolute;left:{$left}px;top:{$top}px;width:{$width}px;height:{$height}px;z-index:{$z};object-fit:contain;border-radius:8px;";
 
@@ -1064,6 +1064,22 @@ HTML;
         }
 
         return $this->initialsPlaceholder($user);
+    }
+
+    private function resolveImageDataUri(string $content): string
+    {
+        if (! str_starts_with($content, '/storage/')) {
+            return $content;
+        }
+
+        $path = substr($content, strlen('/storage/'));
+        if (! $path || ! Storage::disk('public')->exists($path)) {
+            return $content;
+        }
+
+        $mime = Storage::disk('public')->mimeType($path) ?: 'image/png';
+
+        return 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($path));
     }
 
     private function initialsPlaceholder(User $user): string
