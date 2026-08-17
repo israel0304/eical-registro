@@ -130,15 +130,14 @@ class PresentationImportController extends Controller
 
                 $user->roles()->syncWithoutDetaching([Role::where('name', 'Ponente')->value('id')]); // Ponente
 
-                // Enviar email de activación
+                // Enviar email de activación de cuenta
                 try {
-                    $user->update(['activation_token' => Str::random(60)]);
-                    $activationUrl = url('/ponente/activar/'.$user->activation_token);
-                    EventAudit::emit('user.welcome', $user, $request->user(), [
+                    EventAudit::emit('presentation.accepted', $user, $request->user(), [
                         'destinatario' => $user->email,
                         'nombre_completo' => $user->name,
                         'nombre' => $user->first_name,
-                        'url_activacion' => $activationUrl,
+                        'submission_id' => $submissionId,
+                        'url_activacion' => url('/ponente/activar'),
                     ]);
                 } catch (\Throwable $e) {
                     Log::error("Error enviando invitación a {$user->email}: ".$e->getMessage());

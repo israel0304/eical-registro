@@ -421,6 +421,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('admin/correos/disparadores', [EmailTriggerController::class, 'store'])->name('correos.triggers.store');
         Route::put('admin/correos/disparadores/{trigger}', [EmailTriggerController::class, 'update'])->name('correos.triggers.update');
         Route::delete('admin/correos/disparadores/{trigger}', [EmailTriggerController::class, 'destroy'])->name('correos.triggers.destroy');
+
+        Route::post('admin/correos/event-logs/{eventLog}/resend', [EmailTriggerController::class, 'resend'])->name('correos.logs.resend');
     });
 
     // Admin: badge templates

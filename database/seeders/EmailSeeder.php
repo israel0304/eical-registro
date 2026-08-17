@@ -190,6 +190,36 @@ HTML,
 <p>Saludos,<br>El equipo</p>
 HTML,
             ],
+            'presentation.accepted' => [
+                'name' => 'Ponencia aceptada (activación de cuenta)',
+                'subject' => '[XVII EICAL] Activación de cuenta en la plataforma de registro',
+                'default_trigger' => true,
+                'body_html' => <<<'HTML'
+<p>Cordial saludo, <strong>{{ nombre }}</strong>:</p>
+
+<p>Le damos la bienvenida a la plataforma oficial del 17.º Encuentro Internacional sobre la Enseñanza del Cálculo, Ciencias y Matemáticas (XVII EICAL).</p>
+
+<p>Para continuar con su proceso de participación y poder descargar su carta de aceptación oficial, es indispensable activar su cuenta en nuestro sistema.</p>
+
+<p>Por favor, complete su registro siguiendo estos sencillos pasos:</p>
+
+<ol>
+<li>Ingrese al siguiente enlace de activación:<br><a href="{{ url_activacion }}">{{ url_activacion }}</a></li>
+<li>Valide su identidad ingresando el número de ID de su ponencia ({{ submission_id }}) y el correo electrónico exacto con el que la registró.</li>
+<li>Asigne una contraseña segura para proteger su acceso.</li>
+</ol>
+
+<p>Una vez activada su cuenta, podrá acceder a la plataforma en cualquier momento. Le recordamos que su carta de aceptación ya se encuentra disponible para descarga dentro de la sección "Constancias".</p>
+
+<p>Le sugerimos guardar este correo o anotar su contraseña en un lugar seguro, ya que utilizará este acceso para los siguientes pasos rumbo al evento.</p>
+
+<p>Si presenta algún problema técnico o error durante la activación, por favor contáctenos enviando un mensaje a: soporte.encuentro.eical@gmail.com</p>
+
+<p>Esperamos saludarle pronto en el Cinvestav.</p>
+
+<p>Atentamente,<br>Comité Organizador<br>XVII EICAL</p>
+HTML,
+            ],
             'presentation.created' => [
                 'name' => 'Nueva ponencia registrada',
                 'subject' => 'Nueva ponencia: {{ title }}',

@@ -200,6 +200,21 @@ return [
             'variables' => [],
         ],
 
+        'presentation.accepted' => [
+            'label' => 'Ponencia aceptada (activación de cuenta)',
+            'group' => 'Ponencias',
+            'has_trigger' => true,
+            'to_options' => [
+                'destinatario' => 'Ponente importado',
+            ],
+            'variables' => [
+                'nombre_completo' => 'Nombre completo del ponente',
+                'nombre' => 'Nombre del ponente',
+                'submission_id' => 'ID de la ponencia',
+                'url_activacion' => 'Enlace de activación de cuenta',
+            ],
+        ],
+
         'presentation.created' => [
             'label' => 'Ponencia creada',
             'group' => 'Ponencias',
