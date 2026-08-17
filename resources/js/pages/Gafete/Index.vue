@@ -10,8 +10,10 @@ import {
     Building2,
     UserRound,
     Trash2,
+    SwitchCamera,
+    X,
 } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const props = defineProps<{
@@ -66,6 +68,96 @@ const onPhotoChange = (event: Event) => {
         },
     });
 };
+
+const cameraOpen = ref(false);
+const videoRef = ref<HTMLVideoElement | null>(null);
+const captureCanvas = ref<HTMLCanvasElement | null>(null);
+const cameraStream = ref<MediaStream | null>(null);
+const facingMode = ref<'user' | 'environment'>('user');
+const cameraError = ref('');
+
+const startCamera = async () => {
+    cameraError.value = '';
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: facingMode.value, width: { ideal: 1280 }, height: { ideal: 960 } },
+        });
+        cameraStream.value = stream;
+        if (videoRef.value) {
+            videoRef.value.srcObject = stream;
+        }
+    } catch {
+        cameraError.value = 'No se pudo acceder a la cámara. Verifica los permisos del navegador.';
+        cameraOpen.value = false;
+    }
+};
+
+const stopCamera = () => {
+    cameraStream.value?.getTracks().forEach((t) => t.stop());
+    cameraStream.value = null;
+};
+
+const openCamera = () => {
+    cameraOpen.value = true;
+    nextTick(startCamera);
+};
+
+const closeCamera = () => {
+    stopCamera();
+    cameraOpen.value = false;
+    cameraError.value = '';
+};
+
+const switchCamera = () => {
+    facingMode.value = facingMode.value === 'user' ? 'environment' : 'user';
+    stopCamera();
+    nextTick(startCamera);
+};
+
+const capturePhoto = () => {
+    const video = videoRef.value;
+    const canvas = captureCanvas.value;
+    if (!video || !canvas) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    if (facingMode.value === 'user') {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    canvas.toBlob(
+        (blob) => {
+            if (!blob) return;
+            const file = new File([blob], 'foto-gafete.jpg', { type: 'image/jpeg' });
+            photoForm.photo = file;
+            photoForm.post('/gafete/foto', {
+                preserveScroll: true,
+                onSuccess: () => {
+                    photoForm.reset();
+                    closeCamera();
+                },
+            });
+        },
+        'image/jpeg',
+        0.92,
+    );
+};
+
+const hasCamera = (() => {
+    try {
+        return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    } catch {
+        return false;
+    }
+})();
+
+onUnmounted(stopCamera);
 
 const generateQR = async () => {
     await nextTick();
@@ -244,18 +336,29 @@ onMounted(generateQR);
                                     : 'Aún no tienes foto. Agrega una para que aparezca en tu gafete (se mostrarán tus iniciales mientras tanto).'
                             }}
                         </p>
-                        <label
-                            class="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:border-indigo-400 hover:text-indigo-600 dark:border-zinc-700 dark:text-gray-400 dark:hover:text-indigo-400"
-                        >
-                            <Camera class="h-4 w-4" />
-                            {{ user.has_photo ? 'Cambiar foto' : 'Subir foto' }}
-                            <input
-                                type="file"
-                                accept="image/*"
-                                class="hidden"
-                                @change="onPhotoChange"
-                            />
-                        </label>
+                        <div class="mt-4 grid grid-cols-2 gap-2">
+                            <button
+                                v-if="hasCamera"
+                                type="button"
+                                @click="openCamera"
+                                class="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-3 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 dark:hover:bg-indigo-900"
+                            >
+                                <Camera class="h-4 w-4" />
+                                Tomar foto
+                            </button>
+                            <label
+                                class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:border-indigo-400 hover:text-indigo-600 dark:border-zinc-700 dark:text-gray-400 dark:hover:text-indigo-400"
+                            >
+                                <Download class="h-4 w-4" />
+                                Subir foto
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    class="hidden"
+                                    @change="onPhotoChange"
+                                />
+                            </label>
+                        </div>
                         <p
                             v-if="photoForm.processing"
                             class="mt-2 text-xs text-indigo-500"
@@ -339,5 +442,75 @@ onMounted(generateQR);
                 </div>
             </div>
         </div>
+
+        <!-- Camera modal -->
+        <Teleport to="body">
+            <div
+                v-if="cameraOpen"
+                class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black"
+            >
+                <div
+                    class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3"
+                >
+                    <button
+                        type="button"
+                        @click="closeCamera"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/20"
+                    >
+                        <X class="h-4 w-4" />
+                        Cerrar
+                    </button>
+                    <span class="text-sm font-medium text-white/70">
+                        Tomar foto de perfil
+                    </span>
+                    <div class="w-[88px]" />
+                </div>
+
+                <video
+                    ref="videoRef"
+                    autoplay
+                    playsinline
+                    muted
+                    class="h-full w-full object-cover"
+                    :class="{ 'scale-x-[-1]': facingMode === 'user' }"
+                />
+
+                <canvas ref="captureCanvas" class="hidden" />
+
+                <div
+                    class="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-center gap-8 px-4 py-6"
+                >
+                    <div class="w-[52px]" />
+                    <button
+                        type="button"
+                        @click="capturePhoto"
+                        :disabled="photoForm.processing"
+                        class="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-white/20 transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
+                    >
+                        <div
+                            v-if="photoForm.processing"
+                            class="h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white"
+                        />
+                        <div v-else class="h-12 w-12 rounded-full bg-white" />
+                    </button>
+                    <button
+                        v-if="hasCamera"
+                        type="button"
+                        @click="switchCamera"
+                        class="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur transition-colors hover:bg-white/30"
+                    >
+                        <SwitchCamera class="h-5 w-5" />
+                    </button>
+                    <div v-else class="w-[52px]" />
+                </div>
+            </div>
+        </Teleport>
+
+        <p
+            v-if="cameraError"
+            class="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-lg"
+        >
+            {{ cameraError }}
+        </p>
     </AppLayout>
 </template>
