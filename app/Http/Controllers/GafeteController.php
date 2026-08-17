@@ -98,7 +98,13 @@ class GafeteController extends Controller
             Storage::disk('public')->delete($user->profile_photo_path);
         }
 
-        $user->update(['profile_photo_path' => $request->file('photo')->store('profile-photos', 'public')]);
+        $path = $request->file('photo')->store('profile-photos', 'public');
+
+        if (! is_string($path) || $path === '') {
+            return back()->withErrors(['photo' => 'No se pudo guardar la imagen. Verifica permisos de almacenamiento.']);
+        }
+
+        $user->update(['profile_photo_path' => $path]);
 
         return back()->with('success', 'Foto de perfil actualizada.');
     }
