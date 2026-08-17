@@ -89,6 +89,7 @@ class EmailDispatcher
                 'hora_inicio', 'start_time' => '09:00',
                 'hora_fin', 'end_time' => '11:00',
                 'lugar', 'location' => 'Aula Magna',
+                'submission_id' => '12345',
                 'title' => 'Innovación en el aula: buenas prácticas',
                 'description' => 'Descripción de la actividad de ejemplo.',
                 'abstract' => 'Resumen de la ponencia de ejemplo.',

@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendTriggeredEmails;
 use App\Models\EmailTemplate;
 use App\Models\EmailTrigger;
+use App\Models\EventLog;
 use App\Support\EventCatalog;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -39,6 +42,27 @@ class EmailTriggerController extends Controller
         $trigger->delete();
 
         return back()->with('success', 'Disparador eliminado.');
+    }
+
+    public function resend(Request $request, EventLog $eventLog): JsonResponse
+    {
+        abort_unless($request->user()->can('correos.templates.manage'), 403);
+
+        $trigger = $eventLog->trigger;
+
+        if (! $trigger || ! $trigger->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El disparador asociado está inactivo o ya no existe.',
+            ], 422);
+        }
+
+        SendTriggeredEmails::dispatch($trigger, $eventLog->payload, $eventLog);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Correo encolado para envío.',
+        ]);
     }
 
     private function validateTrigger(Request $request): array

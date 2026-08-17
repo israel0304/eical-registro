@@ -7,6 +7,7 @@ import {
     Mail,
     Pencil,
     Plus,
+    RotateCcw,
     Send,
     Trash2,
     XCircle,
@@ -197,6 +198,12 @@ const statusBadge = (status: string) => {
                     'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
                 icon: XCircle,
             };
+        case 'queued':
+            return {
+                classes:
+                    'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+                icon: Clock,
+            };
         default:
             return {
                 classes:
@@ -212,8 +219,44 @@ const statusLabel = (status: string) => {
             return 'Enviado';
         case 'failed':
             return 'Falló';
+        case 'queued':
+            return 'En cola';
         default:
             return 'Registrado';
+    }
+};
+
+const resendingId = ref<number | null>(null);
+
+const resendLog = async (log: EventLogEntry) => {
+    resendingId.value = log.id;
+    try {
+        const res = await fetch(
+            `/admin/correos/event-logs/${log.id}/resend`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-XSRF-TOKEN': decodeURIComponent(
+                        document.cookie
+                            .split('; ')
+                            .find((c) => c.startsWith('XSRF-TOKEN='))
+                            ?.split('=')[1] ?? '',
+                    ),
+                },
+            },
+        );
+        const data = await res.json();
+        if (data.success) {
+            log.status = 'queued';
+        } else {
+            alert(data.message ?? 'No se pudo reenviar.');
+        }
+    } catch {
+        alert('Error de red al reenviar.');
+    } finally {
+        resendingId.value = null;
     }
 };
 
@@ -532,6 +575,12 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                             <th class="px-5 py-3 font-medium">Sujeto</th>
                             <th class="px-5 py-3 font-medium">Actor</th>
                             <th class="px-5 py-3 font-medium">Fecha</th>
+                            <th
+                                v-if="canManage"
+                                class="px-5 py-3 text-right font-medium"
+                            >
+                                Acciones
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -590,6 +639,36 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                                 class="px-5 py-3 text-gray-500 dark:text-gray-400"
                             >
                                 {{ log.created_at }}
+                            </td>
+                            <td
+                                v-if="canManage"
+                                class="px-5 py-3 text-right"
+                            >
+                                <button
+                                    v-if="
+                                        log.status !== 'sent' &&
+                                        log.status !== 'queued'
+                                    "
+                                    :disabled="resendingId === log.id"
+                                    @click="resendLog(log)"
+                                    class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                                >
+                                    <RotateCcw
+                                        class="h-3.5 w-3.5"
+                                        :class="
+                                            resendingId === log.id
+                                                ? 'animate-spin'
+                                                : ''
+                                        "
+                                    />
+                                    Reenviar
+                                </button>
+                                <span
+                                    v-else-if="log.status === 'queued'"
+                                    class="text-xs text-gray-400"
+                                >
+                                    En cola…
+                                </span>
                             </td>
                         </tr>
                     </tbody>
