@@ -88,6 +88,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'is_active',
         'activation_token',
         'password_set_at',
+        'email_verified_at',
         'semblanza',
     ];
 
