@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Services\EventAudit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -44,16 +43,7 @@ class PonenteActivationController extends Controller
         $token = Str::random(60);
         $user->update(['activation_token' => $token]);
 
-        $url = url('/ponente/activar/'.$token);
-
-        EventAudit::emit('user.welcome', $user, $request->user(), [
-            'destinatario' => $user->email,
-            'nombre_completo' => $user->name,
-            'nombre' => $user->first_name,
-            'url_activacion' => $url,
-        ]);
-
-        return back()->with('success', 'Te hemos enviado un correo con las instrucciones para activar tu cuenta. Revisa tu bandeja de entrada.');
+        return redirect('/ponente/activar/'.$token);
     }
 
     public function showSetPasswordForm(string $token)
