@@ -13,12 +13,12 @@ class PermissionSyncTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_ponente_role_map_includes_presentations_view_and_my(): void
+    public function test_ponente_role_map_includes_presentations_my_without_view(): void
     {
         $keys = PermissionSync::rolePermissionMap()[2];
 
-        $this->assertContains('presentations.view', $keys);
         $this->assertContains('presentations.my', $keys);
+        $this->assertNotContains('presentations.view', $keys);
     }
 
     public function test_speaker_role_map_includes_conferences_view_without_edit_or_delete(): void
@@ -71,8 +71,8 @@ class PermissionSyncTest extends TestCase
         $this->artisan('permissions:sync')->assertSuccessful();
 
         $ponenteKeys = Role::find(2)->permissions()->pluck('key')->all();
-        $this->assertContains('presentations.view', $ponenteKeys);
         $this->assertContains('presentations.my', $ponenteKeys);
+        $this->assertNotContains('presentations.view', $ponenteKeys);
 
         $speakerKeys = Role::find(5)->permissions()->pluck('key')->all();
         $this->assertContains('conferences.view', $speakerKeys);

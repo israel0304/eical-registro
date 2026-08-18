@@ -83,8 +83,9 @@ class PresentationController extends Controller
     {
         $user = request()->user();
         $isAssignedModerator = $presentation->moderators()->where('users.id', $user->id)->exists();
+        $isAuthor = $presentation->authors()->where('users.id', $user->id)->exists();
 
-        abort_unless($user->canViewActivity('presentations.view', $isAssignedModerator), 403);
+        abort_unless($user->canViewActivity('presentations.view', $isAssignedModerator || $isAuthor), 403);
 
         $presentation->load(['authors', 'moderators']);
 
