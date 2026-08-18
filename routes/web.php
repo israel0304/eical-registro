@@ -136,7 +136,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('admin/workshops/{workshop}/send-qr-all', [AttendanceController::class, 'sendQRToAll'])->middleware('can:workshops.attendance')->name('workshops.admin-send-qr-all');
 
     // Presentations
-    Route::get('presentations', [PresentationController::class, 'index'])->middleware('can:presentations.view')->name('presentations.index');
+    Route::get('presentations', [PresentationController::class, 'index'])->middleware('can:presentations.my')->name('presentations.index');
     Route::get('presentations/{presentation}', [PresentationController::class, 'show'])->name('presentations.show');
 
     Route::post('presentations', [PresentationController::class, 'store'])->middleware('can:presentations.create')->name('presentations.store');
