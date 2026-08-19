@@ -60,7 +60,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         items.push({ title: 'Ponencias', href: '/presentations', icon: Mic });
     }
 
-    if (can('presentations.my') && ! can('presentations.view')) {
+    if (can('presentations.my')) {
         items.push({ title: 'Mis Ponencias', href: '/my-presentations', icon: Mic });
     }
 
