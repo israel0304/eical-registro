@@ -12,15 +12,7 @@ class PresentationController extends Controller
 {
     public function index(Request $request)
     {
-        $user = $request->user();
-
         $query = Presentation::with(['authors', 'moderators']);
-
-        if ($user->hasPermission('presentations.my') && ! $user->hasPermission('presentations.view')) {
-            $query->whereHas('authors', function ($q) use ($user) {
-                $q->where('users.id', $user->id);
-            });
-        }
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -36,6 +28,23 @@ class PresentationController extends Controller
             'presentations' => $presentations,
             'filters' => $request->only(['search']),
             'tab' => $request->input('tab', 'list'),
+        ]);
+    }
+
+    public function myPresentations(Request $request)
+    {
+        $user = $request->user();
+
+        $presentations = Presentation::with(['authors', 'moderators'])
+            ->whereHas('authors', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            })
+            ->orderBy('day')
+            ->orderBy('start_time')
+            ->get();
+
+        return Inertia::render('Presentations/MyPresentations', [
+            'presentations' => $presentations,
         ]);
     }
 

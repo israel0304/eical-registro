@@ -136,12 +136,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('admin/workshops/{workshop}/send-qr-all', [AttendanceController::class, 'sendQRToAll'])->middleware('can:workshops.attendance')->name('workshops.admin-send-qr-all');
 
     // Presentations
-    Route::get('presentations', [PresentationController::class, 'index'])->middleware('can:presentations.my')->name('presentations.index');
+    Route::get('presentations', [PresentationController::class, 'index'])->middleware('can:presentations.view')->name('presentations.index');
     Route::get('presentations/{presentation}', [PresentationController::class, 'show'])->name('presentations.show');
 
     Route::post('presentations', [PresentationController::class, 'store'])->middleware('can:presentations.create')->name('presentations.store');
     Route::put('presentations/{presentation}', [PresentationController::class, 'update'])->name('presentations.update');
     Route::delete('presentations/{presentation}', [PresentationController::class, 'destroy'])->middleware('can:presentations.delete')->name('presentations.destroy');
+
+    // Mis ponencias (ponente)
+    Route::get('my-presentations', [PresentationController::class, 'myPresentations'])->middleware('can:presentations.my')->name('presentations.my');
 
     // Mis asignaciones (moderador)
     Route::get('mis-asignaciones', [AssignmentController::class, 'index'])->middleware('can:asignaciones.view')->name('asignaciones.index');
