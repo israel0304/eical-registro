@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { Eye } from 'lucide-vue-next';
+import { Eye, Pencil } from 'lucide-vue-next';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 defineProps<{
@@ -128,6 +128,15 @@ const formatDate = (dateStr: string) => {
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
                                         >
                                             <Eye class="h-4 w-4" />
+                                        </Link>
+                                        <Link
+                                            :href="
+                                                '/presentations/' +
+                                                presentation.id
+                                            "
+                                            class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
+                                        >
+                                            <Pencil class="h-4 w-4" />
                                         </Link>
                                     </div>
                                 </td>
