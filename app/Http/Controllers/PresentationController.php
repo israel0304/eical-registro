@@ -100,6 +100,7 @@ class PresentationController extends Controller
 
         return Inertia::render('Presentations/Show', [
             'presentation' => $presentation,
+            'isAuthor' => $isAuthor,
         ]);
     }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import {
     ArrowLeft,
@@ -8,12 +8,16 @@ import {
     MapPin,
     Hash,
     Download,
+    Pencil,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
+import DisciplineInput from '@/components/DisciplineInput.vue';
+import TagInput from '@/components/TagInput.vue';
 
 const props = defineProps<{
     presentation: any;
+    isAuthor?: boolean;
 }>();
 
 const page = usePage();
@@ -31,6 +35,33 @@ const canManage = computed(
     () => can('presentations.edit') || isAssignedModerator.value,
 );
 const canPresented = computed(() => can('presentations.presented'));
+const canEdit = computed(
+    () => can('presentations.edit') || (props.isAuthor && can('presentations.my')),
+);
+
+const showModal = ref(false);
+const form = useForm({
+    title: '',
+    abstract: '',
+    discipline: '',
+    keywords: '',
+});
+
+const openEditModal = () => {
+    form.title = props.presentation.title || '';
+    form.abstract = props.presentation.abstract || '';
+    form.discipline = props.presentation.discipline || '';
+    form.keywords = props.presentation.keywords || '';
+    showModal.value = true;
+};
+
+const savePresentation = () => {
+    form.put('/presentations/' + props.presentation.id, {
+        onSuccess: () => {
+            showModal.value = false;
+        },
+    });
+};
 
 const breadcrumbs = computed(() =>
     can('presentations.view')
@@ -121,11 +152,20 @@ const disciplinesList = computed(() => {
             <div
                 class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
             >
-                <h1
-                    class="text-2xl font-semibold text-gray-900 dark:text-white"
-                >
-                    {{ presentation.title }}
-                </h1>
+                <div class="flex items-start justify-between gap-4">
+                    <h1
+                        class="text-2xl font-semibold text-gray-900 dark:text-white"
+                    >
+                        {{ presentation.title }}
+                    </h1>
+                    <button
+                        v-if="canEdit"
+                        @click="openEditModal"
+                        class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                    >
+                        <Pencil class="h-4 w-4" /> Editar
+                    </button>
+                </div>
 
                 <div
                     v-if="presentation.submission_id"
@@ -310,6 +350,100 @@ const disciplinesList = computed(() => {
                             soporte.encuentro.eical@gmail.com
                         </a>
                     </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div
+            v-if="showModal"
+            class="fixed inset-0 z-50 overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+        >
+            <div
+                class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0"
+            >
+                <div
+                    class="fixed inset-0 bg-black/50 transition-opacity"
+                    @click="showModal = false"
+                ></div>
+                <span class="hidden sm:inline-block sm:h-screen sm:align-middle"
+                    >&#8203;</span
+                >
+                <div
+                    class="relative inline-block transform overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-8 sm:align-middle dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                    <h3
+                        class="mb-4 text-lg font-semibold text-gray-900 dark:text-white"
+                    >
+                        Editar Ponencia
+                    </h3>
+
+                    <form @submit.prevent="savePresentation">
+                        <div
+                            v-if="Object.keys(form.errors).length > 0"
+                            class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+                        >
+                            <p class="font-medium">Corrige los siguientes errores:</p>
+                            <ul class="mt-1 list-inside list-disc">
+                                <li v-for="(message, key) in form.errors" :key="key">
+                                    {{ message }}
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Titulo *
+                                </label>
+                                <input
+                                    v-model="form.title"
+                                    type="text"
+                                    required
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                />
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Resumen
+                                </label>
+                                <textarea
+                                    v-model="form.abstract"
+                                    rows="4"
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                ></textarea>
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Disciplina
+                                </label>
+                                <DisciplineInput v-model="form.discipline" />
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Palabras clave
+                                </label>
+                                <TagInput v-model="form.keywords" />
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                @click="showModal = false"
+                                class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                :disabled="form.processing"
+                                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                                {{ form.processing ? 'Guardando...' : 'Guardar cambios' }}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
