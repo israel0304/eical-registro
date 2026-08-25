@@ -19,7 +19,11 @@ class PresentationController extends Controller
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('discipline', 'like', "%{$search}%");
+                    ->orWhere('discipline', 'like', "%{$search}%")
+                    ->orWhereHas('authors', function ($aq) use ($search) {
+                        $aq->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%");
+                    });
             });
         }
 

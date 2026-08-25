@@ -495,12 +495,6 @@ const submitImport = () => {
                                         scope="col"
                                         class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
                                     >
-                                        Disciplina
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
-                                    >
                                         Horario
                                     </th>
                                     <th
@@ -514,6 +508,12 @@ const submitImport = () => {
                                         class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
                                     >
                                         Ponentes
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
+                                    >
+                                        Moderador
                                     </th>
                                     <th scope="col" class="relative px-6 py-4">
                                         <span class="sr-only">Acciones</span>
@@ -539,11 +539,6 @@ const submitImport = () => {
                                         >
                                             {{ presentation.title }}
                                         </div>
-                                    </td>
-                                    <td
-                                        class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
-                                    >
-                                        {{ presentation.discipline || '-' }}
                                     </td>
                                     <td
                                         class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
@@ -607,6 +602,53 @@ const submitImport = () => {
                                                 +{{
                                                     presentation.authors
                                                         .length - 5
+                                                }}
+                                            </span>
+                                        </div>
+                                        <span v-else class="text-gray-400"
+                                            >—</span
+                                        >
+                                    </td>
+                                    <td
+                                        class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
+                                    >
+                                        <div
+                                            v-if="presentation.moderators?.length"
+                                            class="flex items-center -space-x-2"
+                                        >
+                                            <span
+                                                v-for="mod in presentation.moderators.slice(
+                                                    0,
+                                                    3,
+                                                )"
+                                                :key="mod.id"
+                                                :title="
+                                                    mod.name +
+                                                    (mod.affiliation
+                                                        ? ' — ' +
+                                                          mod.affiliation
+                                                        : '')
+                                                "
+                                                class="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-xs font-medium text-amber-700 ring-2 ring-white dark:bg-amber-900 dark:text-amber-300 dark:ring-zinc-900"
+                                            >
+                                                {{ mod.first_name?.[0]
+                                                }}{{ mod.last_name?.[0] }}
+                                            </span>
+                                            <span
+                                                v-if="
+                                                    presentation.moderators
+                                                        .length > 3
+                                                "
+                                                :title="
+                                                    presentation.moderators
+                                                        .map((m: any) => m.name)
+                                                        .join(', ')
+                                                "
+                                                class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600 ring-2 ring-white dark:bg-zinc-700 dark:text-gray-300 dark:ring-zinc-900"
+                                            >
+                                                +{{
+                                                    presentation.moderators
+                                                        .length - 3
                                                 }}
                                             </span>
                                         </div>
