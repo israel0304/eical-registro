@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Presentation;
 use App\Models\Role;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -29,6 +30,48 @@ class PresentationController extends Controller
             'filters' => $request->only(['search']),
             'tab' => $request->input('tab', 'list'),
         ]);
+    }
+
+    public function exportCsv(Request $request)
+    {
+        $presentations = Presentation::with(['authors'])
+            ->orderBy('day')
+            ->orderBy('start_time')
+            ->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="ponencias_registro_eical.csv"',
+        ];
+
+        return response()->stream(function () use ($presentations) {
+            echo "\xEF\xBB\xBF";
+
+            $file = fopen('php://output', 'w');
+
+            fputcsv($file, ['ID', 'Titulo', 'Disciplina', 'Horario', 'Lugar', 'Ponentes']);
+
+            foreach ($presentations as $p) {
+                $horario = $p->day
+                    ? Carbon::parse($p->day)->isoFormat('ddd DD MMM YYYY').', '.substr($p->start_time, 0, 5).' - '.substr($p->end_time, 0, 5)
+                    : 'Sin asignar';
+
+                $ponentes = $p->authors->map(function ($a) {
+                    return trim($a->first_name.' '.$a->last_name);
+                })->implode('; ');
+
+                fputcsv($file, [
+                    $p->submission_id ?? '',
+                    $p->title,
+                    $p->discipline ?? '',
+                    $horario,
+                    $p->location ?? '',
+                    $ponentes,
+                ]);
+            }
+
+            fclose($file);
+        }, 200, $headers);
     }
 
     public function myPresentations(Request $request)

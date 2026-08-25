@@ -137,6 +137,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Presentations
     Route::get('presentations', [PresentationController::class, 'index'])->middleware('can:presentations.view')->name('presentations.index');
+    Route::get('presentations/export/csv', [PresentationController::class, 'exportCsv'])->middleware('can:presentations.view')->name('presentations.export');
     Route::get('presentations/{presentation}', [PresentationController::class, 'show'])->name('presentations.show');
 
     Route::post('presentations', [PresentationController::class, 'store'])->middleware('can:presentations.create')->name('presentations.store');

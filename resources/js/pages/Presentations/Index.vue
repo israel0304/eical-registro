@@ -10,6 +10,7 @@ import {
     UploadCloud,
     Pencil,
     Trash2,
+    Download,
 } from 'lucide-vue-next';
 import { ref, watch, reactive } from 'vue';
 import DisciplineInput from '@/components/DisciplineInput.vue';
@@ -449,10 +450,16 @@ const submitImport = () => {
                     </div>
 
                     <div
-                        v-if="can('presentations.create')"
                         class="flex items-center gap-3 self-start xl:self-auto"
                     >
+                        <a
+                            href="/admin/presentations/export/csv"
+                            class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                        >
+                            <Download class="h-4 w-4" /> Exportar CSV
+                        </a>
                         <button
+                            v-if="can('presentations.create')"
                             @click="openCreateModal"
                             class="inline-flex items-center gap-2 rounded-md border border-transparent bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2"
                         >
@@ -472,6 +479,12 @@ const submitImport = () => {
                                 class="border-b bg-white dark:border-zinc-800 dark:bg-zinc-900"
                             >
                                 <tr>
+                                    <th
+                                        scope="col"
+                                        class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
+                                    >
+                                        ID
+                                    </th>
                                     <th
                                         scope="col"
                                         class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
@@ -515,6 +528,11 @@ const submitImport = () => {
                                     :key="presentation.id"
                                     class="transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-zinc-800"
                                 >
+                                    <td
+                                        class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
+                                    >
+                                        {{ presentation.submission_id || '-' }}
+                                    </td>
                                     <td class="px-6 py-4">
                                         <div
                                             class="max-w-xs truncate text-sm font-medium text-gray-900 dark:text-white"
