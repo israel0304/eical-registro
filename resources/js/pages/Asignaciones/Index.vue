@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { Calendar, Clock, MapPin, Eye, CheckCircle2 } from 'lucide-vue-next';
+import { ref } from 'vue';
+import ConferenceModal from '@/components/ActivityModal/ConferenceModal.vue';
+import PresentationModal from '@/components/ActivityModal/PresentationModal.vue';
+import WorkshopModal from '@/components/ActivityModal/WorkshopModal.vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 defineProps<{
@@ -38,6 +42,22 @@ const badgeColor = (type: string) => {
         default:
             return 'bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:text-gray-300';
     }
+};
+
+const modalType = ref<'Taller' | 'Ponencia' | 'Conferencia' | null>(null);
+const modalId = ref<number | null>(null);
+const modalUrl = ref('');
+
+const openModal = (type: string, id: number, url: string) => {
+    modalType.value = type as 'Taller' | 'Ponencia' | 'Conferencia';
+    modalId.value = id;
+    modalUrl.value = url;
+};
+
+const closeModal = () => {
+    modalType.value = null;
+    modalId.value = null;
+    modalUrl.value = '';
 };
 </script>
 
@@ -121,13 +141,15 @@ const badgeColor = (type: string) => {
                     </div>
 
                     <div class="flex shrink-0 items-center gap-2">
-                        <Link
-                            :href="item.url"
+                        <button
+                            @click="
+                                openModal(item.type, item.id, item.url)
+                            "
                             class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-200 dark:hover:bg-zinc-700"
                         >
                             <Eye class="h-4 w-4" />
                             Ver actividad
-                        </Link>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -144,5 +166,25 @@ const badgeColor = (type: string) => {
                 </p>
             </div>
         </div>
+
+        <!-- Modals -->
+        <WorkshopModal
+            v-if="modalType === 'Taller' && modalId !== null"
+            :workshop-id="modalId"
+            :url="modalUrl"
+            @close="closeModal"
+        />
+        <PresentationModal
+            v-if="modalType === 'Ponencia' && modalId !== null"
+            :presentation-id="modalId"
+            :url="modalUrl"
+            @close="closeModal"
+        />
+        <ConferenceModal
+            v-if="modalType === 'Conferencia' && modalId !== null"
+            :conference-id="modalId"
+            :url="modalUrl"
+            @close="closeModal"
+        />
     </AppLayout>
 </template>

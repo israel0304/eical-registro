@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attendance;
+use App\Models\Conference;
+use App\Models\Presentation;
+use App\Models\Workshop;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -57,5 +62,63 @@ class AssignmentController extends Controller
         return Inertia::render('Asignaciones/Index', [
             'assignments' => $assignments,
         ]);
+    }
+
+    public function show(Request $request, string $type, int $id): JsonResponse
+    {
+        $user = $request->user();
+
+        return match ($type) {
+            'workshop' => $this->showWorkshop($user, $id),
+            'presentation' => $this->showPresentation($user, $id),
+            'conference' => $this->showConference($user, $id),
+            default => response()->json(['error' => 'Tipo no válido'], 404),
+        };
+    }
+
+    private function showWorkshop($user, int $id): JsonResponse
+    {
+        $workshop = Workshop::withCount(['enrollments as enrolled_count' => function ($q) {
+            $q->where('status', 'enrolled');
+        }])->with(['instructors', 'moderators', 'creator'])->findOrFail($id);
+
+        $isAssignedModerator = $workshop->moderators()->where('users.id', $user->id)->exists();
+        abort_unless($user->canViewActivity('workshops.view', $isAssignedModerator), 403);
+
+        $workshop->load(['enrollments.user']);
+        $workshop->setRelation(
+            'enrollments',
+            $workshop->enrollments->map(function ($enrollment) {
+                $enrollment->has_attendance = Attendance::where('user_id', $enrollment->user_id)
+                    ->where('workshop_id', $enrollment->workshop_id)
+                    ->exists();
+
+                return $enrollment;
+            })
+        );
+
+        return response()->json($workshop);
+    }
+
+    private function showPresentation($user, int $id): JsonResponse
+    {
+        $presentation = Presentation::with(['authors', 'moderators'])->findOrFail($id);
+        $isAssignedModerator = $presentation->moderators()->where('users.id', $user->id)->exists();
+        $isAuthor = $presentation->authors()->where('users.id', $user->id)->exists();
+        abort_unless($user->canViewActivity('presentations.view', $isAssignedModerator || $isAuthor), 403);
+
+        return response()->json([
+            'presentation' => $presentation,
+            'isAuthor' => $isAuthor,
+        ]);
+    }
+
+    private function showConference($user, int $id): JsonResponse
+    {
+        $conference = Conference::with(['creator', 'members'])->findOrFail($id);
+        $isAssignedModerator = $conference->moderators()->where('users.id', $user->id)->exists();
+        abort_unless($user->canViewActivity('conferences.view', $isAssignedModerator), 403);
+
+        return response()->json($conference);
     }
 }

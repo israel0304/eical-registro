@@ -152,6 +152,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Mis asignaciones (moderador)
     Route::get('mis-asignaciones', [AssignmentController::class, 'index'])->middleware('can:asignaciones.view')->name('asignaciones.index');
+    Route::get('mis-asignaciones/{type}/{id}', [AssignmentController::class, 'show'])->middleware('can:asignaciones.view')->name('asignaciones.show');
 
     // Conferences
     Route::get('conferences', [ConferenceController::class, 'index'])->middleware('can:conferences.view')->name('conferences.index');
