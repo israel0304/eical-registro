@@ -453,7 +453,7 @@ const submitImport = () => {
                         class="flex items-center gap-3 self-start xl:self-auto"
                     >
                         <a
-                            href="/admin/presentations/export/csv"
+                            href="/presentations/export/csv"
                             class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
                         >
                             <Download class="h-4 w-4" /> Exportar CSV
