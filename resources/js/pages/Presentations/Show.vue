@@ -11,9 +11,9 @@ import {
     Pencil,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
-import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 import DisciplineInput from '@/components/DisciplineInput.vue';
 import TagInput from '@/components/TagInput.vue';
+import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const props = defineProps<{
     presentation: any;

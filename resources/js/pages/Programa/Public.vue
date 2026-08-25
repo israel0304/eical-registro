@@ -2,15 +2,14 @@
 import { Head } from '@inertiajs/vue3';
 import { Calendar, List, Printer } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogClose,
     DialogContent,
-    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import ProgramCalendar, {
     type ActivityPerson,
     type CalendarItem,
