@@ -37,6 +37,25 @@ class ProgramController extends Controller
         ]);
     }
 
+    public function publicIndex()
+    {
+        ProgramService::ensureActivityItemsSynced();
+
+        $groups = ProgramService::itemsByDay()->map(function (array $group) {
+            $group['items'] = collect($group['items'])
+                ->map(fn (ProgramItem $item) => $this->serialize($item))
+                ->values();
+
+            return $group;
+        })->values();
+
+        return Inertia::render('Programa/Public', [
+            'groups' => $groups,
+            'eventName' => EventSettings::nombre(),
+            'days' => EventSettings::eventDays(),
+        ]);
+    }
+
     public function store(Request $request)
     {
         abort_unless($request->user()->can('programa.manage'), 403);

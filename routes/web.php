@@ -54,6 +54,9 @@ Route::get('constancias/verificar/{folio}', [CertificateVerificationController::
 
 Route::get('gafete/escaneo', [GafeteController::class, 'scanInfo'])->name('gafete.scan-info');
 
+// Programa público (sin auth)
+Route::get('programa/publico', [ProgramController::class, 'publicIndex'])->name('programa.public');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         $user = auth()->user();

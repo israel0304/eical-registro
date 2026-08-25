@@ -7,6 +7,7 @@ import {
     Pencil,
     Printer,
     Trash2,
+    Code,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,15 @@ const props = defineProps<{
 const modalOpen = ref(false);
 const editingId = ref<number | null>(null);
 const editing = computed(() => editingId.value !== null);
+const embedOpen = ref(false);
+const embedCopied = ref(false);
+const embedCode = `<iframe src="${window.location.origin}/programa/publico" width="100%" height="800" frameborder="0" style="border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>`;
+
+const copyEmbedCode = () => {
+    navigator.clipboard.writeText(embedCode);
+    embedCopied.value = true;
+    setTimeout(() => (embedCopied.value = false), 2000);
+};
 
 const detailId = ref<number | null>(null);
 const detailOpen = computed(() => detailId.value !== null);
@@ -301,6 +311,15 @@ const remove = (item: any) => {
                             <Printer class="h-4 w-4" />
                             Imprimir
                         </a>
+                    </Button>
+                    <Button
+                        v-if="canManage"
+                        variant="outline"
+                        size="sm"
+                        @click="embedOpen = true"
+                    >
+                        <Code class="h-4 w-4" />
+                        Embed
                     </Button>
                     <Button v-if="canManage" size="sm" @click="openCreate()">
                         <CalendarPlus class="h-4 w-4" />
@@ -854,6 +873,31 @@ const remove = (item: any) => {
                             </Button>
                         </div>
                     </template>
+                </DialogContent>
+            </Dialog>
+
+            <!-- Embed Modal -->
+            <Dialog :open="embedOpen" @update:open="(open) => (embedOpen = open)">
+                <DialogContent class="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Codigo de incrustacion</DialogTitle>
+                        <DialogDescription>
+                            Copia el siguiente codigo HTML para incrustar el programa del evento en tu pagina web.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div class="mt-4">
+                        <pre class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-xs text-gray-700 break-all whitespace-pre-wrap dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300">{{ embedCode }}</pre>
+                        <div class="mt-3 flex justify-end gap-3">
+                            <DialogClose as-child>
+                                <Button type="button" variant="outline" size="sm">
+                                    Cerrar
+                                </Button>
+                            </DialogClose>
+                            <Button type="button" size="sm" @click="copyEmbedCode">
+                                {{ embedCopied ? 'Copiado!' : 'Copiar codigo' }}
+                            </Button>
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
