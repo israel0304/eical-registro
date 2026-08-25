@@ -138,6 +138,10 @@ const openDetail = (item: any) => {
 const closeDetail = () => {
     detailId.value = null;
 };
+
+const printPage = () => {
+    window.print();
+};
 </script>
 
 <template>
@@ -185,7 +189,7 @@ const closeDetail = () => {
                             Calendario
                         </button>
                     </div>
-                    <Button variant="outline" size="sm" @click="window.print()">
+                    <Button variant="outline" size="sm" @click="printPage">
                         <Printer class="h-4 w-4" />
                         Imprimir
                     </Button>
