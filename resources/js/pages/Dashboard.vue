@@ -272,7 +272,7 @@ const can = (permission: string) =>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <Link
                         v-if="can('presentations.my')"
-                        href="/presentations"
+                        href="/my-presentations"
                         class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-indigo-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
                     >
                         <div class="flex items-center gap-3">
