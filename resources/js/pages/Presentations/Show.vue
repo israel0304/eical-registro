@@ -352,6 +352,59 @@ const disciplinesList = computed(() => {
                     </p>
                 </div>
             </div>
+
+            <div
+                class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+            >
+                <span
+                    class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                >
+                    Moderador(es) asignado(s)
+                </span>
+
+                <ul
+                    v-if="presentation.moderators?.length"
+                    class="mt-3 space-y-3"
+                >
+                    <li
+                        v-for="mod in presentation.moderators"
+                        :key="mod.id"
+                        class="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+                    >
+                        <span
+                            class="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-medium text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+                        >
+                            {{ mod.first_name?.[0]
+                            }}{{ mod.last_name?.[0] }}
+                        </span>
+                        <div class="flex-1">
+                            <span class="font-medium"
+                                >{{ mod.first_name }}
+                                {{ mod.last_name }}</span
+                            >
+                            <span
+                                v-if="mod.affiliation"
+                                class="ml-1 text-xs text-gray-400"
+                            >
+                                ({{ mod.affiliation }})
+                            </span>
+                        </div>
+                        <span
+                            v-if="mod.email"
+                            class="text-xs text-gray-400"
+                        >
+                            {{ mod.email }}
+                        </span>
+                    </li>
+                </ul>
+
+                <p
+                    v-else
+                    class="mt-3 text-sm text-gray-400 dark:text-gray-500"
+                >
+                    Sin moderador asignado
+                </p>
+            </div>
         </div>
 
         <!-- Edit Modal -->
@@ -425,8 +478,61 @@ const disciplinesList = computed(() => {
                                     Palabras clave
                                 </label>
                                 <TagInput v-model="form.keywords" />
-                            </div>
+            </div>
+
+            <div
+                class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+            >
+                <span
+                    class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                >
+                    Moderador(es) asignado(s)
+                </span>
+
+                <ul
+                    v-if="presentation.moderators?.length"
+                    class="mt-3 space-y-3"
+                >
+                    <li
+                        v-for="mod in presentation.moderators"
+                        :key="mod.id"
+                        class="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+                    >
+                        <span
+                            class="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-medium text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+                        >
+                            {{ mod.first_name?.[0]
+                            }}{{ mod.last_name?.[0] }}
+                        </span>
+                        <div class="flex-1">
+                            <span class="font-medium"
+                                >{{ mod.first_name }}
+                                {{ mod.last_name }}</span
+                            >
+                            <span
+                                v-if="mod.affiliation"
+                                class="ml-1 text-xs text-gray-400"
+                            >
+                                ({{ mod.affiliation }})
+                            </span>
                         </div>
+                        <span
+                            v-if="mod.email"
+                            class="text-xs text-gray-400"
+                        >
+                            {{ mod.email }}
+                        </span>
+                    </li>
+                </ul>
+
+                <p
+                    v-else
+                    class="mt-3 text-sm text-gray-400 dark:text-gray-500"
+                >
+                    Sin moderador asignado
+                </p>
+            </div>
+        </div>
                         <div class="mt-6 flex justify-end gap-3">
                             <button
                                 type="button"
