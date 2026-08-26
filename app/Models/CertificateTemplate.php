@@ -23,6 +23,8 @@ class CertificateTemplate extends Model
         'background_path',
         'width',
         'height',
+        'print_width_mm',
+        'print_height_mm',
     ];
 
     protected $casts = [
@@ -30,6 +32,8 @@ class CertificateTemplate extends Model
         'is_active' => 'boolean',
         'width' => 'integer',
         'height' => 'integer',
+        'print_width_mm' => 'float',
+        'print_height_mm' => 'float',
     ];
 
     public function participationType(): BelongsTo

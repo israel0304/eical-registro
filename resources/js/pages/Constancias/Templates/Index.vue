@@ -35,6 +35,8 @@ const form = useForm({
     is_default: false,
     width: isBadge.value ? 1050 : 1800,
     height: isBadge.value ? 700 : 1200,
+    print_width_mm: isBadge.value ? 75 : 210,
+    print_height_mm: isBadge.value ? 125 : 297,
     background: null as File | null,
 });
 
@@ -43,6 +45,8 @@ const openCreateModal = () => {
     form.reset();
     form.width = isBadge.value ? 1050 : 1800;
     form.height = isBadge.value ? 700 : 1200;
+    form.print_width_mm = isBadge.value ? 75 : 210;
+    form.print_height_mm = isBadge.value ? 125 : 297;
     form.participation_type_id = isBadge.value
         ? ''
         : (props.participationTypes.find((t) => t.is_active)?.id ?? '');
@@ -383,6 +387,32 @@ const activeTypes = computed(() =>
                                             class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                         />
                                     </div>
+                                </div>
+                            </div>
+
+                            <div v-if="isBadge">
+                                <label
+                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                    Tamaño de impresión (mm)
+                                </label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input
+                                        v-model.number="form.print_width_mm"
+                                        type="number"
+                                        min="10"
+                                        max="500"
+                                        step="0.1"
+                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    />
+                                    <input
+                                        v-model.number="form.print_height_mm"
+                                        type="number"
+                                        min="10"
+                                        max="500"
+                                        step="0.1"
+                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    />
                                 </div>
                             </div>
 

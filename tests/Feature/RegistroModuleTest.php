@@ -138,7 +138,7 @@ class RegistroModuleTest extends TestCase
         $this->assertStringContainsString($user->first_name, $response->getContent());
         $this->assertStringContainsString('EICAL 2026', $response->getContent());
         $this->assertStringContainsString('data:image/svg+xml;base64', $response->getContent());
-        $this->assertStringContainsString('@page { size: 7.5cm 12.5cm; margin: 0; }', $response->getContent());
+        $this->assertStringContainsString('@page { size: 75mm 125mm; margin: 0; }', $response->getContent());
         $this->assertStringContainsString('name="viewport"', $response->getContent());
         $this->assertStringContainsString('print-color-adjust: exact', $response->getContent());
     }
@@ -265,6 +265,63 @@ class RegistroModuleTest extends TestCase
         $shortSize = $this->badgeFontSize();
 
         $this->assertEqualsWithDelta($shortSize, $longSize, 0.01);
+    }
+
+    public function test_badge_pdf_uses_template_print_size()
+    {
+        $template = CertificateTemplate::create([
+            'name' => 'Gafete 85x85',
+            'kind' => 'badge',
+            'is_default' => true,
+            'width' => 1000,
+            'height' => 1000,
+            'print_width_mm' => 85,
+            'print_height_mm' => 85,
+        ]);
+
+        $template->elements()->create([
+            'type' => 'text',
+            'content' => '{nombre}',
+            'x' => 100,
+            'y' => 100,
+            'width' => 800,
+            'height' => 60,
+            'font_size' => 40,
+            'text_align' => 'center',
+            'z_index' => 1,
+        ]);
+
+        $user = $this->userWith('Asistente', ['gafete.view']);
+        $this->actingAs($user);
+
+        $content = $this->get('/gafete/imprimir/pdf')->getContent();
+
+        preg_match('/MediaBox\s*\[\s*[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)\s*\]/', $content, $matches);
+
+        $this->assertNotEmpty($matches, 'No se encontró MediaBox en el PDF del gafete');
+        $expectedPt = 85 * 72 / 25.4;
+        $this->assertEqualsWithDelta($expectedPt, (float) $matches[1], 0.2);
+        $this->assertEqualsWithDelta($expectedPt, (float) $matches[2], 0.2);
+    }
+
+    public function test_badge_print_page_uses_template_print_size()
+    {
+        CertificateTemplate::create([
+            'name' => 'Gafete 100x140',
+            'kind' => 'badge',
+            'is_default' => true,
+            'width' => 1000,
+            'height' => 1400,
+            'print_width_mm' => 100,
+            'print_height_mm' => 140,
+        ]);
+
+        $user = $this->userWith('Asistente', ['gafete.view']);
+        $this->actingAs($user);
+
+        $content = $this->get('/gafete/imprimir')->getContent();
+
+        $this->assertStringContainsString('100mm 140mm', $content);
     }
 
     public function test_scan_info_page_is_public()

@@ -48,6 +48,8 @@ const kinds: Record<
         basePath: string;
         defaultWidth: number;
         defaultHeight: number;
+        defaultPrintWidth: number;
+        defaultPrintHeight: number;
         requiresType: boolean;
         aspect: string;
         defaultLabel: string;
@@ -63,6 +65,8 @@ const kinds: Record<
         basePath: '/admin/gafetes/plantillas',
         defaultWidth: 886,
         defaultHeight: 1476,
+        defaultPrintWidth: 75,
+        defaultPrintHeight: 125,
         requiresType: false,
         aspect: 'aspect-[3/5]',
         defaultLabel: 'Usar como plantilla por defecto del gafete',
@@ -77,6 +81,8 @@ const kinds: Record<
         basePath: '/admin/constancias/plantillas',
         defaultWidth: 1800,
         defaultHeight: 1200,
+        defaultPrintWidth: 210,
+        defaultPrintHeight: 297,
         requiresType: true,
         aspect: 'aspect-[3/2]',
         defaultLabel: 'Usar como plantilla por defecto de este tipo',
@@ -90,6 +96,8 @@ const kinds: Record<
         basePath: '/admin/correos/plantillas',
         defaultWidth: 1800,
         defaultHeight: 1200,
+        defaultPrintWidth: 210,
+        defaultPrintHeight: 297,
         requiresType: false,
         aspect: 'aspect-[3/2]',
         defaultLabel: '',
@@ -161,14 +169,36 @@ const form = useForm({
     is_default: false,
     width: 1800,
     height: 1200,
+    print_width_mm: 75,
+    print_height_mm: 125,
     background: null as File | null,
 });
+
+const badgePrintPresets = [
+    { label: 'Gafete estándar (75 × 125 mm)', width: 75, height: 125 },
+    { label: 'Gafete cuadrado (85 × 85 mm)', width: 85, height: 85 },
+    { label: 'Credencial grande (100 × 140 mm)', width: 100, height: 140 },
+    { label: 'Personalizado', width: 0, height: 0 },
+];
+
+const selectedPrintPreset = ref(0);
+
+const onPrintPresetChange = () => {
+    const preset = badgePrintPresets[selectedPrintPreset.value];
+    if (preset && preset.width > 0) {
+        form.print_width_mm = preset.width;
+        form.print_height_mm = preset.height;
+    }
+};
 
 const openCreateModal = () => {
     backgroundPreview.value = null;
     form.reset();
     form.width = activeKind.value.defaultWidth;
     form.height = activeKind.value.defaultHeight;
+    form.print_width_mm = activeKind.value.defaultPrintWidth;
+    form.print_height_mm = activeKind.value.defaultPrintHeight;
+    selectedPrintPreset.value = activeTab.value === 'badge' ? 0 : 3;
     form.participation_type_id = activeKind.value.requiresType
         ? (props.participationTypes.find((t) => t.is_active)?.id ?? '')
         : '';
@@ -519,6 +549,47 @@ const activeTypes = computed(() =>
                                             class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                                         />
                                     </div>
+                                </div>
+                            </div>
+
+                            <div v-if="activeTab === 'badge'">
+                                <label
+                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                    Tamaño de impresión (mm)
+                                </label>
+                                <select
+                                    v-model="selectedPrintPreset"
+                                    @change="onPrintPresetChange"
+                                    class="mb-2 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                >
+                                    <option
+                                        v-for="(preset, i) in badgePrintPresets"
+                                        :key="i"
+                                        :value="i"
+                                    >
+                                        {{ preset.label }}
+                                    </option>
+                                </select>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input
+                                        v-model.number="form.print_width_mm"
+                                        type="number"
+                                        min="10"
+                                        max="500"
+                                        step="0.1"
+                                        :disabled="selectedPrintPreset < 3"
+                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    />
+                                    <input
+                                        v-model.number="form.print_height_mm"
+                                        type="number"
+                                        min="10"
+                                        max="500"
+                                        step="0.1"
+                                        :disabled="selectedPrintPreset < 3"
+                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    />
                                 </div>
                             </div>
 

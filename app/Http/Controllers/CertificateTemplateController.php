@@ -161,6 +161,8 @@ class CertificateTemplateController extends Controller
             'is_default' => (bool) ($validated['is_default'] ?? false),
             'width' => $validated['width'] ?? 1800,
             'height' => $validated['height'] ?? 1200,
+            'print_width_mm' => $validated['print_width_mm'] ?? ($kind === 'badge' ? 75 : null),
+            'print_height_mm' => $validated['print_height_mm'] ?? ($kind === 'badge' ? 125 : null),
             'background_path' => $this->storeBackground($request, null, $kind),
         ]);
 
@@ -229,6 +231,8 @@ class CertificateTemplateController extends Controller
             'is_default' => (bool) ($validated['is_default'] ?? false),
             'width' => $validated['width'] ?? $template->width,
             'height' => $validated['height'] ?? $template->height,
+            'print_width_mm' => $validated['print_width_mm'] ?? $template->print_width_mm,
+            'print_height_mm' => $validated['print_height_mm'] ?? $template->print_height_mm,
             'background_path' => $this->storeBackground($request, $template, $kind),
         ]);
 
@@ -296,6 +300,8 @@ class CertificateTemplateController extends Controller
             'is_default' => ['nullable', 'boolean'],
             'width' => ['nullable', 'integer', 'min:200', 'max:5000'],
             'height' => ['nullable', 'integer', 'min:200', 'max:5000'],
+            'print_width_mm' => ['nullable', 'numeric', 'min:10', 'max:500'],
+            'print_height_mm' => ['nullable', 'numeric', 'min:10', 'max:500'],
             'background' => ['nullable', 'image', 'mimes:png', 'max:5120'],
             'elements' => ['nullable', 'array'],
             'elements.*.type' => ['nullable', Rule::in($elementTypes)],

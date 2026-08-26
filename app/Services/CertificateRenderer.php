@@ -55,6 +55,24 @@ class CertificateRenderer
 
     private const BADGE_PRINT_HEIGHT_PT = 354.33070866142;
 
+    private const MM_TO_PT = 72 / 25.4;
+
+    /**
+     * Get print size in points from a badge template.
+     */
+    private function badgePrintSize(?CertificateTemplate $template): array
+    {
+        $wMm = $template->print_width_mm ?? 75;
+        $hMm = $template->print_height_mm ?? 125;
+
+        return [
+            'width_pt' => $wMm * self::MM_TO_PT,
+            'height_pt' => $hMm * self::MM_TO_PT,
+            'width_mm' => $wMm,
+            'height_mm' => $hMm,
+        ];
+    }
+
     /**
      * Resolve the participation type for a given event and user.
      */
@@ -295,7 +313,8 @@ class CertificateRenderer
         $photo = $this->photoDataUri($user);
 
         $layout = $this->badgePrintLayout($template);
-        $printPage = '7.5cm 12.5cm';
+        $print = $this->badgePrintSize($template);
+        $printPage = $print['width_mm'].'mm '.$print['height_mm'].'mm';
 
         $printButton = <<<'HTML'
 <button class="print-btn" onclick="window.print()">
@@ -361,7 +380,7 @@ HTML;
                 'pageWidth' => $layout['targetWidth'],
                 'pageHeight' => $layout['targetHeight'],
             ]));
-        $dompdf->setPaper([0, 0, self::BADGE_PRINT_WIDTH_PT, self::BADGE_PRINT_HEIGHT_PT]);
+        $dompdf->setPaper([0, 0, $layout['targetWidth'] * 72 / 96, $layout['targetHeight'] * 72 / 96]);
         $dompdf->render();
 
         return $dompdf->output();
@@ -372,8 +391,9 @@ HTML;
         $designWidth = $template->width ?? 384;
         $designHeight = $template->height ?? 816;
 
-        $targetWidth = self::BADGE_PRINT_WIDTH_PT * 96 / 72;
-        $targetHeight = self::BADGE_PRINT_HEIGHT_PT * 96 / 72;
+        $print = $this->badgePrintSize($template);
+        $targetWidth = $print['width_pt'] * 96 / 72;
+        $targetHeight = $print['height_pt'] * 96 / 72;
 
         $scale = min($targetWidth / $designWidth, $targetHeight / $designHeight);
         $offsetX = ($targetWidth - $designWidth * $scale) / 2;
