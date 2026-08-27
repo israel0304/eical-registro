@@ -161,8 +161,8 @@ class CertificateTemplateController extends Controller
             'is_default' => (bool) ($validated['is_default'] ?? false),
             'width' => $validated['width'] ?? 1800,
             'height' => $validated['height'] ?? 1200,
-            'print_width_mm' => $validated['print_width_mm'] ?? ($kind === 'badge' ? 75 : null),
-            'print_height_mm' => $validated['print_height_mm'] ?? ($kind === 'badge' ? 125 : null),
+            'print_width_mm' => $validated['print_width_mm'] ?? 75,
+            'print_height_mm' => $validated['print_height_mm'] ?? 125,
             'background_path' => $this->storeBackground($request, null, $kind),
         ]);
 

@@ -269,9 +269,7 @@ watch(
             <div
                 class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-zinc-800"
             >
-                <h2
-                    class="text-lg font-semibold text-gray-900 dark:text-white"
-                >
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
                     Detalle del Taller
                 </h2>
                 <button
@@ -439,9 +437,7 @@ watch(
                                                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                                         "
                                     >
-                                        Inscritos ({{
-                                            allEnrolled.length
-                                        }})
+                                        Inscritos ({{ allEnrolled.length }})
                                     </button>
                                     <button
                                         @click="activeTab = 'cancelled'"
@@ -632,9 +628,7 @@ watch(
                                     <tr v-if="filteredEnrollments.length === 0">
                                         <td
                                             :colspan="
-                                                activeTab === 'enrolled'
-                                                    ? 6
-                                                    : 5
+                                                activeTab === 'enrolled' ? 6 : 5
                                             "
                                             class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
                                         >

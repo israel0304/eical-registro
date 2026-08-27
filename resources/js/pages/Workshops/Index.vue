@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
-import { Search, Plus, Edit, Trash2, Eye, UserPlus, RotateCcw, AlertTriangle } from 'lucide-vue-next';
+import {
+    Search,
+    Plus,
+    Edit,
+    Trash2,
+    Eye,
+    UserPlus,
+    RotateCcw,
+    AlertTriangle,
+} from 'lucide-vue-next';
 import { ref, watch, reactive } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
@@ -333,11 +342,15 @@ const forceDeleteWorkshop = (workshop: any) => {
     const enrolledCount = workshop.enrolled_count || 0;
     if (enrolledCount > 0) {
         alert(
-            `No se puede eliminar definitivamente. El taller tiene ${enrolledCount} inscripción(es) activa(s). Elimínelas primero desde la vista de inscripciones del taller.`
+            `No se puede eliminar definitivamente. El taller tiene ${enrolledCount} inscripción(es) activa(s). Elimínelas primero desde la vista de inscripciones del taller.`,
         );
         return;
     }
-    if (confirm('¿Estás seguro de eliminar DEFINITIVAMENTE este taller? Esta acción no se puede deshacer.')) {
+    if (
+        confirm(
+            '¿Estás seguro de eliminar DEFINITIVAMENTE este taller? Esta acción no se puede deshacer.',
+        )
+    ) {
         router.post('/workshops/' + workshop.id + '/force-delete', {
             preserveScroll: true,
         });
@@ -396,7 +409,7 @@ const formatDate = (dateStr: string) => {
                         </label>
                         <select
                             v-model="formFilters.status"
-                            class="w-full sm:w-48 rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-black focus:ring-1 focus:ring-black sm:text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-white dark:focus:ring-white"
+                            class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-black focus:ring-1 focus:ring-black sm:w-48 sm:text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-white dark:focus:ring-white"
                         >
                             <option value="active">Activos</option>
                             <option value="deleted">Eliminados</option>
@@ -482,7 +495,7 @@ const formatDate = (dateStr: string) => {
                                         :class="[
                                             'text-sm font-medium',
                                             workshop.deleted_at
-                                                ? 'line-through text-gray-500 dark:text-gray-400'
+                                                ? 'text-gray-500 line-through dark:text-gray-400'
                                                 : 'text-gray-900 dark:text-white',
                                         ]"
                                     >
@@ -557,33 +570,52 @@ const formatDate = (dateStr: string) => {
                                             <Eye class="h-4 w-4" />
                                         </Link>
                                         <button
-                                            v-if="!workshop.deleted_at && can('workshops.edit')"
+                                            v-if="
+                                                !workshop.deleted_at &&
+                                                can('workshops.edit')
+                                            "
                                             @click="openEditModal(workshop)"
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
                                         >
                                             <Edit class="h-4 w-4" />
                                         </button>
                                         <button
-                                            v-if="!workshop.deleted_at && can('workshops.delete')"
+                                            v-if="
+                                                !workshop.deleted_at &&
+                                                can('workshops.delete')
+                                            "
                                             @click="deleteWorkshop(workshop.id)"
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-gray-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-white"
                                         >
                                             <Trash2 class="h-4 w-4" />
                                         </button>
                                         <button
-                                            v-if="workshop.deleted_at && can('workshops.delete')"
-                                            @click="restoreWorkshop(workshop.id)"
+                                            v-if="
+                                                workshop.deleted_at &&
+                                                can('workshops.delete')
+                                            "
+                                            @click="
+                                                restoreWorkshop(workshop.id)
+                                            "
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-emerald-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-emerald-400"
                                             title="Restaurar"
                                         >
                                             <RotateCcw class="h-4 w-4" />
                                         </button>
                                         <button
-                                            v-if="workshop.deleted_at && can('workshops.delete')"
-                                            @click="forceDeleteWorkshop(workshop)"
+                                            v-if="
+                                                workshop.deleted_at &&
+                                                can('workshops.delete')
+                                            "
+                                            @click="
+                                                forceDeleteWorkshop(workshop)
+                                            "
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-red-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-red-400"
                                             title="Eliminar definitivamente"
-                                            :disabled="(workshop.enrolled_count || 0) > 0"
+                                            :disabled="
+                                                (workshop.enrolled_count || 0) >
+                                                0
+                                            "
                                         >
                                             <AlertTriangle class="h-4 w-4" />
                                         </button>

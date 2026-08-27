@@ -877,23 +877,38 @@ const remove = (item: any) => {
             </Dialog>
 
             <!-- Embed Modal -->
-            <Dialog :open="embedOpen" @update:open="(open) => (embedOpen = open)">
+            <Dialog
+                :open="embedOpen"
+                @update:open="(open) => (embedOpen = open)"
+            >
                 <DialogContent class="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>Codigo de incrustacion</DialogTitle>
                         <DialogDescription>
-                            Copia el siguiente codigo HTML para incrustar el programa del evento en tu pagina web.
+                            Copia el siguiente codigo HTML para incrustar el
+                            programa del evento en tu pagina web.
                         </DialogDescription>
                     </DialogHeader>
                     <div class="mt-4">
-                        <pre class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-xs text-gray-700 break-all whitespace-pre-wrap dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300">{{ embedCode }}</pre>
+                        <pre
+                            class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-xs break-all whitespace-pre-wrap text-gray-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300"
+                            >{{ embedCode }}</pre
+                        >
                         <div class="mt-3 flex justify-end gap-3">
                             <DialogClose as-child>
-                                <Button type="button" variant="outline" size="sm">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                >
                                     Cerrar
                                 </Button>
                             </DialogClose>
-                            <Button type="button" size="sm" @click="copyEmbedCode">
+                            <Button
+                                type="button"
+                                size="sm"
+                                @click="copyEmbedCode"
+                            >
                                 {{ embedCopied ? 'Copiado!' : 'Copiar codigo' }}
                             </Button>
                         </div>

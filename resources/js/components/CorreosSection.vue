@@ -231,22 +231,19 @@ const resendingId = ref<number | null>(null);
 const resendLog = async (log: EventLogEntry) => {
     resendingId.value = log.id;
     try {
-        const res = await fetch(
-            `/admin/correos/event-logs/${log.id}/resend`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-XSRF-TOKEN': decodeURIComponent(
-                        document.cookie
-                            .split('; ')
-                            .find((c) => c.startsWith('XSRF-TOKEN='))
-                            ?.split('=')[1] ?? '',
-                    ),
-                },
+        const res = await fetch(`/admin/correos/event-logs/${log.id}/resend`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-XSRF-TOKEN': decodeURIComponent(
+                    document.cookie
+                        .split('; ')
+                        .find((c) => c.startsWith('XSRF-TOKEN='))
+                        ?.split('=')[1] ?? '',
+                ),
             },
-        );
+        });
         const data = await res.json();
         if (data.success) {
             log.status = 'queued';
@@ -640,10 +637,7 @@ const varToken = (key: string) => '{{ ' + key + ' }}';
                             >
                                 {{ log.created_at }}
                             </td>
-                            <td
-                                v-if="canManage"
-                                class="px-5 py-3 text-right"
-                            >
+                            <td v-if="canManage" class="px-5 py-3 text-right">
                                 <button
                                     v-if="
                                         log.status !== 'sent' &&

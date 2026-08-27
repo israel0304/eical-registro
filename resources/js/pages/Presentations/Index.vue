@@ -613,7 +613,9 @@ const submitImport = () => {
                                         class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
                                     >
                                         <div
-                                            v-if="presentation.moderators?.length"
+                                            v-if="
+                                                presentation.moderators?.length
+                                            "
                                             class="flex items-center -space-x-2"
                                         >
                                             <span

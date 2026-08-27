@@ -55,6 +55,14 @@ class ConstanciaController extends Controller
             }])
             ->get();
 
+        $cartaPresentations = Presentation::whereHas('authors', function ($q) use ($user) {
+            $q->where('users.id', $user->id);
+        })
+            ->with(['authors' => function ($q) {
+                $q->withPivot('presented', 'presented_at');
+            }])
+            ->get();
+
         $conferenceCertificates = Conference::whereHas('members', function ($q) use ($user) {
             $q->where('users.id', $user->id);
         })
@@ -69,8 +77,19 @@ class ConstanciaController extends Controller
             ->get()
             ->keyBy(fn ($certificate) => $certificate->event_type.'-'.$certificate->event_id);
 
+        $cartaCertificates = Certificate::query()
+            ->where('user_id', $user->id)
+            ->where('event_type', 'carta-presentation')
+            ->whereNotNull('event_id')
+            ->get()
+            ->keyBy(fn ($certificate) => 'carta-presentation-'.$certificate->event_id);
+
         $invitationLetters = [];
         foreach ($user->roles()->orderBy('roles.id')->get() as $role) {
+            if ($role->name === 'Ponente') {
+                continue;
+            }
+
             $template = $this->renderer->invitationTemplateFor($role);
 
             if ($template === null) {
@@ -137,6 +156,10 @@ class ConstanciaController extends Controller
             $presentation->folio = $certificates->get('presentation-'.$presentation->id)?->folio;
         }
 
+        foreach ($cartaPresentations as $presentation) {
+            $presentation->cartaFolio = $cartaCertificates->get('carta-presentation-'.$presentation->id)?->folio;
+        }
+
         foreach ($conferenceCertificates as $conference) {
             $conference->folio = $certificates->get('conference-'.$conference->id)?->folio;
             $conference->activated = (bool) $conference->members->first()?->pivot->activated;
@@ -147,6 +170,7 @@ class ConstanciaController extends Controller
             'completedWorkshops' => $completedWorkshops,
             'instructorWorkshops' => $instructorWorkshops,
             'presentationCertificates' => $presentationCertificates,
+            'cartaPresentations' => $cartaPresentations,
             'conferenceCertificates' => $conferenceCertificates,
             'eventCertificate' => $eventCertificate,
             'eventAttendance' => $eventAttendance,
@@ -172,6 +196,39 @@ class ConstanciaController extends Controller
         }
 
         $certificate = $this->renderer->issueCarta($user, $role);
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible generar la carta de invitación.']);
+        }
+
+        $certificate->update(['downloaded_at' => now()]);
+
+        return $this->respondWithHtml($certificate);
+    }
+
+    public function downloadInvitacionPonencia(Request $request, Presentation $presentation)
+    {
+        $user = $request->user();
+
+        $isAuthor = $presentation->authors()->where('users.id', $user->id)->exists();
+
+        if (! $isAuthor) {
+            return back()->withErrors(['error' => 'No eres autor de esta ponencia.']);
+        }
+
+        $role = Role::where('name', 'Ponente')->first();
+
+        if ($role === null || ! $user->roles()->where('roles.id', $role->id)->exists()) {
+            return back()->withErrors(['error' => 'No tienes el rol de Ponente.']);
+        }
+
+        $template = $this->renderer->invitationTemplateFor($role);
+
+        if ($template === null) {
+            return back()->withErrors(['error' => 'La carta de invitación no está disponible.']);
+        }
+
+        $certificate = $this->renderer->issueCartaForPresentation($user, $role, $presentation);
 
         if ($certificate === null) {
             return back()->withErrors(['error' => 'No fue posible generar la carta de invitación.']);

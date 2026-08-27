@@ -564,7 +564,13 @@ onMounted(() => {
                                 @click="selectedUid = el._uid"
                             >
                                 <component
-                                    :is="el.type === 'qr' ? QrCode : el.type === 'image' ? Image : Type"
+                                    :is="
+                                        el.type === 'qr'
+                                            ? QrCode
+                                            : el.type === 'image'
+                                              ? Image
+                                              : Type
+                                    "
                                     class="h-4 w-4 shrink-0"
                                 />
                                 <span class="flex-1 truncate">
@@ -701,24 +707,24 @@ onMounted(() => {
                                 :style="elementStyle(el)"
                                 @pointerdown="onElementPointerDown($event, el)"
                             >
-                            <img
-                                v-if="el.type === 'qr'"
-                                :src="qrFor(el)"
-                                class="pointer-events-none h-full w-full"
-                                draggable="false"
-                            />
-                            <img
-                                v-else-if="el.type === 'image'"
-                                :src="el.content || ''"
-                                class="pointer-events-none h-full w-full object-contain"
-                                draggable="false"
-                            />
-                            <div
-                                v-else
-                                class="pointer-events-none min-h-full whitespace-pre-line"
-                            >
-                                {{ previewText(el.content) }}
-                            </div>
+                                <img
+                                    v-if="el.type === 'qr'"
+                                    :src="qrFor(el)"
+                                    class="pointer-events-none h-full w-full"
+                                    draggable="false"
+                                />
+                                <img
+                                    v-else-if="el.type === 'image'"
+                                    :src="el.content || ''"
+                                    class="pointer-events-none h-full w-full object-contain"
+                                    draggable="false"
+                                />
+                                <div
+                                    v-else
+                                    class="pointer-events-none min-h-full whitespace-pre-line"
+                                >
+                                    {{ previewText(el.content) }}
+                                </div>
                                 <div
                                     v-if="selectedUid === el._uid"
                                     class="pointer-events-none absolute -inset-1 rounded border-2 border-indigo-500"
@@ -734,17 +740,17 @@ onMounted(() => {
                 >
                     <template v-if="selected">
                         <div class="mb-3 flex items-center justify-between">
-                        <h3
-                            class="text-sm font-semibold text-gray-900 dark:text-white"
-                        >
-                            {{
-                                selected.type === 'qr'
-                                    ? 'Código QR'
-                                    : selected.type === 'image'
-                                      ? 'Imagen'
-                                      : 'Texto'
-                            }}
-                        </h3>
+                            <h3
+                                class="text-sm font-semibold text-gray-900 dark:text-white"
+                            >
+                                {{
+                                    selected.type === 'qr'
+                                        ? 'Código QR'
+                                        : selected.type === 'image'
+                                          ? 'Imagen'
+                                          : 'Texto'
+                                }}
+                            </h3>
                             <div class="flex items-center gap-1">
                                 <button
                                     @click="duplicateElement(selected._uid)"
@@ -945,7 +951,9 @@ onMounted(() => {
                                         <option value="left">Izquierda</option>
                                         <option value="center">Centro</option>
                                         <option value="right">Derecha</option>
-                                        <option value="justify">Justificado</option>
+                                        <option value="justify">
+                                            Justificado
+                                        </option>
                                     </select>
                                 </div>
                             </div>
@@ -962,9 +970,15 @@ onMounted(() => {
                                     class="mt-1 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-500 transition-colors hover:border-indigo-400 hover:text-indigo-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-400 dark:hover:border-indigo-500"
                                 >
                                     <Upload class="h-5 w-5" />
-                                    <span v-if="uploadingImage">Subiendo...</span>
+                                    <span v-if="uploadingImage"
+                                        >Subiendo...</span
+                                    >
                                     <span v-else>
-                                        {{ selected.content ? 'Cambiar imagen' : 'Seleccionar imagen' }}
+                                        {{
+                                            selected.content
+                                                ? 'Cambiar imagen'
+                                                : 'Seleccionar imagen'
+                                        }}
                                     </span>
                                     <input
                                         type="file"

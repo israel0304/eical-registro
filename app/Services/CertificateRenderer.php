@@ -209,6 +209,38 @@ class CertificateRenderer
         return $this->finalize($certificate, $template, $metadata);
     }
 
+    public function issueCartaForPresentation(User $user, Role $role, Presentation $presentation): ?Certificate
+    {
+        $template = $this->invitationTemplateFor($role);
+
+        if ($template === null) {
+            return null;
+        }
+
+        $metadata = $this->buildCartaMetadata($user, $role, $presentation);
+
+        $certificate = Certificate::query()->firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'participation_type_id' => null,
+                'role_id' => $role->id,
+                'event_type' => 'carta-presentation',
+                'event_id' => $presentation->id,
+            ],
+            [
+                'template_id' => $template->id,
+                'metadata' => $metadata,
+            ],
+        );
+
+        $certificate->update([
+            'template_id' => $template->id,
+            'metadata' => $metadata,
+        ]);
+
+        return $this->finalize($certificate, $template, $metadata);
+    }
+
     /**
      * Resolve the active invitation template for a role. Prefers the default
      * active template, falling back to any active template of the role and
@@ -938,10 +970,16 @@ HTML;
         ];
     }
 
-    private function buildCartaMetadata(User $user, Role $role): array
+    private function buildCartaMetadata(User $user, Role $role, ?Presentation $event = null): array
     {
         $nombre = trim($user->first_name.' '.$user->last_name);
-        $trabajos = $this->workTitlesForRole($user, $role);
+
+        if ($event !== null) {
+            $titulo = (string) $event->title;
+            $trabajos = [$titulo];
+        } else {
+            $trabajos = $this->workTitlesForRole($user, $role);
+        }
 
         return [
             'nombre' => $nombre,

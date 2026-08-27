@@ -36,7 +36,9 @@ const canManage = computed(
 );
 const canPresented = computed(() => can('presentations.presented'));
 const canEdit = computed(
-    () => can('presentations.edit') || (props.isAuthor && can('presentations.my')),
+    () =>
+        can('presentations.edit') ||
+        (props.isAuthor && can('presentations.my')),
 );
 
 const showModal = ref(false);
@@ -374,13 +376,11 @@ const disciplinesList = computed(() => {
                         <span
                             class="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-medium text-amber-700 dark:bg-amber-900 dark:text-amber-300"
                         >
-                            {{ mod.first_name?.[0]
-                            }}{{ mod.last_name?.[0] }}
+                            {{ mod.first_name?.[0] }}{{ mod.last_name?.[0] }}
                         </span>
                         <div class="flex-1">
                             <span class="font-medium"
-                                >{{ mod.first_name }}
-                                {{ mod.last_name }}</span
+                                >{{ mod.first_name }} {{ mod.last_name }}</span
                             >
                             <span
                                 v-if="mod.affiliation"
@@ -389,19 +389,13 @@ const disciplinesList = computed(() => {
                                 ({{ mod.affiliation }})
                             </span>
                         </div>
-                        <span
-                            v-if="mod.email"
-                            class="text-xs text-gray-400"
-                        >
+                        <span v-if="mod.email" class="text-xs text-gray-400">
                             {{ mod.email }}
                         </span>
                     </li>
                 </ul>
 
-                <p
-                    v-else
-                    class="mt-3 text-sm text-gray-400 dark:text-gray-500"
-                >
+                <p v-else class="mt-3 text-sm text-gray-400 dark:text-gray-500">
                     Sin moderador asignado
                 </p>
             </div>
@@ -438,16 +432,23 @@ const disciplinesList = computed(() => {
                             v-if="Object.keys(form.errors).length > 0"
                             class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
                         >
-                            <p class="font-medium">Corrige los siguientes errores:</p>
+                            <p class="font-medium">
+                                Corrige los siguientes errores:
+                            </p>
                             <ul class="mt-1 list-inside list-disc">
-                                <li v-for="(message, key) in form.errors" :key="key">
+                                <li
+                                    v-for="(message, key) in form.errors"
+                                    :key="key"
+                                >
                                     {{ message }}
                                 </li>
                             </ul>
                         </div>
                         <div class="space-y-4">
                             <div>
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <label
+                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
                                     Titulo *
                                 </label>
                                 <input
@@ -458,7 +459,9 @@ const disciplinesList = computed(() => {
                                 />
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <label
+                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
                                     Resumen
                                 </label>
                                 <textarea
@@ -468,71 +471,75 @@ const disciplinesList = computed(() => {
                                 ></textarea>
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <label
+                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
                                     Disciplina
                                 </label>
                                 <DisciplineInput v-model="form.discipline" />
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <label
+                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
                                     Palabras clave
                                 </label>
                                 <TagInput v-model="form.keywords" />
-            </div>
+                            </div>
 
-            <div
-                class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-            >
-                <span
-                    class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
-                >
-                    Moderador(es) asignado(s)
-                </span>
+                            <div
+                                class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                            >
+                                <span
+                                    class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                                >
+                                    Moderador(es) asignado(s)
+                                </span>
 
-                <ul
-                    v-if="presentation.moderators?.length"
-                    class="mt-3 space-y-3"
-                >
-                    <li
-                        v-for="mod in presentation.moderators"
-                        :key="mod.id"
-                        class="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
-                    >
-                        <span
-                            class="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-medium text-amber-700 dark:bg-amber-900 dark:text-amber-300"
-                        >
-                            {{ mod.first_name?.[0]
-                            }}{{ mod.last_name?.[0] }}
-                        </span>
-                        <div class="flex-1">
-                            <span class="font-medium"
-                                >{{ mod.first_name }}
-                                {{ mod.last_name }}</span
-                            >
-                            <span
-                                v-if="mod.affiliation"
-                                class="ml-1 text-xs text-gray-400"
-                            >
-                                ({{ mod.affiliation }})
-                            </span>
+                                <ul
+                                    v-if="presentation.moderators?.length"
+                                    class="mt-3 space-y-3"
+                                >
+                                    <li
+                                        v-for="mod in presentation.moderators"
+                                        :key="mod.id"
+                                        class="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+                                    >
+                                        <span
+                                            class="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-medium text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+                                        >
+                                            {{ mod.first_name?.[0]
+                                            }}{{ mod.last_name?.[0] }}
+                                        </span>
+                                        <div class="flex-1">
+                                            <span class="font-medium"
+                                                >{{ mod.first_name }}
+                                                {{ mod.last_name }}</span
+                                            >
+                                            <span
+                                                v-if="mod.affiliation"
+                                                class="ml-1 text-xs text-gray-400"
+                                            >
+                                                ({{ mod.affiliation }})
+                                            </span>
+                                        </div>
+                                        <span
+                                            v-if="mod.email"
+                                            class="text-xs text-gray-400"
+                                        >
+                                            {{ mod.email }}
+                                        </span>
+                                    </li>
+                                </ul>
+
+                                <p
+                                    v-else
+                                    class="mt-3 text-sm text-gray-400 dark:text-gray-500"
+                                >
+                                    Sin moderador asignado
+                                </p>
+                            </div>
                         </div>
-                        <span
-                            v-if="mod.email"
-                            class="text-xs text-gray-400"
-                        >
-                            {{ mod.email }}
-                        </span>
-                    </li>
-                </ul>
-
-                <p
-                    v-else
-                    class="mt-3 text-sm text-gray-400 dark:text-gray-500"
-                >
-                    Sin moderador asignado
-                </p>
-            </div>
-        </div>
                         <div class="mt-6 flex justify-end gap-3">
                             <button
                                 type="button"
@@ -546,7 +553,11 @@ const disciplinesList = computed(() => {
                                 :disabled="form.processing"
                                 class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
                             >
-                                {{ form.processing ? 'Guardando...' : 'Guardar cambios' }}
+                                {{
+                                    form.processing
+                                        ? 'Guardando...'
+                                        : 'Guardar cambios'
+                                }}
                             </button>
                         </div>
                     </form>

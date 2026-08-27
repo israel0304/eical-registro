@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3';
-import {
-    X,
-    Calendar,
-    Clock,
-    MapPin,
-    Download,
-} from 'lucide-vue-next';
+import { X, Calendar, Clock, MapPin, Download } from 'lucide-vue-next';
 import { computed, ref, onMounted } from 'vue';
 
 const props = defineProps<{
@@ -133,9 +127,7 @@ onMounted(() => {
             <div
                 class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-zinc-800"
             >
-                <h2
-                    class="text-lg font-semibold text-gray-900 dark:text-white"
-                >
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
                     Detalle de la Conferencia
                 </h2>
                 <button
@@ -170,7 +162,9 @@ onMounted(() => {
                 <template v-else-if="conference">
                     <!-- Title & Kind -->
                     <div class="mb-6">
-                        <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div
+                            class="flex flex-wrap items-start justify-between gap-3"
+                        >
                             <h3
                                 class="text-xl font-semibold text-gray-900 dark:text-white"
                             >
@@ -203,8 +197,7 @@ onMounted(() => {
                                 <Clock class="h-4 w-4" />
                                 {{ conference.start_time || '—' }}
                                 {{
-                                    conference.start_time &&
-                                    conference.end_time
+                                    conference.start_time && conference.end_time
                                         ? '-'
                                         : ''
                                 }}
@@ -280,9 +273,7 @@ onMounted(() => {
                                     >
                                         <input
                                             type="checkbox"
-                                            :checked="
-                                                member.pivot?.activated
-                                            "
+                                            :checked="member.pivot?.activated"
                                             @change="
                                                 toggleActivation(member.id)
                                             "
@@ -296,9 +287,7 @@ onMounted(() => {
                                             can('constancias.download')
                                         "
                                         type="button"
-                                        @click="
-                                            downloadConstancia(member.id)
-                                        "
+                                        @click="downloadConstancia(member.id)"
                                         class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300"
                                     >
                                         <Download class="h-3 w-3" />
@@ -319,9 +308,7 @@ onMounted(() => {
                             v-if="canManage && conference.members?.length"
                             class="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200"
                         >
-                            <p class="font-medium">
-                                Activacion de constancias
-                            </p>
+                            <p class="font-medium">Activacion de constancias</p>
                             <p class="mt-1 leading-relaxed">
                                 Marca la casilla para activar la constancia de
                                 cada participante. Solo quienes tengan la

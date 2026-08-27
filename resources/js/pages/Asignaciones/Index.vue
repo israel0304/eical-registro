@@ -55,8 +55,10 @@ const groupLabels: Record<string, string> = {
 };
 const groupBadgeColors: Record<string, string> = {
     Taller: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
-    Ponencia: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-    Conferencia: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+    Ponencia:
+        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+    Conferencia:
+        'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
 };
 
 const groupedAssignments = computed(() => {
@@ -70,7 +72,9 @@ const groupedAssignments = computed(() => {
         .map((type) => ({
             type,
             label: groupLabels[type] ?? type,
-            badgeColor: groupBadgeColors[type] ?? 'bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:text-gray-300',
+            badgeColor:
+                groupBadgeColors[type] ??
+                'bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:text-gray-300',
             items: groups[type],
         }));
 });
@@ -116,11 +120,13 @@ const groupedAssignments = computed(() => {
                         <div
                             class="h-px flex-1 bg-gray-200 dark:bg-zinc-800"
                         ></div>
-                        <span
-                            class="text-xs text-gray-400 dark:text-gray-500"
-                        >
+                        <span class="text-xs text-gray-400 dark:text-gray-500">
                             {{ group.items.length }}
-                            {{ group.items.length === 1 ? 'actividad' : 'actividades' }}
+                            {{
+                                group.items.length === 1
+                                    ? 'actividad'
+                                    : 'actividades'
+                            }}
                         </span>
                     </div>
 
@@ -182,11 +188,7 @@ const groupedAssignments = computed(() => {
                             <div class="flex shrink-0 items-center gap-2">
                                 <button
                                     @click="
-                                        openModal(
-                                            item.type,
-                                            item.id,
-                                            item.url,
-                                        )
+                                        openModal(item.type, item.id, item.url)
                                     "
                                     class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-200 dark:hover:bg-zinc-700"
                                 >

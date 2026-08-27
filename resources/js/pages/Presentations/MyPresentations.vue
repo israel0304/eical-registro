@@ -104,10 +104,7 @@ const formatDate = (dateStr: string) => {
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
                                 >
-                                    {{
-                                        presentation.location ||
-                                        'Sin asignar'
-                                    }}
+                                    {{ presentation.location || 'Sin asignar' }}
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
@@ -125,8 +122,7 @@ const formatDate = (dateStr: string) => {
                                             :title="
                                                 mod.name +
                                                 (mod.affiliation
-                                                    ? ' — ' +
-                                                      mod.affiliation
+                                                    ? ' — ' + mod.affiliation
                                                     : '')
                                             "
                                             class="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-xs font-medium text-amber-700 ring-2 ring-white dark:bg-amber-900 dark:text-amber-300 dark:ring-zinc-900"
@@ -136,8 +132,8 @@ const formatDate = (dateStr: string) => {
                                         </span>
                                         <span
                                             v-if="
-                                                presentation.moderators
-                                                    .length > 3
+                                                presentation.moderators.length >
+                                                3
                                             "
                                             :title="
                                                 presentation.moderators
@@ -147,14 +143,12 @@ const formatDate = (dateStr: string) => {
                                             class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600 ring-2 ring-white dark:bg-zinc-700 dark:text-gray-300 dark:ring-zinc-900"
                                         >
                                             +{{
-                                                presentation.moderators
-                                                    .length - 3
+                                                presentation.moderators.length -
+                                                3
                                             }}
                                         </span>
                                     </div>
-                                    <span v-else class="text-gray-400"
-                                        >—</span
-                                    >
+                                    <span v-else class="text-gray-400">—</span>
                                 </td>
                                 <td
                                     class="px-6 py-4 text-right text-sm font-medium whitespace-nowrap"

@@ -217,7 +217,7 @@ class CartaInvitacionTest extends TestCase
         $this->assertSame($specific->id, Certificate::query()->where('user_id', $user->id)->first()->template_id);
     }
 
-    public function test_my_certificates_lists_generic_letter_when_no_role_template(): void
+    public function test_my_certificates_excludes_ponente_from_invitation_letters(): void
     {
         $this->genericInvitationTemplate();
         $role = $this->role('Ponente', 2);
@@ -227,8 +227,7 @@ class CartaInvitacionTest extends TestCase
             ->get('/constancias')
             ->assertInertia(fn ($page) => $page
                 ->component('Constancias/Index')
-                ->has('invitationLetters', 1)
-                ->where('invitationLetters.0.label', 'Carta de Invitación - Ponente'));
+                ->has('invitationLetters', 0));
     }
 
     public function test_carta_with_presentation_includes_work_title(): void
@@ -493,7 +492,7 @@ class CartaInvitacionTest extends TestCase
         $this->assertStringStartsWith('%PDF', $response->getContent());
     }
 
-    public function test_multiple_roles_are_listed_on_my_certificates(): void
+    public function test_multiple_roles_excludes_ponente_from_invitation_letters(): void
     {
         $ponente = $this->role('Ponente', 2);
         $instructor = $this->role('Instructor', 4);
@@ -507,8 +506,123 @@ class CartaInvitacionTest extends TestCase
             ->get('/constancias')
             ->assertInertia(fn ($page) => $page
                 ->component('Constancias/Index')
-                ->has('invitationLetters', 2)
-                ->where('invitationLetters.0.label', 'Carta de Invitación - Ponente')
-                ->where('invitationLetters.1.label', 'Carta de Invitación - Instructor'));
+                ->has('invitationLetters', 1)
+                ->where('invitationLetters.0.label', 'Carta de Invitación - Instructor'));
+    }
+
+    public function test_ponente_can_download_invitation_letter_per_presentation(): void
+    {
+        $role = $this->role('Ponente', 2);
+        $template = $this->invitationTemplate($role);
+        $template->elements()->delete();
+        $template->elements()->create([
+            'type' => 'text',
+            'content' => '{titulo_actividad}',
+            'x' => 100,
+            'y' => 300,
+            'width' => 600,
+            'height' => 60,
+            'font_size' => 18,
+            'text_align' => 'center',
+            'z_index' => 1,
+        ]);
+
+        $user = $this->userWithRole();
+
+        $presentation = Presentation::create([
+            'title' => 'Machine Learning en Producción',
+            'day' => '2026-08-06',
+            'location' => 'Sala 5',
+        ]);
+        $presentation->authors()->attach($user->id, ['author_order' => 1, 'presented' => true, 'presented_at' => now()]);
+
+        $this->actingAs($user)
+            ->get('/constancias/invitacion/ponencia/'.$presentation->id.'/download')
+            ->assertOk()
+            ->assertSee('Machine Learning en Producción', false);
+
+        $certificate = Certificate::query()
+            ->where('user_id', $user->id)
+            ->where('event_type', 'carta-presentation')
+            ->where('event_id', $presentation->id)
+            ->first();
+
+        $this->assertNotNull($certificate);
+        $this->assertSame('Machine Learning en Producción', $certificate->metadata['trabajos'][0] ?? null);
+        $this->assertSame('Machine Learning en Producción', $certificate->metadata['ponencia'] ?? null);
+    }
+
+    public function test_invitation_letter_per_presentation_is_distinct_from_event_letter(): void
+    {
+        $role = $this->role('Ponente', 2);
+        $this->invitationTemplate($role);
+
+        $user = $this->userWithRole();
+
+        $presentation = Presentation::create([
+            'title' => 'Deep Learning Aplicado',
+            'day' => '2026-08-07',
+            'location' => 'Sala 2',
+        ]);
+        $presentation->authors()->attach($user->id, ['author_order' => 1, 'presented' => true, 'presented_at' => now()]);
+
+        $this->actingAs($user)
+            ->get('/constancias/invitacion/ponencia/'.$presentation->id.'/download')
+            ->assertOk();
+
+        $eventLetter = Certificate::query()
+            ->where('user_id', $user->id)
+            ->where('event_type', 'event')
+            ->where('event_id', 0)
+            ->first();
+
+        $presentationLetter = Certificate::query()
+            ->where('user_id', $user->id)
+            ->where('event_type', 'carta-presentation')
+            ->where('event_id', $presentation->id)
+            ->first();
+
+        $this->assertNotNull($presentationLetter);
+        $this->assertNotSame($eventLetter?->id, $presentationLetter->id);
+    }
+
+    public function test_non_author_cannot_download_presentation_invitation_letter(): void
+    {
+        $role = $this->role('Ponente', 2);
+        $this->invitationTemplate($role);
+
+        $user = $this->userWithRole();
+
+        $presentation = Presentation::create([
+            'title' => 'Otra Ponencia',
+            'day' => '2026-08-08',
+            'location' => 'Sala 1',
+        ]);
+
+        $this->actingAs($user)
+            ->get('/constancias/invitacion/ponencia/'.$presentation->id.'/download')
+            ->assertRedirect();
+    }
+
+    public function test_presentation_invitation_letters_appear_in_my_certificates(): void
+    {
+        $role = $this->role('Ponente', 2);
+        $this->invitationTemplate($role);
+
+        $user = $this->userWithRole();
+
+        $presentation = Presentation::create([
+            'title' => 'NLP en Español',
+            'day' => '2026-08-09',
+            'location' => 'Sala 4',
+        ]);
+        $presentation->authors()->attach($user->id, ['author_order' => 1, 'presented' => true, 'presented_at' => now()]);
+
+        $this->actingAs($user)
+            ->get('/constancias')
+            ->assertInertia(fn ($page) => $page
+                ->component('Constancias/Index')
+                ->has('cartaPresentations', 1)
+                ->where('cartaPresentations.0.title', 'NLP en Español'));
     }
 }

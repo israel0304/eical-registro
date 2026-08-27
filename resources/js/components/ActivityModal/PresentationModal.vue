@@ -176,9 +176,7 @@ onMounted(() => {
             <div
                 class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-zinc-800"
             >
-                <h2
-                    class="text-lg font-semibold text-gray-900 dark:text-white"
-                >
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
                     Detalle de la Ponencia
                 </h2>
                 <button
@@ -240,8 +238,7 @@ onMounted(() => {
                         <!-- Disciplines & Keywords -->
                         <div
                             v-if="
-                                presentation.discipline ||
-                                presentation.keywords
+                                presentation.discipline || presentation.keywords
                             "
                             class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm"
                         >
@@ -368,8 +365,9 @@ onMounted(() => {
                                         @change="
                                             togglePresented(
                                                 author.id,
-                                                ($event.target as HTMLInputElement)
-                                                    .checked,
+                                                (
+                                                    $event.target as HTMLInputElement
+                                                ).checked,
                                             )
                                         "
                                         class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
@@ -391,7 +389,9 @@ onMounted(() => {
                                 </button>
 
                                 <span
-                                    v-if="!canPresented && author.pivot?.presented"
+                                    v-if="
+                                        !canPresented && author.pivot?.presented
+                                    "
                                     class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-200"
                                 >
                                     Presentada

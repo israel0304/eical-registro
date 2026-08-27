@@ -80,14 +80,19 @@ const startCamera = async () => {
     cameraError.value = '';
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: facingMode.value, width: { ideal: 1280 }, height: { ideal: 960 } },
+            video: {
+                facingMode: facingMode.value,
+                width: { ideal: 1280 },
+                height: { ideal: 960 },
+            },
         });
         cameraStream.value = stream;
         if (videoRef.value) {
             videoRef.value.srcObject = stream;
         }
     } catch {
-        cameraError.value = 'No se pudo acceder a la cámara. Verifica los permisos del navegador.';
+        cameraError.value =
+            'No se pudo acceder a la cámara. Verifica los permisos del navegador.';
         cameraOpen.value = false;
     }
 };
@@ -134,7 +139,9 @@ const capturePhoto = () => {
     canvas.toBlob(
         (blob) => {
             if (!blob) return;
-            const file = new File([blob], 'foto-gafete.jpg', { type: 'image/jpeg' });
+            const file = new File([blob], 'foto-gafete.jpg', {
+                type: 'image/jpeg',
+            });
             photoForm.photo = file;
             photoForm.post('/gafete/foto', {
                 preserveScroll: true,
@@ -151,7 +158,9 @@ const capturePhoto = () => {
 
 const hasCamera = (() => {
     try {
-        return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        return !!(
+            navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+        );
     } catch {
         return false;
     }
@@ -450,7 +459,7 @@ onMounted(generateQR);
                 class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black"
             >
                 <div
-                    class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3"
+                    class="absolute top-0 right-0 left-0 z-10 flex items-center justify-between px-4 py-3"
                 >
                     <button
                         type="button"
@@ -478,7 +487,7 @@ onMounted(generateQR);
                 <canvas ref="captureCanvas" class="hidden" />
 
                 <div
-                    class="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-center gap-8 px-4 py-6"
+                    class="absolute right-0 bottom-0 left-0 z-10 flex items-center justify-center gap-8 px-4 py-6"
                 >
                     <div class="w-[52px]" />
                     <button

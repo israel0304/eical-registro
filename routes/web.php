@@ -380,6 +380,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Constancia de asistencia al evento (antes de rutas genéricas)
     Route::get('constancias/evento/download', [ConstanciaController::class, 'downloadEvento'])->middleware('can:constancias.download')->name('constancias.evento.download');
     Route::get('constancias/invitacion/descargar', [ConstanciaController::class, 'downloadInvitacion'])->middleware('can:constancias.download')->name('constancias.invitacion.download');
+    Route::get('constancias/invitacion/ponencia/{presentation}/download', [ConstanciaController::class, 'downloadInvitacionPonencia'])->middleware('can:constancias.download')->name('constancias.invitacion.ponencia.download');
     Route::get('admin/constancias/evento/{user}/download', [ConstanciaController::class, 'adminDownloadEvento'])->middleware('can:constancias.download')->name('constancias.evento.admin-download');
 
     Route::get('constancias/{id}/download', [ConstanciaController::class, 'download'])->middleware('can:constancias.download')->name('constancias.download');
