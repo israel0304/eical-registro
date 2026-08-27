@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
+use App\Models\Conference;
 use App\Models\Permission;
 use App\Models\Presentation;
 use App\Models\Role;
@@ -602,6 +603,60 @@ class CartaInvitacionTest extends TestCase
         $this->actingAs($user)
             ->get('/constancias/invitacion/ponencia/'.$presentation->id.'/download')
             ->assertRedirect();
+    }
+
+    public function test_speaker_can_download_invitation_letter_with_conference_and_co_speakers(): void
+    {
+        $role = $this->role('Speaker', 5);
+        $this->roleWithPermissions($role);
+        $template = $this->invitationTemplate($role);
+        $template->elements()->delete();
+        $template->elements()->create([
+            'type' => 'text',
+            'content' => '{evento}',
+            'x' => 100,
+            'y' => 300,
+            'width' => 600,
+            'height' => 60,
+            'font_size' => 18,
+            'text_align' => 'center',
+            'z_index' => 1,
+        ]);
+
+        $user = $this->userWithRole();
+        $user->roles()->sync([$role->id]);
+
+        $coSpeaker = User::factory()->create([
+            'first_name' => 'Juan',
+            'last_name' => 'Pérez',
+        ]);
+
+        $conference = Conference::create([
+            'title' => 'La conferencia magistral inaugural',
+            'day' => '2026-08-05',
+            'location' => 'Auditorio',
+            'created_by' => $user->id,
+        ]);
+        $conference->speakers()->attach($user->id);
+        $conference->speakers()->attach($coSpeaker->id);
+
+        $this->actingAs($user)
+            ->get('/constancias/invitacion/descargar?role='.$role->id)
+            ->assertOk()
+            ->assertSee('La conferencia magistral inaugural', false);
+
+        $certificate = Certificate::query()
+            ->where('user_id', $user->id)
+            ->where('role_id', $role->id)
+            ->where('event_type', 'event')
+            ->first();
+
+        $this->assertNotNull($certificate);
+        $this->assertSame('La conferencia magistral inaugural', $certificate->metadata['evento'] ?? null);
+
+        $autores = $certificate->metadata['autores'] ?? '';
+        $this->assertStringContainsString('María López', $autores);
+        $this->assertStringContainsString('Juan Pérez', $autores);
     }
 
     public function test_presentation_invitation_letters_appear_in_my_certificates(): void

@@ -1043,18 +1043,38 @@ HTML;
     private function authorNamesForRole(User $user, Role $role): array
     {
         $names = match ($role->name) {
-            'Ponente' => User::whereHas('presentations', fn ($q) => $q
-                ->whereIn('presentations.id', $user->presentations()->pluck('presentations.id'))
-            )->get()->map(fn ($u) => trim($u->first_name.' '.$u->last_name))->all(),
-            'Instructor' => User::whereHas('workshops', fn ($q) => $q
-                ->whereIn('workshops.id', Workshop::whereHas('instructors', fn ($q) => $q->where('users.id', $user->id))->pluck('id'))
-            )->get()->map(fn ($u) => trim($u->first_name.' '.$u->last_name))->all(),
-            'Speaker' => User::whereHas('conferences', fn ($q) => $q
-                ->whereIn('conferences.id', Conference::whereHas('speakers', fn ($q) => $q->where('users.id', $user->id))->pluck('id'))
-            )->get()->map(fn ($u) => trim($u->first_name.' '.$u->last_name))->all(),
-            'Moderator' => User::whereHas('conferences', fn ($q) => $q
-                ->whereIn('conferences.id', Conference::whereHas('moderators', fn ($q) => $q->where('users.id', $user->id))->pluck('id'))
-            )->get()->map(fn ($u) => trim($u->first_name.' '.$u->last_name))->all(),
+            'Ponente' => Presentation::query()
+                ->whereHas('authors', fn ($q) => $q->where('users.id', $user->id))
+                ->get()
+                ->flatMap(fn ($presentation) => $presentation->authors()->get())
+                ->map(fn ($u) => trim($u->first_name.' '.$u->last_name))
+                ->unique()
+                ->values()
+                ->all(),
+            'Instructor' => Workshop::query()
+                ->whereHas('instructors', fn ($q) => $q->where('users.id', $user->id))
+                ->get()
+                ->flatMap(fn ($workshop) => $workshop->instructors()->get())
+                ->map(fn ($u) => trim($u->first_name.' '.$u->last_name))
+                ->unique()
+                ->values()
+                ->all(),
+            'Speaker' => Conference::query()
+                ->whereHas('speakers', fn ($q) => $q->where('users.id', $user->id))
+                ->get()
+                ->flatMap(fn ($conference) => $conference->speakers()->get())
+                ->map(fn ($u) => trim($u->first_name.' '.$u->last_name))
+                ->unique()
+                ->values()
+                ->all(),
+            'Moderator' => Conference::query()
+                ->whereHas('moderators', fn ($q) => $q->where('users.id', $user->id))
+                ->get()
+                ->flatMap(fn ($conference) => $conference->moderators()->get())
+                ->map(fn ($u) => trim($u->first_name.' '.$u->last_name))
+                ->unique()
+                ->values()
+                ->all(),
             default => [],
         };
 
