@@ -78,6 +78,20 @@ const isFull = computed(() => {
     return (props.workshop.enrolled_count || 0) >= props.workshop.capacity;
 });
 
+const toggleInstructorConstancia = (userId: number) => {
+    router.post(
+        '/workshops/' +
+            props.workshop.id +
+            '/instructors/' +
+            userId +
+            '/activation',
+        {},
+        {
+            preserveScroll: true,
+        },
+    );
+};
+
 const myEnrollment = computed(() => {
     return props.workshop.enrollments?.find(
         (e: any) =>
@@ -380,34 +394,55 @@ watch(
                             class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
                             >Instructores</span
                         >
-                        <div class="mt-1 flex items-start gap-1.5">
-                            <UserCheck
-                                class="mt-0.5 h-4 w-4 shrink-0 text-gray-400"
-                            />
+                        <div class="mt-2 space-y-2">
                             <template v-if="workshop.instructors?.length">
-                                <span
-                                    v-for="(
-                                        instructor, idx
-                                    ) in workshop.instructors"
+                                <div
+                                    v-for="instructor in workshop.instructors"
                                     :key="instructor.id"
-                                    class="text-gray-900 dark:text-white"
+                                    class="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
                                 >
-                                    {{ instructor.first_name }}
-                                    {{ instructor.last_name
-                                    }}<span
-                                        v-if="instructor.affiliation"
-                                        class="text-xs text-gray-500"
+                                    <UserCheck
+                                        class="h-4 w-4 shrink-0 text-gray-400"
+                                    />
+                                    <div class="min-w-0 flex-1">
+                                        <span
+                                            class="text-gray-900 dark:text-white"
+                                        >
+                                            {{ instructor.first_name }}
+                                            {{ instructor.last_name }}
+                                        </span>
+                                        <span
+                                            v-if="instructor.affiliation"
+                                            class="text-xs text-gray-500"
+                                        >
+                                            ({{ instructor.affiliation }})
+                                        </span>
+                                    </div>
+                                    <label
+                                        v-if="can('workshops.activate')"
+                                        class="flex cursor-pointer items-center gap-1 text-xs text-gray-600 dark:text-gray-400"
                                     >
-                                        ({{ instructor.affiliation }})</span
-                                    ><span
-                                        v-if="
-                                            idx <
-                                            workshop.instructors.length - 1
-                                        "
+                                        <input
+                                            type="checkbox"
+                                            :checked="
+                                                !!instructor.pivot?.activated
+                                            "
+                                            @change="
+                                                toggleInstructorConstancia(
+                                                    instructor.id,
+                                                )
+                                            "
+                                            class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                        Constancia activada
+                                    </label>
+                                    <span
+                                        v-else-if="instructor.pivot?.activated"
+                                        class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-200"
                                     >
-                                        ,
+                                        Constancia activada
                                     </span>
-                                </span>
+                                </div>
                             </template>
                             <span v-else class="text-gray-400">—</span>
                         </div>

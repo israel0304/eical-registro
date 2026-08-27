@@ -159,7 +159,14 @@ class WorkshopController extends Controller
 
         $workshop->update($validated);
 
-        // Sync instructors
+        // Sync instructors, preserving activation state on re-attach
+        $activatedMap = $workshop->instructors()
+            ->whereIn('users.id', collect($instructorsData)->pluck('email')->filter())
+            ->get()
+            ->pluck('pivot.activated', 'id')
+            ->map(fn ($activated) => (bool) $activated)
+            ->all();
+
         $workshop->instructors()->detach();
         foreach ($instructorsData as $data) {
             $user = User::firstOrCreate(
@@ -179,13 +186,37 @@ class WorkshopController extends Controller
 
             $user->roles()->syncWithoutDetaching([Role::where('name', 'Instructor')->value('id')]); // Instructor
 
-            $workshop->instructors()->attach($user->id);
+            $activated = $activatedMap[$user->id] ?? false;
+            $workshop->instructors()->attach($user->id, [
+                'activated' => $activated,
+                'activated_at' => $activated ? now() : null,
+            ]);
         }
 
         $workshop->moderators()->sync($moderatorIds);
         $this->syncModeratorRoles($moderatorIds);
 
         return back()->with('success', 'Taller actualizado correctamente.');
+    }
+
+    public function toggleInstructorActivation(Request $request, Workshop $workshop, User $user)
+    {
+        abort_unless($request->user()->can('workshops.activate'), 403);
+
+        $instructor = $workshop->instructors()->where('users.id', $user->id)->first();
+
+        if ($instructor === null) {
+            return back()->withErrors(['error' => 'El usuario no es instructor de este taller.']);
+        }
+
+        $activated = ! (bool) $instructor->pivot->activated;
+
+        $workshop->instructors()->updateExistingPivot($user->id, [
+            'activated' => $activated,
+            'activated_at' => $activated ? now() : null,
+        ]);
+
+        return back()->with('success', $activated ? 'Constancia activada.' : 'Constancia desactivada.');
     }
 
     public function destroy(Workshop $workshop)

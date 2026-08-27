@@ -117,6 +117,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('workshops', [WorkshopController::class, 'store'])->middleware('can:workshops.create')->name('workshops.store');
     Route::put('workshops/{workshop}', [WorkshopController::class, 'update'])->middleware('can:workshops.edit')->name('workshops.update');
+    Route::post('workshops/{workshop}/instructors/{user}/activation', [WorkshopController::class, 'toggleInstructorActivation'])->middleware('can:workshops.activate')->name('workshops.instructors.activation');
     Route::delete('workshops/{workshop}', [WorkshopController::class, 'destroy'])->middleware('can:workshops.delete')->name('workshops.destroy');
     Route::post('workshops/{workshop}/force-delete', [WorkshopController::class, 'forceDelete'])->middleware('can:workshops.delete')->name('workshops.force-delete');
     Route::post('workshops/{workshop}/restore', [WorkshopController::class, 'restore'])->middleware('can:workshops.delete')->name('workshops.restore');

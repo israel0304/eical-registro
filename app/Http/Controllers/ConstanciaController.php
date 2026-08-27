@@ -150,6 +150,7 @@ class ConstanciaController extends Controller
 
         foreach ($instructorWorkshops as $workshop) {
             $workshop->folio = $certificates->get('workshop-'.$workshop->id)?->folio;
+            $workshop->activated = (bool) $workshop->instructors->first()?->pivot->activated;
         }
 
         foreach ($presentationCertificates as $presentation) {
@@ -282,9 +283,18 @@ class ConstanciaController extends Controller
         $user = $request->user();
         $workshop = Workshop::findOrFail($id);
 
-        $isInstructor = $workshop->instructors()->where('users.id', $user->id)->exists();
+        $isInstructor = $workshop->instructors()
+            ->where('users.id', $user->id)
+            ->wherePivot('activated', true)
+            ->exists();
 
         if (! $isInstructor) {
+            $isInstructorPending = $workshop->instructors()->where('users.id', $user->id)->exists();
+
+            if ($isInstructorPending) {
+                return back()->withErrors(['error' => 'Tu constancia aún no ha sido activada.']);
+            }
+
             $isEnrolled = $workshop->enrollments()
                 ->where('user_id', $user->id)
                 ->where('status', 'enrolled')

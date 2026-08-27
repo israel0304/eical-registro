@@ -51,6 +51,23 @@ watch(
     { deep: true },
 );
 
+const toggleInstructorConstancia = (
+    workshopId: number,
+    instructorId: number,
+) => {
+    router.post(
+        '/workshops/' +
+            workshopId +
+            '/instructors/' +
+            instructorId +
+            '/activation',
+        {},
+        {
+            preserveScroll: true,
+        },
+    );
+};
+
 const showModal = ref(false);
 const isEditing = ref(false);
 
@@ -516,7 +533,10 @@ const formatDate = (dateStr: string) => {
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
                                 >
-                                    <div class="flex items-center -space-x-2">
+                                    <div
+                                        v-if="workshop.deleted_at"
+                                        class="flex items-center -space-x-2"
+                                    >
                                         <span
                                             v-for="instructor in workshop.instructors"
                                             :key="instructor.id"
@@ -532,6 +552,66 @@ const formatDate = (dateStr: string) => {
                                             {{ instructor.first_name?.[0]
                                             }}{{ instructor.last_name?.[0] }}
                                         </span>
+                                    </div>
+                                    <div
+                                        v-else-if="
+                                            !can('workshops.activate')
+                                        "
+                                        class="flex items-center -space-x-2"
+                                    >
+                                        <span
+                                            v-for="instructor in workshop.instructors"
+                                            :key="instructor.id"
+                                            :title="
+                                                instructor.name +
+                                                (instructor.affiliation
+                                                    ? ' — ' +
+                                                      instructor.affiliation
+                                                    : '')
+                                            "
+                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-xs font-medium text-indigo-700 ring-2 ring-white dark:bg-indigo-900 dark:text-indigo-300 dark:ring-zinc-900"
+                                        >
+                                            {{ instructor.first_name?.[0]
+                                            }}{{ instructor.last_name?.[0] }}
+                                        </span>
+                                    </div>
+                                    <div
+                                        v-else
+                                        class="flex flex-col gap-1.5"
+                                    >
+                                        <label
+                                            v-for="instructor in workshop.instructors"
+                                            :key="instructor.id"
+                                            class="flex cursor-pointer items-center gap-2 text-xs text-gray-700 dark:text-gray-300"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                :checked="
+                                                    !!instructor.pivot
+                                                        ?.activated
+                                                "
+                                                @change="
+                                                    toggleInstructorConstancia(
+                                                        workshop.id,
+                                                        instructor.id,
+                                                    )
+                                                "
+                                                class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <span class="truncate">
+                                                {{ instructor.first_name }}
+                                                {{ instructor.last_name }}
+                                            </span>
+                                            <span
+                                                v-if="
+                                                    instructor.pivot
+                                                        ?.activated
+                                                "
+                                                class="hidden shrink-0 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700 lg:inline dark:bg-green-900 dark:text-green-200"
+                                            >
+                                                Activa
+                                            </span>
+                                        </label>
                                     </div>
                                     <div
                                         v-if="!workshop.instructors?.length"

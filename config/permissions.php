@@ -21,6 +21,7 @@ return [
         'workshops.enrollments' => 'Gestionar inscripciones de talleres',
         'workshops.attendance' => 'Gestionar asistencia de talleres',
         'workshops.qr.send' => 'Enviar código QR de taller a instructores',
+        'workshops.activate' => 'Activar constancias de instructores',
     ],
     'Ponencias' => [
         'presentations.view' => 'Ver ponencias',

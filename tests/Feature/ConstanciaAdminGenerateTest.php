@@ -128,7 +128,10 @@ class ConstanciaAdminGenerateTest extends TestCase
         $type = $this->instructorType();
         $this->certificateTemplate($type);
         $workshop = $this->workshop();
-        $workshop->instructors()->attach($instructor->id);
+        $workshop->instructors()->attach($instructor->id, [
+            'activated' => true,
+            'activated_at' => now(),
+        ]);
 
         $this->actingAs($instructor)
             ->get('/constancias/'.$workshop->id.'/download')
@@ -144,13 +147,32 @@ class ConstanciaAdminGenerateTest extends TestCase
         ]);
     }
 
+    public function test_instructor_download_blocked_when_not_activated(): void
+    {
+        $instructor = $this->instructor();
+        $type = $this->instructorType();
+        $this->certificateTemplate($type);
+        $workshop = $this->workshop();
+        $workshop->instructors()->attach($instructor->id);
+
+        $this->actingAs($instructor)
+            ->get('/constancias/'.$workshop->id.'/download')
+            ->assertRedirect()
+            ->assertSessionHasErrors('error');
+
+        $this->assertDatabaseCount('certificates', 0);
+    }
+
     public function test_instructor_download_blocked_when_type_is_inactive(): void
     {
         $instructor = $this->instructor();
         $type = $this->instructorType(false);
         $this->certificateTemplate($type);
         $workshop = $this->workshop();
-        $workshop->instructors()->attach($instructor->id);
+        $workshop->instructors()->attach($instructor->id, [
+            'activated' => true,
+            'activated_at' => now(),
+        ]);
 
         $this->actingAs($instructor)
             ->get('/constancias/'.$workshop->id.'/download')

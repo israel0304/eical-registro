@@ -398,12 +398,23 @@ const missingDays = computed(() => {
                         </div>
                         <div class="mt-4">
                             <button
+                                v-if="
+                                    workshop.activated &&
+                                    can('constancias.download')
+                                "
                                 @click="downloadCertificate(workshop.id)"
                                 class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-900/30 dark:text-violet-300"
                             >
                                 <Download class="h-4 w-4" /> Descargar
                                 Constancia
                             </button>
+                            <div
+                                v-else
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-500"
+                            >
+                                <Clock class="h-4 w-4" /> Pendiente de
+                                activación
+                            </div>
                         </div>
                     </div>
                 </div>
