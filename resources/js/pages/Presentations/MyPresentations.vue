@@ -110,11 +110,6 @@ const formatDate = (dateStr: string) => {
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
                                 >
-                                    {{ presentation.location || 'Sin asignar' }}
-                                </td>
-                                <td
-                                    class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
-                                >
                                     <div
                                         v-if="presentation.authors?.length"
                                         class="flex items-center -space-x-2"
@@ -165,6 +160,11 @@ const formatDate = (dateStr: string) => {
                                     <span v-else class="text-gray-400"
                                         >—</span
                                     >
+                                </td>
+                                <td
+                                    class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
+                                >
+                                    {{ presentation.location || 'Sin asignar' }}
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
