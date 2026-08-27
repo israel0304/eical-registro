@@ -59,6 +59,12 @@ const formatDate = (dateStr: string) => {
                                     scope="col"
                                     class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
                                 >
+                                    Ponentes
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
+                                >
                                     Lugar
                                 </th>
                                 <th
@@ -105,6 +111,60 @@ const formatDate = (dateStr: string) => {
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
                                 >
                                     {{ presentation.location || 'Sin asignar' }}
+                                </td>
+                                <td
+                                    class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
+                                >
+                                    <div
+                                        v-if="presentation.authors?.length"
+                                        class="flex items-center -space-x-2"
+                                    >
+                                        <span
+                                            v-for="author in presentation.authors.slice(
+                                                0,
+                                                5,
+                                            )"
+                                            :key="author.id"
+                                            :title="
+                                                author.first_name +
+                                                ' ' +
+                                                author.last_name +
+                                                (author.affiliation
+                                                    ? ' — ' +
+                                                      author.affiliation
+                                                    : '')
+                                            "
+                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-xs font-medium text-indigo-700 ring-2 ring-white dark:bg-indigo-900 dark:text-indigo-300 dark:ring-zinc-900"
+                                        >
+                                            {{ author.first_name?.[0]
+                                            }}{{ author.last_name?.[0] }}
+                                        </span>
+                                        <span
+                                            v-if="
+                                                presentation.authors
+                                                    .length > 5
+                                            "
+                                            :title="
+                                                presentation.authors
+                                                    .map(
+                                                        (a: any) =>
+                                                            a.first_name +
+                                                            ' ' +
+                                                            a.last_name,
+                                                    )
+                                                    .join(', ')
+                                            "
+                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600 ring-2 ring-white dark:bg-zinc-700 dark:text-gray-300 dark:ring-zinc-900"
+                                        >
+                                            +{{
+                                                presentation.authors
+                                                    .length - 5
+                                            }}
+                                        </span>
+                                    </div>
+                                    <span v-else class="text-gray-400"
+                                        >—</span
+                                    >
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
