@@ -282,19 +282,23 @@ class ConstanciaController extends Controller
         $user = $request->user();
         $workshop = Workshop::findOrFail($id);
 
-        $isEnrolled = $workshop->enrollments()
-            ->where('user_id', $user->id)
-            ->where('status', 'enrolled')
-            ->exists();
+        $isInstructor = $workshop->instructors()->where('users.id', $user->id)->exists();
 
-        if (! $isEnrolled) {
-            return back()->withErrors(['error' => 'No estás inscrito en este taller.']);
-        }
+        if (! $isInstructor) {
+            $isEnrolled = $workshop->enrollments()
+                ->where('user_id', $user->id)
+                ->where('status', 'enrolled')
+                ->exists();
 
-        $hasAttendance = $workshop->attendances()->where('user_id', $user->id)->exists();
+            if (! $isEnrolled) {
+                return back()->withErrors(['error' => 'No estás inscrito en este taller.']);
+            }
 
-        if (! $hasAttendance) {
-            return back()->withErrors(['error' => 'Tu asistencia aún no ha sido verificada.']);
+            $hasAttendance = $workshop->attendances()->where('user_id', $user->id)->exists();
+
+            if (! $hasAttendance) {
+                return back()->withErrors(['error' => 'Tu asistencia aún no ha sido verificada.']);
+            }
         }
 
         $certificate = $this->renderer->issue($user, 'workshop', $workshop);
