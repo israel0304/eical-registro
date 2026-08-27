@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, Calendar, Clock, MapPin, Download } from 'lucide-vue-next';
+import { ArrowLeft, Calendar, Clock, MapPin } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
@@ -76,16 +76,6 @@ const toggleActivation = (userId: number) => {
     );
 };
 
-const downloadConstancia = (userId: number) => {
-    window.open(
-        '/admin/constancias/conferencia/' +
-            props.conference.id +
-            '/' +
-            userId +
-            '/download',
-        '_blank',
-    );
-};
 </script>
 
 <template>
@@ -202,29 +192,31 @@ const downloadConstancia = (userId: number) => {
                                 (can('conferences.view') || isAssignedModerator)
                             "
                         >
-                            <label
-                                class="flex cursor-pointer items-center gap-1 text-xs text-gray-600 dark:text-gray-400"
-                            >
-                                <input
-                                    type="checkbox"
-                                    :checked="member.pivot?.activated"
-                                    @change="toggleActivation(member.id)"
-                                    class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                />
-                                Constancia activada
-                            </label>
-                            <button
-                                v-if="
-                                    member.pivot?.activated &&
-                                    can('constancias.download')
-                                "
-                                type="button"
-                                @click="downloadConstancia(member.id)"
-                                class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300"
-                            >
-                                <Download class="h-3 w-3" />
-                                Constancia
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    @click="toggleActivation(member.id)"
+                                    class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
+                                    :class="
+                                        member.pivot?.activated
+                                            ? 'bg-indigo-600'
+                                            : 'bg-gray-300 dark:bg-zinc-600'
+                                    "
+                                >
+                                    <span
+                                        class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                        :class="
+                                            member.pivot?.activated
+                                                ? 'translate-x-6'
+                                                : 'translate-x-1'
+                                        "
+                                    ></span>
+                                </button>
+                                <span
+                                    class="text-xs text-gray-600 dark:text-gray-400"
+                                    >Constancia activada</span
+                                >
+                            </div>
                         </template>
 
                         <span
@@ -242,7 +234,7 @@ const downloadConstancia = (userId: number) => {
                 >
                     <p class="font-medium">Activación de constancias</p>
                     <p class="mt-1 leading-relaxed">
-                        Marca la casilla para activar la constancia de cada
+                        Usa el interruptor para activar la constancia de cada
                         participante. Solo quienes tengan la constancia activada
                         podrán descargarla desde su panel.
                     </p>

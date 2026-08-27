@@ -161,6 +161,31 @@ const toggleQrTimeRestricted = () => {
     );
 };
 
+const toggleInstructorConstancia = (userId: number) => {
+    router.post(
+        '/workshops/' +
+            workshop.value.id +
+            '/instructors/' +
+            userId +
+            '/activation',
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                const instructor = workshop.value.instructors?.find(
+                    (i: any) => i.id === userId,
+                );
+                if (instructor) {
+                    instructor.pivot = {
+                        ...(instructor.pivot ?? {}),
+                        activated: !instructor.pivot?.activated,
+                    };
+                }
+            },
+        },
+    );
+};
+
 const generateQR = async () => {
     await nextTick();
     if (!qrCanvas.value) return;
@@ -382,34 +407,81 @@ watch(
                                 class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
                                 >Instructores</span
                             >
-                            <div class="mt-1 flex items-start gap-1.5">
-                                <UserCheck
-                                    class="mt-0.5 h-4 w-4 text-gray-400"
-                                />
-                                <template v-if="workshop.instructors?.length">
-                                    <span
-                                        v-for="(
-                                            instructor, idx
-                                        ) in workshop.instructors"
+                            <div class="mt-2 space-y-2">
+                                <template
+                                    v-if="workshop.instructors?.length"
+                                >
+                                    <div
+                                        v-for="instructor in workshop.instructors"
                                         :key="instructor.id"
-                                        class="text-gray-900 dark:text-white"
+                                        class="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
                                     >
-                                        {{ instructor.first_name }}
-                                        {{ instructor.last_name
-                                        }}<span
-                                            v-if="instructor.affiliation"
-                                            class="text-xs text-gray-500"
-                                        >
-                                            ({{ instructor.affiliation }})</span
-                                        ><span
+                                        <UserCheck
+                                            class="h-4 w-4 shrink-0 text-gray-400"
+                                        />
+                                        <div class="min-w-0 flex-1">
+                                            <span
+                                                class="text-gray-900 dark:text-white"
+                                            >
+                                                {{ instructor.first_name }}
+                                                {{ instructor.last_name }}
+                                            </span>
+                                            <span
+                                                v-if="
+                                                    instructor.affiliation
+                                                "
+                                                class="text-xs text-gray-500"
+                                            >
+                                                ({{
+                                                    instructor.affiliation
+                                                }})
+                                            </span>
+                                        </div>
+                                        <div
                                             v-if="
-                                                idx <
-                                                workshop.instructors.length - 1
+                                                can('workshops.activate')
                                             "
+                                            class="flex items-center gap-1.5"
                                         >
-                                            ,
+                                            <button
+                                                type="button"
+                                                @click="
+                                                    toggleInstructorConstancia(
+                                                        instructor.id,
+                                                    )
+                                                "
+                                                class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
+                                                :class="
+                                                    instructor.pivot
+                                                        ?.activated
+                                                        ? 'bg-indigo-600'
+                                                        : 'bg-gray-300 dark:bg-zinc-600'
+                                                "
+                                            >
+                                                <span
+                                                    class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                                    :class="
+                                                        instructor.pivot
+                                                            ?.activated
+                                                            ? 'translate-x-6'
+                                                            : 'translate-x-1'
+                                                    "
+                                                ></span>
+                                            </button>
+                                            <span
+                                                class="text-xs text-gray-600 dark:text-gray-400"
+                                                >Constancia activada</span
+                                            >
+                                        </div>
+                                        <span
+                                            v-else-if="
+                                                instructor.pivot?.activated
+                                            "
+                                            class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-200"
+                                        >
+                                            Constancia activada
                                         </span>
-                                    </span>
+                                    </div>
                                 </template>
                                 <span v-else class="text-gray-400">—</span>
                             </div>

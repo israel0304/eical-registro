@@ -7,7 +7,6 @@ import {
     Clock,
     MapPin,
     Hash,
-    Download,
     Pencil,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -25,15 +24,6 @@ const can = (permission: string) =>
     (page.props.auth.permissions as string[] | undefined)?.includes(
         permission,
     ) ?? false;
-const currentUserId = computed(() => page.props.auth.user?.id);
-const isAssignedModerator = computed(() => {
-    return props.presentation.moderators?.some(
-        (m: any) => m.id === currentUserId.value,
-    );
-});
-const canManage = computed(
-    () => can('presentations.edit') || isAssignedModerator.value,
-);
 const canPresented = computed(() => can('presentations.presented'));
 const canEdit = computed(
     () =>
@@ -108,17 +98,6 @@ const togglePresented = (userId: number, presented: boolean) => {
         .finally(() => {
             toggling.value = null;
         });
-};
-
-const downloadConstancia = (authorId: number) => {
-    window.open(
-        '/admin/constancias/ponencia/' +
-            props.presentation.id +
-            '/' +
-            authorId +
-            '/download',
-        '_blank',
-    );
 };
 
 const keywordsList = computed(() => {
@@ -293,39 +272,40 @@ const disciplinesList = computed(() => {
                             </span>
                         </div>
 
-                        <label
+                        <div
                             v-if="canPresented"
-                            class="flex cursor-pointer items-center gap-1 text-xs text-gray-600 dark:text-gray-400"
+                            class="flex items-center gap-2"
                         >
-                            <input
-                                type="checkbox"
-                                :checked="author.pivot?.presented"
+                            <button
+                                type="button"
                                 :disabled="toggling !== null"
-                                @change="
+                                @click="
                                     togglePresented(
                                         author.id,
-                                        ($event.target as HTMLInputElement)
-                                            .checked,
+                                        !author.pivot?.presented,
                                     )
                                 "
-                                class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            Presentó
-                        </label>
-                        <button
-                            v-if="
-                                canManage &&
-                                author.pivot?.presented &&
-                                can('constancias.download')
-                            "
-                            type="button"
-                            @click="downloadConstancia(author.id)"
-                            class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300"
-                        >
-                            <Download class="h-3 w-3" />
-                            Constancia
-                        </button>
-
+                                class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                                :class="
+                                    author.pivot?.presented
+                                        ? 'bg-indigo-600'
+                                        : 'bg-gray-300 dark:bg-zinc-600'
+                                "
+                            >
+                                <span
+                                    class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                    :class="
+                                        author.pivot?.presented
+                                            ? 'translate-x-6'
+                                            : 'translate-x-1'
+                                    "
+                                ></span>
+                            </button>
+                            <span
+                                class="text-xs text-gray-600 dark:text-gray-400"
+                                >Presentó</span
+                            >
+</div>
                         <span
                             v-if="!canPresented && author.pivot?.presented"
                             class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-200"

@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('workshop_instructor_user', function (Blueprint $table) {
-            $table->boolean('activated')->default(false)->after('institution');
-            $table->timestamp('activated_at')->nullable()->after('activated');
+            $table->boolean('activated')->default(false);
+            $table->timestamp('activated_at')->nullable();
         });
     }
 

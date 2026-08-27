@@ -418,24 +418,39 @@ watch(
                                             ({{ instructor.affiliation }})
                                         </span>
                                     </div>
-                                    <label
+                                    <div
                                         v-if="can('workshops.activate')"
-                                        class="flex cursor-pointer items-center gap-1 text-xs text-gray-600 dark:text-gray-400"
+                                        class="flex items-center gap-1.5"
                                     >
-                                        <input
-                                            type="checkbox"
-                                            :checked="
-                                                !!instructor.pivot?.activated
-                                            "
-                                            @change="
+                                        <button
+                                            type="button"
+                                            @click="
                                                 toggleInstructorConstancia(
                                                     instructor.id,
                                                 )
                                             "
-                                            class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        Constancia activada
-                                    </label>
+                                            class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
+                                            :class="
+                                                instructor.pivot?.activated
+                                                    ? 'bg-indigo-600'
+                                                    : 'bg-gray-300 dark:bg-zinc-600'
+                                            "
+                                        >
+                                            <span
+                                                class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                                :class="
+                                                    instructor.pivot
+                                                        ?.activated
+                                                        ? 'translate-x-6'
+                                                        : 'translate-x-1'
+                                                "
+                                            ></span>
+                                        </button>
+                                        <span
+                                            class="text-xs text-gray-600 dark:text-gray-400"
+                                            >Constancia activada</span
+                                        >
+                                    </div>
                                     <span
                                         v-else-if="instructor.pivot?.activated"
                                         class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-200"
