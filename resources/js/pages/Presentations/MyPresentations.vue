@@ -59,13 +59,13 @@ const formatDate = (dateStr: string) => {
                                     scope="col"
                                     class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
                                 >
-                                    Ponentes
+                                    Lugar
                                 </th>
                                 <th
                                     scope="col"
                                     class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
                                 >
-                                    Lugar
+                                    Ponentes
                                 </th>
                                 <th
                                     scope="col"
@@ -106,6 +106,11 @@ const formatDate = (dateStr: string) => {
                                     <span v-else class="text-gray-400"
                                         >Sin asignar</span
                                     >
+                                </td>
+                                <td
+                                    class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
+                                >
+                                    {{ presentation.location || 'Sin asignar' }}
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
@@ -160,11 +165,6 @@ const formatDate = (dateStr: string) => {
                                     <span v-else class="text-gray-400"
                                         >—</span
                                     >
-                                </td>
-                                <td
-                                    class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    {{ presentation.location || 'Sin asignar' }}
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
