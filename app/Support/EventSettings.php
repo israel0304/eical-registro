@@ -145,6 +145,22 @@ class EventSettings
         return $days;
     }
 
+    /** Ruta (disco public) del archivo de plantilla de presentaciones, o null. */
+    public static function presentationTemplatePath(): ?string
+    {
+        $path = self::get('plantilla_presentacion_path');
+
+        return is_string($path) && $path !== '' ? $path : null;
+    }
+
+    /** Nombre original del archivo de plantilla de presentaciones, o null. */
+    public static function presentationTemplateName(): ?string
+    {
+        $name = self::get('plantilla_presentacion_nombre');
+
+        return is_string($name) && $name !== '' ? $name : null;
+    }
+
     private static function get(string $key, mixed $default = null): mixed
     {
         $value = Setting::query()->where('key', $key)->value('value');

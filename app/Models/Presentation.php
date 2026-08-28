@@ -16,6 +16,8 @@ class Presentation extends Model
 
     protected static string $programActivityType = 'presentation';
 
+    public const STATUS_ACEPTADA = 'aceptada';
+
     protected $fillable = [
         'submission_id',
         'title',
@@ -26,6 +28,7 @@ class Presentation extends Model
         'day',
         'start_time',
         'end_time',
+        'status',
     ];
 
     public function authors(): BelongsToMany

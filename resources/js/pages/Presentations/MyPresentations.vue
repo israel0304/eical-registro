@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { Eye, Pencil } from 'lucide-vue-next';
+import { Download, Eye, Presentation, Pencil } from 'lucide-vue-next';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 defineProps<{
     presentations: any[];
+    slideTemplateAvailable: boolean;
 }>();
 
 const formatDate = (dateStr: string) => {
@@ -30,6 +31,39 @@ const formatDate = (dateStr: string) => {
             >
                 Mis Ponencias
             </h1>
+
+            <div
+                v-if="slideTemplateAvailable"
+                class="flex flex-col gap-4 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-violet-50 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-indigo-800 dark:from-indigo-950/40 dark:to-violet-950/40"
+            >
+                <div class="flex items-start gap-4">
+                    <span
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300"
+                    >
+                        <Presentation class="h-5 w-5" />
+                    </span>
+                    <div>
+                        <h2
+                            class="text-base font-semibold text-gray-900 dark:text-white"
+                        >
+                            Plantilla de presentación
+                        </h2>
+                        <p
+                            class="mt-0.5 text-sm text-gray-600 dark:text-gray-400"
+                        >
+                            Usa esta plantilla para preparar las diapositivas de
+                            tu ponencia.
+                        </p>
+                    </div>
+                </div>
+                <a
+                    :href="'/my-presentations/plantilla-presentacion'"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+                >
+                    <Download class="h-4 w-4" />
+                    Descargar plantilla
+                </a>
+            </div>
 
             <div
                 v-if="presentations && presentations.length > 0"
@@ -130,8 +164,7 @@ const formatDate = (dateStr: string) => {
                                                 ' ' +
                                                 author.last_name +
                                                 (author.affiliation
-                                                    ? ' — ' +
-                                                      author.affiliation
+                                                    ? ' — ' + author.affiliation
                                                     : '')
                                             "
                                             class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-xs font-medium text-indigo-700 ring-2 ring-white dark:bg-indigo-900 dark:text-indigo-300 dark:ring-zinc-900"
@@ -141,8 +174,7 @@ const formatDate = (dateStr: string) => {
                                         </span>
                                         <span
                                             v-if="
-                                                presentation.authors
-                                                    .length > 5
+                                                presentation.authors.length > 5
                                             "
                                             :title="
                                                 presentation.authors
@@ -157,14 +189,11 @@ const formatDate = (dateStr: string) => {
                                             class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600 ring-2 ring-white dark:bg-zinc-700 dark:text-gray-300 dark:ring-zinc-900"
                                         >
                                             +{{
-                                                presentation.authors
-                                                    .length - 5
+                                                presentation.authors.length - 5
                                             }}
                                         </span>
                                     </div>
-                                    <span v-else class="text-gray-400"
-                                        >—</span
-                                    >
+                                    <span v-else class="text-gray-400">—</span>
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"

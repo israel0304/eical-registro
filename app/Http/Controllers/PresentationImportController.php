@@ -103,6 +103,7 @@ class PresentationImportController extends Controller
                 'abstract' => trim($data['Resumen'] ?? ''),
                 'discipline' => trim($data['Disciplina(s)'] ?? ''),
                 'keywords' => trim($data['Palabras clave'] ?? ''),
+                'status' => Presentation::STATUS_ACEPTADA,
             ]);
 
             for ($i = 1; $i <= 10; $i++) {

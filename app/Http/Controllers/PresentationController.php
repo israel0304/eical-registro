@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Presentation;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\EventSettings;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -33,6 +34,9 @@ class PresentationController extends Controller
             'presentations' => $presentations,
             'filters' => $request->only(['search']),
             'tab' => $request->input('tab', 'list'),
+            'template' => [
+                'name' => EventSettings::presentationTemplateName(),
+            ],
         ]);
     }
 
@@ -90,8 +94,13 @@ class PresentationController extends Controller
             ->orderBy('start_time')
             ->get();
 
+        $hasAccepted = $presentations->contains(
+            fn (Presentation $p) => $p->status === Presentation::STATUS_ACEPTADA,
+        );
+
         return Inertia::render('Presentations/MyPresentations', [
             'presentations' => $presentations,
+            'slideTemplateAvailable' => EventSettings::presentationTemplatePath() !== null && $hasAccepted,
         ]);
     }
 

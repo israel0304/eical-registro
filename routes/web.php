@@ -17,6 +17,7 @@ use App\Http\Controllers\ParticipationTypeController;
 use App\Http\Controllers\PonenteActivationController;
 use App\Http\Controllers\PresentationController;
 use App\Http\Controllers\PresentationImportController;
+use App\Http\Controllers\PresentationTemplateController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ProgramTemplateController;
 use App\Http\Controllers\ReportController;
@@ -153,6 +154,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Mis ponencias (ponente)
     Route::get('my-presentations', [PresentationController::class, 'myPresentations'])->middleware('can:presentations.my')->name('presentations.my');
+    Route::get('my-presentations/plantilla-presentacion', [PresentationTemplateController::class, 'download'])->middleware('can:presentations.my')->name('presentations.template.download');
+
+    // Plantilla de presentación (admin)
+    Route::post('admin/presentations/plantilla', [PresentationTemplateController::class, 'update'])->middleware('can:presentations.template')->name('presentations.template.update');
+    Route::delete('admin/presentations/plantilla', [PresentationTemplateController::class, 'destroy'])->middleware('can:presentations.template')->name('presentations.template.destroy');
 
     // Mis asignaciones (moderador)
     Route::get('mis-asignaciones', [AssignmentController::class, 'index'])->middleware('can:asignaciones.view')->name('asignaciones.index');

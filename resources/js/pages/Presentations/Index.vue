@@ -11,6 +11,8 @@ import {
     Pencil,
     Trash2,
     Download,
+    FileUp,
+    Presentation,
 } from 'lucide-vue-next';
 import { ref, watch, reactive } from 'vue';
 import DisciplineInput from '@/components/DisciplineInput.vue';
@@ -32,6 +34,9 @@ const props = defineProps<{
     };
     filters: any;
     tab: string;
+    template: {
+        name: string | null;
+    };
 }>();
 
 const activeTab = ref(props.tab || 'list');
@@ -379,6 +384,45 @@ const submitImport = () => {
         },
     });
 };
+
+const templateFileInput = ref<HTMLInputElement | null>(null);
+const templateFile = ref<File | null>(null);
+
+const templateForm = useForm({
+    file: null as File | null,
+});
+
+const triggerTemplateUpload = () => {
+    templateFileInput.value?.click();
+};
+
+const handleTemplateFile = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (file) {
+        templateFile.value = file;
+        templateForm.file = file;
+    }
+};
+
+const submitTemplate = () => {
+    if (!templateForm.file) return;
+
+    templateForm.post('/admin/presentations/plantilla', {
+        onSuccess: () => {
+            templateFile.value = null;
+            if (templateFileInput.value) {
+                templateFileInput.value.value = '';
+            }
+        },
+    });
+};
+
+const deleteTemplate = () => {
+    templateForm.delete('/admin/presentations/plantilla', {
+        preserveScroll: true,
+    });
+};
 </script>
 
 <template>
@@ -393,7 +437,9 @@ const submitImport = () => {
             </h1>
 
             <div
-                v-if="can('presentations.import')"
+                v-if="
+                    can('presentations.import') || can('presentations.template')
+                "
                 class="mb-6 border-b border-gray-200 dark:border-zinc-800"
             >
                 <nav class="-mb-px flex gap-6">
@@ -410,6 +456,7 @@ const submitImport = () => {
                         Ponencias
                     </button>
                     <button
+                        v-if="can('presentations.import')"
                         @click="activeTab = 'import'"
                         :class="[
                             'inline-flex items-center gap-2 border-b-2 px-1 pb-3 text-sm font-medium transition-colors',
@@ -420,6 +467,19 @@ const submitImport = () => {
                     >
                         <UploadCloud class="h-4 w-4" />
                         Importar CSV
+                    </button>
+                    <button
+                        v-if="can('presentations.template')"
+                        @click="activeTab = 'template'"
+                        :class="[
+                            'inline-flex items-center gap-2 border-b-2 px-1 pb-3 text-sm font-medium transition-colors',
+                            activeTab === 'template'
+                                ? 'border-black text-black dark:border-white dark:text-white'
+                                : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300',
+                        ]"
+                    >
+                        <Presentation class="h-4 w-4" />
+                        Plantilla de presentación
                     </button>
                 </nav>
             </div>
@@ -830,6 +890,121 @@ const submitImport = () => {
                                     importForm.processing
                                         ? 'Importando...'
                                         : 'Importar'
+                                }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <template v-if="activeTab === 'template'">
+                <div
+                    class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                    <div class="space-y-6">
+                        <div>
+                            <h3
+                                class="text-sm font-semibold text-gray-900 dark:text-white"
+                            >
+                                Plantilla de presentación
+                            </h3>
+                            <p
+                                class="mt-1 text-sm text-gray-600 dark:text-gray-400"
+                            >
+                                Sube la plantilla PowerPoint que los ponentes
+                                con ponencia aceptada descargarán para preparar
+                                sus diapositivas.
+                            </p>
+                        </div>
+
+                        <div
+                            v-if="props.template?.name"
+                            class="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-700 dark:bg-zinc-800/50"
+                        >
+                            <div class="flex items-center gap-3">
+                                <Presentation class="h-5 w-5 text-indigo-500" />
+                                <div>
+                                    <p
+                                        class="text-sm font-medium text-gray-900 dark:text-white"
+                                    >
+                                        {{ props.template.name }}
+                                    </p>
+                                    <p
+                                        class="text-xs text-gray-500 dark:text-gray-400"
+                                    >
+                                        Plantilla actual
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                @click="deleteTemplate"
+                                :disabled="templateForm.processing"
+                                class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                            >
+                                <Trash2 class="h-4 w-4" />
+                                {{
+                                    templateForm.processing
+                                        ? 'Eliminando...'
+                                        : 'Eliminar'
+                                }}
+                            </button>
+                        </div>
+
+                        <div
+                            class="border-t border-gray-100 pt-4 dark:border-zinc-800"
+                        >
+                            <label
+                                class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                            >
+                                Seleccionar archivo PowerPoint
+                            </label>
+                            <input
+                                type="file"
+                                ref="templateFileInput"
+                                class="hidden"
+                                accept=".pptx,.potx"
+                                @change="handleTemplateFile"
+                            />
+                            <div
+                                @click="triggerTemplateUpload"
+                                class="flex cursor-pointer items-center justify-center gap-3 rounded-lg border-2 border-dashed border-gray-300 p-8 transition-colors hover:border-indigo-400 hover:bg-indigo-50/50 dark:border-zinc-700 dark:hover:border-indigo-500"
+                            >
+                                <FileUp class="h-8 w-8 text-gray-400" />
+                                <div class="text-center">
+                                    <p
+                                        class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    >
+                                        {{
+                                            templateFile
+                                                ? templateFile.name
+                                                : 'Haz clic para seleccionar archivo'
+                                        }}
+                                    </p>
+                                    <p
+                                        class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                                    >
+                                        Solo archivos .pptx o .potx (máx. 20 MB)
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="flex justify-end border-t border-gray-100 pt-4 dark:border-zinc-800"
+                        >
+                            <button
+                                @click="submitTemplate"
+                                :disabled="
+                                    !templateFile || templateForm.processing
+                                "
+                                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                                <UploadCloud class="h-4 w-4" />
+                                {{
+                                    templateForm.processing
+                                        ? 'Subiendo...'
+                                        : 'Subir plantilla'
                                 }}
                             </button>
                         </div>

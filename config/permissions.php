@@ -31,6 +31,7 @@ return [
         'presentations.delete' => 'Eliminar ponencias',
         'presentations.import' => 'Importar ponencias desde OJS',
         'presentations.presented' => 'Gestionar asistencia',
+        'presentations.template' => 'Gestionar plantilla de presentaciones',
     ],
     'Conferencias' => [
         'conferences.view' => 'Ver conferencias',
