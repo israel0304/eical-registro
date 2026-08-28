@@ -57,6 +57,8 @@ Route::get('gafete/escaneo', [GafeteController::class, 'scanInfo'])->name('gafet
 
 // Programa público (sin auth)
 Route::get('programa/publico', [ProgramController::class, 'publicIndex'])->name('programa.public');
+Route::get('programa/publico/imprimir', [ProgramController::class, 'printPublic'])->name('programa.public.print');
+Route::get('programa/publico/imprimir/pdf', [ProgramController::class, 'printPublicPdf'])->name('programa.public.print.pdf');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {

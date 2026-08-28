@@ -361,4 +361,41 @@ class ProgramaTemplateTest extends TestCase
 
         $this->get('/programa/imprimir/pdf')->assertForbidden();
     }
+
+    public function test_public_print_renders_active_template_without_auth(): void
+    {
+        CertificateTemplate::create([
+            'name' => 'Programa público',
+            'kind' => 'program',
+            'is_active' => true,
+            'width' => 816,
+            'height' => 1056,
+        ]);
+
+        $this->get('/programa/publico/imprimir')
+            ->assertOk()
+            ->assertSee('pi-badge-block');
+    }
+
+    public function test_public_print_falls_back_when_no_active_template(): void
+    {
+        $this->get('/programa/publico/imprimir')
+            ->assertOk()
+            ->assertSee('Programa del evento');
+    }
+
+    public function test_public_pdf_downloads_without_auth(): void
+    {
+        CertificateTemplate::create([
+            'name' => 'Programa público pdf',
+            'kind' => 'program',
+            'is_active' => true,
+            'width' => 816,
+            'height' => 1056,
+        ]);
+
+        $this->get('/programa/publico/imprimir/pdf')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+    }
 }

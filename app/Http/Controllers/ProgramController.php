@@ -11,6 +11,7 @@ use App\Services\ProgramTemplateRenderer;
 use App\Support\EventSettings;
 use Dompdf\Dompdf;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Inertia\Inertia;
 
 class ProgramController extends Controller
@@ -117,6 +118,28 @@ class ProgramController extends Controller
     {
         abort_unless($request->user()->can('programa.print'), 403);
 
+        return $this->printHtml();
+    }
+
+    public function printPdf(Request $request)
+    {
+        abort_unless($request->user()->can('programa.print'), 403);
+
+        return $this->printPdfResponse();
+    }
+
+    public function printPublic()
+    {
+        return $this->printHtml();
+    }
+
+    public function printPublicPdf()
+    {
+        return $this->printPdfResponse();
+    }
+
+    private function printHtml(): Response
+    {
         $data = $this->printData();
         $template = ProgramTemplateRenderer::activeTemplate();
 
@@ -126,16 +149,14 @@ class ProgramController extends Controller
             ]);
         }
 
-        return view('programa.print', [
+        return response(view('programa.print', [
             'groups' => $data['groups'],
             'eventName' => $data['meta']['eventName'],
-        ]);
+        ]), 200);
     }
 
-    public function printPdf(Request $request)
+    private function printPdfResponse(): Response
     {
-        abort_unless($request->user()->can('programa.print'), 403);
-
         $data = $this->printData();
         $template = ProgramTemplateRenderer::activeTemplate();
 
