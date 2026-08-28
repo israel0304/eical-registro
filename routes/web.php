@@ -18,6 +18,7 @@ use App\Http\Controllers\PonenteActivationController;
 use App\Http\Controllers\PresentationController;
 use App\Http\Controllers\PresentationImportController;
 use App\Http\Controllers\ProgramController;
+use App\Http\Controllers\ProgramTemplateController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
@@ -456,11 +457,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('can:programa.view')->group(function () {
         Route::get('programa', [ProgramController::class, 'index'])->name('programa.index');
         Route::get('programa/imprimir', [ProgramController::class, 'print'])->middleware('can:programa.print')->name('programa.print');
+        Route::get('programa/imprimir/pdf', [ProgramController::class, 'printPdf'])->middleware('can:programa.print')->name('programa.print.pdf');
 
         Route::middleware('can:programa.manage')->group(function () {
             Route::post('programa', [ProgramController::class, 'store'])->name('programa.store');
             Route::put('programa/{programItem}', [ProgramController::class, 'update'])->name('programa.update');
             Route::delete('programa/{programItem}', [ProgramController::class, 'destroy'])->name('programa.destroy');
+        });
+
+        Route::middleware('can:programa.templates.manage')->group(function () {
+            Route::get('programa/plantillas', [ProgramTemplateController::class, 'index'])->name('programa.templates.index');
+            Route::post('programa/plantillas', [ProgramTemplateController::class, 'store'])->name('programa.templates.store');
+            Route::get('programa/plantillas/{template}/edit', [ProgramTemplateController::class, 'edit'])->name('programa.templates.edit');
+            Route::put('programa/plantillas/{template}', [ProgramTemplateController::class, 'update'])->name('programa.templates.update');
+            Route::patch('programa/plantillas/{template}/activar', [ProgramTemplateController::class, 'toggleActive'])->name('programa.templates.activate');
+            Route::delete('programa/plantillas/{template}', [ProgramTemplateController::class, 'destroy'])->name('programa.templates.destroy');
+            Route::post('programa/plantillas/upload-image', [ProgramTemplateController::class, 'uploadImage'])->name('programa.templates.upload-image');
         });
     });
 

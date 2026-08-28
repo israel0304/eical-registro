@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import {
     Calendar,
     CalendarPlus,
@@ -8,6 +8,8 @@ import {
     Printer,
     Trash2,
     Code,
+    Download,
+    LayoutTemplate,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { Button } from '@/components/ui/button';
@@ -50,6 +52,7 @@ const props = defineProps<{
     blockTypes: Record<string, string>;
     canManage: boolean;
     canPrint: boolean;
+    canManageTemplates: boolean;
 }>();
 
 const modalOpen = ref(false);
@@ -311,6 +314,28 @@ const remove = (item: any) => {
                             <Printer class="h-4 w-4" />
                             Imprimir
                         </a>
+                    </Button>
+                    <Button
+                        v-if="canPrint"
+                        variant="outline"
+                        size="sm"
+                        as-child
+                    >
+                        <a href="/programa/imprimir/pdf">
+                            <Download class="h-4 w-4" />
+                            Descargar PDF
+                        </a>
+                    </Button>
+                    <Button
+                        v-if="canManageTemplates"
+                        variant="outline"
+                        size="sm"
+                        as-child
+                    >
+                        <Link :href="'/programa/plantillas'">
+                            <LayoutTemplate class="h-4 w-4" />
+                            Plantilla
+                        </Link>
                     </Button>
                     <Button
                         v-if="canManage"

@@ -64,6 +64,7 @@ return [
         'programa.view' => 'Ver programa del evento',
         'programa.manage' => 'Gestionar programa del evento',
         'programa.print' => 'Imprimir programa del evento',
+        'programa.templates.manage' => 'Gestionar plantillas del programa',
     ],
     'Correos' => [
         'correos.templates.manage' => 'Gestionar plantillas de correo y disparadores',

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Programa - {{ $eventName }}</title>
     <style>
+        @page { size: 8.5in 11in; margin: 14mm; }
         * { box-sizing: border-box; }
         body {
             margin: 0;
@@ -22,7 +23,6 @@
         .header p { margin: 4px 0 0; color: #6b7280; font-size: 14px; }
         .day {
             margin-bottom: 28px;
-            break-inside: avoid;
         }
         .day h2 {
             font-size: 16px;
@@ -34,6 +34,8 @@
             margin: 0 0 10px;
         }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead { display: table-header-group; }
+        tr { break-inside: avoid; page-break-inside: avoid; }
         th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
         th { font-size: 11px; text-transform: uppercase; color: #6b7280; }
         .time { white-space: nowrap; font-variant-numeric: tabular-nums; width: 120px; color: #374151; }
@@ -54,7 +56,8 @@
         .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 24px; }
         @media print {
             body { padding: 0; }
-            .day { break-inside: avoid; }
+            thead { display: table-header-group; }
+            tr { break-inside: avoid; page-break-inside: avoid; }
         }
     </style>
 </head>

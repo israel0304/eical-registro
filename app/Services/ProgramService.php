@@ -2,7 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Conference;
+use App\Models\Presentation;
 use App\Models\ProgramItem;
+use App\Models\User;
+use App\Models\Workshop;
 use App\Support\EventSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -23,11 +27,6 @@ class ProgramService
             ->get();
 
         return static::groupByDay($items);
-    }
-
-    public static function printItemsByDay(): Collection
-    {
-        return static::itemsByDay();
     }
 
     /**
@@ -138,5 +137,105 @@ class ProgramService
             'conference' => 'Conferencia',
             default => 'Actividad',
         };
+    }
+
+    /**
+     * Grupos del programa (por día) con cada item serializado para el
+     * renderizador de plantillas y el editor: sin los detalles del modal.
+     *
+     * @return Collection<int, array{label: string, items: Collection<int, array>}>
+     */
+    public static function groupsForRender(): Collection
+    {
+        static::ensureActivityItemsSynced();
+
+        return static::itemsByDay()->map(function (array $group) {
+            $group['items'] = collect($group['items'])
+                ->map(fn (ProgramItem $item) => static::serializeItem($item))
+                ->values();
+
+            return $group;
+        })->values();
+    }
+
+    /**
+     * Item del programa serializado para el renderizador de plantillas.
+     */
+    public static function serializeItem(ProgramItem $item): array
+    {
+        $activity = $item->activity;
+
+        return [
+            'id' => $item->id,
+            'title' => static::titleFor($item),
+            'description' => $item->description,
+            'location' => $item->location,
+            'day' => $item->day?->format('Y-m-d'),
+            'start_time' => $item->start_time?->format('H:i'),
+            'end_time' => $item->end_time?->format('H:i'),
+            'time_label' => $item->time_label,
+            'block_type' => $item->block_type,
+            'block_label' => $item->block_type ? (config('program.block_types')[$item->block_type] ?? $item->block_type) : null,
+            'activity_type' => $item->activity_type,
+            'activity_label' => $item->activity_type ? static::modelLabel($item->activity_type) : null,
+            'activity_name' => $activity?->name ?? $activity?->title ?? null,
+            'kind' => $item->activity_type !== null ? 'activity' : 'block',
+            'people' => static::peopleFor($item),
+        ];
+    }
+
+    /**
+     * Personas (instructores/autores/expositores/moderadores) para la
+     * plantilla imprimible del programa.
+     *
+     * @return array<int, array{label: string, names: array<int, string>}>
+     */
+    public static function peopleFor(ProgramItem $item): array
+    {
+        $activity = $item->activity;
+
+        if ($activity instanceof Workshop) {
+            $activity->loadMissing(['instructors:id,first_name,last_name,affiliation', 'moderators:id,first_name,last_name,affiliation']);
+
+            return array_filter([
+                static::peopleGroup('Instructores', $activity->instructors),
+                static::peopleGroup('Moderadores', $activity->moderators),
+            ]);
+        }
+
+        if ($activity instanceof Presentation) {
+            $activity->loadMissing(['authors:id,first_name,last_name,affiliation', 'moderators:id,first_name,last_name,affiliation']);
+            $authors = $activity->authors->sortBy(fn ($user) => $user->pivot->author_order);
+
+            return array_filter([
+                static::peopleGroup('Autoras/es', $authors),
+                static::peopleGroup('Moderadores', $activity->moderators),
+            ]);
+        }
+
+        if ($activity instanceof Conference) {
+            $activity->loadMissing(['members:id,first_name,last_name,affiliation']);
+            $people = fn ($role) => $activity->members->filter(fn ($user) => $user->pivot->role === $role);
+
+            return array_filter([
+                static::peopleGroup('Expositores', $people('speaker')),
+                static::peopleGroup('Moderadores', $people('moderator')),
+            ]);
+        }
+
+        return [];
+    }
+
+    /**
+     * @param  Collection<int, User>|\Illuminate\Database\Eloquent\Collection  $users
+     */
+    private static function peopleGroup(string $label, $users): ?array
+    {
+        $names = $users
+            ->map(fn ($user) => $user->name)
+            ->filter()
+            ->values();
+
+        return $names->isEmpty() ? null : ['label' => $label, 'names' => $names->all()];
     }
 }

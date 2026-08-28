@@ -14,6 +14,11 @@ class EventSettings
         return self::get('evento_nombre', 'EICAL 2026');
     }
 
+    public static function lugar(): string
+    {
+        return (string) self::get('evento_lugar', '');
+    }
+
     public static function checkinEnabled(): bool
     {
         return (bool) self::get('evento_checkin_enabled', false);
@@ -83,6 +88,29 @@ class EventSettings
         }
 
         return $date ?? '';
+    }
+
+    /**
+     * Etiqueta de fechas del evento para {fecha_evento}, p. ej. "12 al 15 de agosto de 2026".
+     */
+    public static function rangoFechas(): string
+    {
+        $format = function (?string $date) {
+            if ($date === null) {
+                return null;
+            }
+
+            return CarbonImmutable::parse($date)->locale('es')->translatedFormat('j \\d\\e F \\d\\e Y');
+        };
+
+        $start = $format(self::startDate());
+        $end = $format(self::endDate());
+
+        if ($start === null) {
+            return '';
+        }
+
+        return $end !== null && $end !== $start ? "{$start} al {$end}" : $start;
     }
 
     public static function attendedDays(int $userId): int

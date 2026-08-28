@@ -7,7 +7,9 @@ use App\Models\Presentation;
 use App\Models\ProgramItem;
 use App\Models\Workshop;
 use App\Services\ProgramService;
+use App\Services\ProgramTemplateRenderer;
 use App\Support\EventSettings;
+use Dompdf\Dompdf;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -34,6 +36,7 @@ class ProgramController extends Controller
             'blockTypes' => config('program.block_types', []),
             'canManage' => $request->user()->can('programa.manage'),
             'canPrint' => $request->user()->can('programa.print'),
+            'canManageTemplates' => $request->user()->can('programa.templates.manage'),
         ]);
     }
 
@@ -114,20 +117,75 @@ class ProgramController extends Controller
     {
         abort_unless($request->user()->can('programa.print'), 403);
 
-        ProgramService::ensureActivityItemsSynced();
+        $data = $this->printData();
+        $template = ProgramTemplateRenderer::activeTemplate();
 
-        $groups = ProgramService::printItemsByDay()->map(function (array $group) {
-            $group['items'] = collect($group['items'])
-                ->map(fn (ProgramItem $item) => $this->serialize($item))
-                ->values();
-
-            return $group;
-        })->values();
+        if ($template !== null) {
+            return response((new ProgramTemplateRenderer)->render($template, $data['groups'], $data['meta']), 200, [
+                'Content-Type' => 'text/html',
+            ]);
+        }
 
         return view('programa.print', [
-            'groups' => $groups,
-            'eventName' => EventSettings::nombre(),
+            'groups' => $data['groups'],
+            'eventName' => $data['meta']['eventName'],
         ]);
+    }
+
+    public function printPdf(Request $request)
+    {
+        abort_unless($request->user()->can('programa.print'), 403);
+
+        $data = $this->printData();
+        $template = ProgramTemplateRenderer::activeTemplate();
+
+        if ($template !== null) {
+            $html = (new ProgramTemplateRenderer)->render($template, $data['groups'], $data['meta'], forPdf: true);
+
+            return response($this->dompdf($html, $template->width ?: 816, $template->height ?: 1056), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename=programa-eical.pdf',
+            ]);
+        }
+
+        $html = view('programa.print', [
+            'groups' => $data['groups'],
+            'eventName' => $data['meta']['eventName'],
+        ])->render();
+
+        return response($this->dompdf($html, 816, 1056, letterFallback: true), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename=programa-eical.pdf',
+        ]);
+    }
+
+    private function printData(): array
+    {
+        return [
+            'groups' => ProgramService::groupsForRender(),
+            'meta' => [
+                'eventName' => EventSettings::nombre(),
+                'fechas' => EventSettings::rangoFechas(),
+                'lugar' => EventSettings::lugar(),
+            ],
+        ];
+    }
+
+    private function dompdf(string $html, int $width, int $height, bool $letterFallback = false): string
+    {
+        $dompdf = new Dompdf;
+
+        $dompdf->loadHtml($html);
+
+        if ($letterFallback) {
+            $dompdf->setPaper('letter');
+        } else {
+            $dompdf->setPaper([0, 0, $width * 0.75, $height * 0.75]);
+        }
+
+        $dompdf->render();
+
+        return $dompdf->output();
     }
 
     private function validateBlock(Request $request): array
@@ -166,25 +224,7 @@ class ProgramController extends Controller
 
     private function serialize(ProgramItem $item): array
     {
-        $activity = $item->activity;
-
-        return [
-            'id' => $item->id,
-            'title' => ProgramService::titleFor($item),
-            'description' => $item->description,
-            'location' => $item->location,
-            'day' => $item->day?->format('Y-m-d'),
-            'start_time' => $item->start_time?->format('H:i'),
-            'end_time' => $item->end_time?->format('H:i'),
-            'time_label' => $item->time_label,
-            'block_type' => $item->block_type,
-            'block_label' => $item->block_type ? (config('program.block_types')[$item->block_type] ?? $item->block_type) : null,
-            'activity_type' => $item->activity_type,
-            'activity_label' => $item->activity_type ? ProgramService::modelLabel($item->activity_type) : null,
-            'activity_name' => $activity?->name ?? $activity?->title ?? null,
-            'kind' => $item->activity_type !== null ? 'activity' : 'block',
-            'details' => $this->activityDetails($item),
-        ];
+        return ProgramService::serializeItem($item) + ['details' => $this->activityDetails($item)];
     }
 
     /**
