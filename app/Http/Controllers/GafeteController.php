@@ -7,6 +7,7 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Services\CertificateRenderer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -82,6 +83,43 @@ class GafeteController extends Controller
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename=gafete_'.$user->dni.'.pdf',
         ]);
+    }
+
+    public function userPrint(Request $request, User $user)
+    {
+        abort_unless($request->user()->can('users.view'), 403);
+
+        return response($this->renderer->renderBadge($user), 200, [
+            'Content-Type' => 'text/html',
+        ]);
+    }
+
+    public function asistentesBadgesPrint(Request $request)
+    {
+        abort_unless($request->user()->can('users.view'), 403);
+
+        return response($this->renderer->renderBadges($this->activeUsers()), 200, [
+            'Content-Type' => 'text/html',
+        ]);
+    }
+
+    public function asistentesBadgesPrintPdf(Request $request)
+    {
+        abort_unless($request->user()->can('users.view'), 403);
+
+        return response($this->renderer->renderBadgesPdf($this->activeUsers()), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename=credenciales_asistentes_'.date('Y-m-d').'.pdf',
+        ]);
+    }
+
+    private function activeUsers(): Collection
+    {
+        return User::query()
+            ->where('is_active', true)
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
     }
 
     public function uploadPhoto(Request $request)

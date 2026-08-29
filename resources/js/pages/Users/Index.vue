@@ -9,6 +9,8 @@ import {
     Trash2,
     CheckCircle2,
     Award,
+    Printer,
+    FileDown,
     X,
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
@@ -163,6 +165,10 @@ const deleteUser = (id: number) => {
     }
 };
 
+const openGafetePrint = (userId: number) => {
+    window.open('/users/' + userId + '/gafete/imprimir', '_blank');
+};
+
 const sendResetPassword = () => {
     router.post(
         '/users/' + userForm.id + '/reset-password',
@@ -301,6 +307,22 @@ const handleFileUpload = (event: Event) => {
                     >
                         <UploadCloud class="h-4 w-4" /> Multiple
                     </button>
+
+                    <a
+                        href="/users/gafetes/imprimir"
+                        target="_blank"
+                        rel="noopener"
+                        class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+                    >
+                        <Printer class="h-4 w-4" /> Credenciales
+                    </a>
+
+                    <a
+                        href="/users/gafetes/imprimir/pdf"
+                        class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+                    >
+                        <FileDown class="h-4 w-4" /> PDF
+                    </a>
 
                     <a
                         href="/users/export/csv"
@@ -482,6 +504,13 @@ const handleFileUpload = (event: Event) => {
                                             class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-indigo-400"
                                         >
                                             <Award class="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            @click="openGafetePrint(user.id)"
+                                            title="Imprimir credencial"
+                                            class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-indigo-400"
+                                        >
+                                            <Printer class="h-4 w-4" />
                                         </button>
                                         <button
                                             @click="openEditModal(user)"

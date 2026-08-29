@@ -98,6 +98,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])->middleware('can:users.edit')->name('users.reset-password');
     Route::delete('users/{user}/force-delete', [UserController::class, 'forceDelete'])->middleware('can:users.delete')->name('users.force-delete');
 
+    Route::get('users/{user}/gafete/imprimir', [GafeteController::class, 'userPrint'])->middleware('can:users.view')->name('users.gafete.print');
+    Route::get('users/gafetes/imprimir', [GafeteController::class, 'asistentesBadgesPrint'])->middleware('can:users.view')->name('users.gafete.print-asistentes');
+    Route::get('users/gafetes/imprimir/pdf', [GafeteController::class, 'asistentesBadgesPrintPdf'])->middleware('can:users.view')->name('users.gafete.print-asistentes-pdf');
+
     // Workshops
     Route::get('workshops', [WorkshopController::class, 'index'])->middleware('can:workshops.view')->name('workshops.index');
     Route::get('workshops/{workshop}', [WorkshopController::class, 'show'])->name('workshops.show');

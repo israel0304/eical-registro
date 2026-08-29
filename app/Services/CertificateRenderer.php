@@ -418,6 +418,157 @@ HTML;
         return $dompdf->output();
     }
 
+    /**
+     * Render several user badges into a single printable HTML document
+     * (one badge per printed page).
+     */
+    public function renderBadges(iterable $users): string
+    {
+        return $this->badgesDocument($users, forPdf: false);
+    }
+
+    /**
+     * Render several user badges into a single multi-page PDF document.
+     */
+    public function renderBadgesPdf(iterable $users): string
+    {
+        return $this->badgesDocument($users, forPdf: true);
+    }
+
+    /**
+     * Build one document containing one badge per page, reusing a single
+     * template and layout for every user.
+     */
+    private function badgesDocument(iterable $users, bool $forPdf): string
+    {
+        $template = $this->resolveBadgeTemplate();
+        $layout = $this->badgePrintLayout($template);
+        $print = $this->badgePrintSize($template);
+        $list = array_values(is_array($users) ? $users : iterator_to_array($users));
+        $count = count($list);
+
+        $designWidth = $template === null ? 384 : (int) ($template->width ?: 384);
+        $designHeight = $template === null ? 816 : (int) ($template->height ?: 816);
+        $width = $designWidth * $layout['scale'];
+        $height = $designHeight * $layout['scale'];
+
+        $pageRule = $forPdf
+            ? "@page { size: {$layout['targetWidth']}px {$layout['targetHeight']}px; margin: 0; }"
+            : '@page { size: '.$print['width_mm'].'mm '.$print['height_mm'].'mm; margin: 0; }';
+
+        $stdStyles = $template === null
+            ? $this->fallbackBadgeStyles($width, $height, $layout['offsetX'], $layout['offsetY'], $layout['scale'])
+            : '.certificate { position: relative; width: '.($template->width ?: 1800) * $layout['scale'].'px; height: '.($template->height ?: 1200) * $layout['scale'].'px; margin-left: '.$layout['offsetX'].'px; margin-top: '.$layout['offsetY'].'px; overflow: hidden; }'
+                .'.certificate .bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }'
+                .$this->elementStyles();
+
+        $pages = '';
+        foreach ($list as $i => $user) {
+            if (! $user instanceof User) {
+                continue;
+            }
+
+            $isLast = $i === $count - 1;
+            $pages .= '<div class="page"'.($isLast ? ' style="page-break-after: auto"' : '').'>'
+                .$this->badgeFragment($user, $template, $layout, $forPdf)
+                .'</div>';
+        }
+
+        $screenRule = $forPdf ? '' : '@media screen { .page { margin: 16px auto; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); background: #ffffff; } }';
+        $printButton = $forPdf ? '' : '<button class="print-btn" onclick="window.print()">Imprimir '.($count === 1 ? 'gafete' : 'todos los gafetes').'</button>';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Credenciales de {$count} participantes</title>
+    <style>
+        html, body { margin: 0; padding: 0; }
+        .page { width: {$layout['targetWidth']}px; height: {$layout['targetHeight']}px; page-break-after: always; overflow: hidden; }
+        {$pageRule}
+        {$stdStyles}
+        {$screenRule}
+        {$this->badgeStyles()}
+    </style>
+</head>
+<body>
+    {$printButton}
+    {$pages}
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Markup of a single badge (fallback or template-backed) without the
+     * surrounding document.
+     */
+    private function badgeFragment(User $user, ?CertificateTemplate $template, array $layout, bool $forPdf): string
+    {
+        $metadata = $this->buildBadgeMetadata($user);
+        $qr = $this->qrDataUri($this->badgeUrl($user), png: $forPdf);
+        $photo = $this->photoDataUri($user);
+
+        if ($template === null) {
+            return <<<HTML
+<div class="badge">
+    <div class="badge-header">
+        <span class="title">{$metadata['evento']}</span>
+        <span class="subtitle">Acceso</span>
+    </div>
+    <img class="badge-photo" src="{$photo}" alt="Foto" />
+    <div class="badge-name">{$metadata['nombre']}</div>
+    <div class="badge-dni">{$metadata['dni']}</div>
+    <div class="badge-role"><span>{$metadata['rol']}</span></div>
+    <div class="badge-aff">{$metadata['afiliacion']}</div>
+    <div class="badge-event">Asistente al evento</div>
+    <img class="badge-qr" src="{$qr}" alt="QR" />
+    <div class="badge-qr-caption">Escanear en acceso</div>
+</div>
+HTML;
+        }
+
+        $template->loadMissing('elements');
+
+        $background = '';
+        if ($template->background_path && Storage::disk('public')->exists($template->background_path)) {
+            $background = '<img class="bg" src="data:image/png;base64,'
+                .base64_encode(Storage::disk('public')->get($template->background_path))
+                .'" alt="" />';
+        }
+
+        $elementHtml = '';
+        foreach ($template->elements as $element) {
+            $elementHtml .= $this->renderElement($element->toArray(), $metadata, $qr, $photo, $layout['scale']);
+        }
+
+        return '<div class="certificate">'.$background.$elementHtml.'</div>';
+    }
+
+    /**
+     * Shared CSS rules for the fallback badge layout used on batch documents.
+     */
+    private function fallbackBadgeStyles(float $width, float $height, float $offsetX, float $offsetY, float $s): string
+    {
+        return <<<CSS
+ .badge { position: relative; width: {$width}px; height: {$height}px; margin-left: {$offsetX}px; margin-top: {$offsetY}px; background: #ffffff; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; }
+ .badge-header { position: absolute; top: 0; left: 0; right: 0; height: {64 * $s}px; background: #0f172a; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 {16 * $s}px; }
+ .badge-header .title { font-size: {22 * $s}px; font-weight: 700; letter-spacing: 1px; }
+ .badge-header .subtitle { font-size: {11 * $s}px; color: #94a3b8; }
+ .badge-photo { position: absolute; top: {96 * $s}px; left: {117 * $s}px; width: {150 * $s}px; height: {150 * $s}px; border-radius: {12 * $s}px; object-fit: cover; border: {3 * $s}px solid #e2e8f0; }
+ .badge-name { position: absolute; top: {268 * $s}px; left: 0; right: 0; text-align: center; padding: 0 {12 * $s}px; font-size: {24 * $s}px; font-weight: 700; color: #0f172a; }
+ .badge-dni { position: absolute; top: {314 * $s}px; left: 0; right: 0; text-align: center; font-size: {13 * $s}px; color: #475569; }
+ .badge-role { position: absolute; top: {352 * $s}px; left: 0; right: 0; text-align: center; }
+ .badge-role span { display: inline-block; padding: {5 * $s}px {14 * $s}px; border-radius: 999px; background: #6366f1; color: #ffffff; font-size: {14 * $s}px; font-weight: 600; }
+ .badge-aff { position: absolute; top: {408 * $s}px; left: 0; right: 0; text-align: center; padding: 0 {12 * $s}px; font-size: {13 * $s}px; color: #475569; }
+ .badge-event { position: absolute; top: {470 * $s}px; left: 0; right: 0; text-align: center; font-size: {12 * $s}px; color: #94a3b8; }
+ .badge-qr { position: absolute; left: {102 * $s}px; bottom: {120 * $s}px; width: {180 * $s}px; height: {180 * $s}px; }
+ .badge-qr-caption { position: absolute; left: 0; right: 0; bottom: {40 * $s}px; text-align: center; font-size: {12 * $s}px; color: #64748b; }
+CSS;
+    }
+
     private function badgePrintLayout(?CertificateTemplate $template): array
     {
         $designWidth = $template->width ?? 384;
