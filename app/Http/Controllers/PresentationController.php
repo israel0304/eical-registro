@@ -193,7 +193,7 @@ class PresentationController extends Controller
             $validated = $request->validate([
                 'title' => 'sometimes|string|max:255',
                 'abstract' => 'sometimes|string',
-                'discipline' => 'sometimes|string|max:255',
+                'discipline' => 'sometimes|nullable|string|max:255',
                 'keywords' => 'sometimes|string',
                 'location' => 'nullable|string|max:255',
                 'day' => 'nullable|date',
@@ -224,7 +224,7 @@ class PresentationController extends Controller
             $validated = $request->validate([
                 'title' => 'sometimes|string|max:255',
                 'abstract' => 'sometimes|string',
-                'discipline' => 'sometimes|string|max:255',
+                'discipline' => 'sometimes|nullable|string|max:255',
                 'keywords' => 'sometimes|string',
             ]);
         } else {
