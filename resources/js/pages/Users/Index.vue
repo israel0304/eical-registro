@@ -292,7 +292,9 @@ const handleFileUpload = (event: Event) => {
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 self-start xl:self-auto">
+                <div
+                    class="flex w-full flex-wrap items-center gap-3 self-start xl:w-auto xl:self-auto"
+                >
                     <input
                         type="file"
                         ref="fileInput"
@@ -303,39 +305,44 @@ const handleFileUpload = (event: Event) => {
 
                     <button
                         @click="triggerFileUpload"
-                        class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+                        class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 sm:px-4"
                     >
-                        <UploadCloud class="h-4 w-4" /> Multiple
+                        <UploadCloud class="h-4 w-4 shrink-0" />
+                        <span class="hidden sm:inline">Multiple</span>
                     </button>
 
                     <a
                         href="/users/gafetes/imprimir"
                         target="_blank"
                         rel="noopener"
-                        class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+                        class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 sm:px-4"
                     >
-                        <Printer class="h-4 w-4" /> Credenciales
+                        <Printer class="h-4 w-4 shrink-0" />
+                        <span class="hidden sm:inline">Credenciales</span>
                     </a>
 
                     <a
                         href="/users/gafetes/imprimir/pdf"
-                        class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+                        class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 sm:px-4"
                     >
-                        <FileDown class="h-4 w-4" /> PDF
+                        <FileDown class="h-4 w-4 shrink-0" />
+                        <span class="hidden sm:inline">PDF</span>
                     </a>
 
                     <a
                         href="/users/export/csv"
-                        class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+                        class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 sm:px-4"
                     >
-                        <DownloadCloud class="h-4 w-4" /> CSV
+                        <DownloadCloud class="h-4 w-4 shrink-0" />
+                        <span class="hidden sm:inline">CSV</span>
                     </a>
 
                     <button
                         @click="openCreateModal"
-                        class="inline-flex items-center gap-2 rounded-md border border-transparent bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2"
+                        class="inline-flex items-center gap-2 rounded-md border border-transparent bg-black px-2.5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2 sm:px-4"
                     >
-                        <Plus class="h-4 w-4" /> Añadir
+                        <Plus class="h-4 w-4 shrink-0" />
+                        <span class="hidden sm:inline">Añadir</span>
                     </button>
                 </div>
             </div>
