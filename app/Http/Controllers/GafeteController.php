@@ -118,6 +118,7 @@ class GafeteController extends Controller
     private function activeUsers(): Collection
     {
         return User::query()
+            ->with('roles:id,name')
             ->where('is_active', true)
             ->orderBy('last_name')
             ->orderBy('first_name')

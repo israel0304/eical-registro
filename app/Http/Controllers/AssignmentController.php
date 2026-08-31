@@ -86,12 +86,14 @@ class AssignmentController extends Controller
         abort_unless($user->canViewActivity('workshops.view', $isAssignedModerator), 403);
 
         $workshop->load(['enrollments.user']);
+        $attendedUserIds = Attendance::where('workshop_id', $workshop->id)
+            ->pluck('user_id')
+            ->all();
+
         $workshop->setRelation(
             'enrollments',
-            $workshop->enrollments->map(function ($enrollment) {
-                $enrollment->has_attendance = Attendance::where('user_id', $enrollment->user_id)
-                    ->where('workshop_id', $enrollment->workshop_id)
-                    ->exists();
+            $workshop->enrollments->map(function ($enrollment) use ($attendedUserIds) {
+                $enrollment->has_attendance = in_array($enrollment->user_id, $attendedUserIds, true);
 
                 return $enrollment;
             })

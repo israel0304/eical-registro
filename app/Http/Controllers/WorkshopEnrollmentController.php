@@ -141,10 +141,15 @@ class WorkshopEnrollmentController extends Controller
 
         $workshops = Workshop::with('instructors')->whereHas('enrollments', function ($q) use ($user) {
             $q->where('user_id', $user->id)->where('status', 'enrolled');
-        })->get()->map(function ($workshop) use ($user) {
-            $workshop->has_attendance = Attendance::where('user_id', $user->id)
-                ->where('workshop_id', $workshop->id)
-                ->exists();
+        })->get();
+
+        $attendedWorkshopIds = Attendance::where('user_id', $user->id)
+            ->whereIn('workshop_id', $workshops->pluck('id'))
+            ->pluck('workshop_id')
+            ->all();
+
+        $workshops = $workshops->map(function ($workshop) use ($attendedWorkshopIds) {
+            $workshop->has_attendance = in_array($workshop->id, $attendedWorkshopIds, true);
 
             return $workshop;
         });

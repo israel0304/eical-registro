@@ -29,15 +29,36 @@ class EventoController extends Controller
             ->with(['user:id,first_name,last_name,dni,affiliation,email', 'registeredBy:id,first_name,last_name'])
             ->orderByDesc('event_day')
             ->orderByDesc('created_at')
-            ->get()
-            ->map(function (Attendance $attendance) {
-                $attendance->setAttribute('certificate_issued', $this->hasEventCertificate($attendance->user_id));
-                $attendance->setAttribute('days_attended', EventSettings::attendedDays($attendance->user_id));
-                $attendance->setAttribute('qualifies', EventSettings::qualifies($attendance->user_id));
-                $attendance->setAttribute('day_label', EventSettings::dayLabel($attendance->event_day));
+            ->get();
 
-                return $attendance;
-            });
+        $userIds = $attendances->pluck('user_id')->all();
+
+        $certIssuedByIds = Certificate::query()
+            ->whereIn('user_id', $userIds)
+            ->where('event_type', 'event')
+            ->pluck('user_id')
+            ->flip()
+            ->all();
+
+        $daysByUser = Attendance::query()
+            ->whereIn('user_id', $userIds)
+            ->whereNull('workshop_id')
+            ->whereNull('presentation_id')
+            ->selectRaw('user_id, COUNT(DISTINCT event_day) as days')
+            ->groupBy('user_id')
+            ->pluck('days', 'user_id');
+
+        $minDays = EventSettings::minDays();
+
+        $attendances = $attendances->map(function (Attendance $attendance) use ($certIssuedByIds, $daysByUser, $minDays) {
+            $days = (int) ($daysByUser[$attendance->user_id] ?? 0);
+            $attendance->setAttribute('certificate_issued', isset($certIssuedByIds[$attendance->user_id]));
+            $attendance->setAttribute('days_attended', $days);
+            $attendance->setAttribute('qualifies', $days >= $minDays);
+            $attendance->setAttribute('day_label', EventSettings::dayLabel($attendance->event_day));
+
+            return $attendance;
+        });
 
         $dayCounts = Attendance::query()
             ->whereNull('workshop_id')
@@ -182,13 +203,5 @@ class EventoController extends Controller
         $attendance->delete();
 
         return back()->with('success', 'Registro de asistencia eliminado.');
-    }
-
-    private function hasEventCertificate(int $userId): bool
-    {
-        return Certificate::query()
-            ->where('user_id', $userId)
-            ->where('event_type', 'event')
-            ->exists();
     }
 }

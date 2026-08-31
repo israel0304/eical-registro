@@ -26,12 +26,20 @@ class CheckinController extends Controller
             ->where('event_day', $today)
             ->with(['user:id,first_name,last_name,dni,affiliation,profile_photo_path,email'])
             ->orderByDesc('created_at')
-            ->get()
-            ->map(function (Attendance $attendance) {
-                $attendance->setAttribute('certificate_issued', $this->hasEventCertificate($attendance->user_id));
+            ->get();
 
-                return $attendance;
-            });
+        $certIssuedByIds = Certificate::query()
+            ->whereIn('user_id', $attendances->pluck('user_id'))
+            ->where('event_type', 'event')
+            ->pluck('user_id')
+            ->flip()
+            ->all();
+
+        $attendances = $attendances->map(function (Attendance $attendance) use ($certIssuedByIds) {
+            $attendance->setAttribute('certificate_issued', isset($certIssuedByIds[$attendance->user_id]));
+
+            return $attendance;
+        });
 
         return Inertia::render('Checkin/Index', [
             'attendances' => $attendances,
@@ -159,14 +167,6 @@ class CheckinController extends Controller
                 ->exists(),
             'days_attended' => EventSettings::attendedDays($user->id),
         ];
-    }
-
-    private function hasEventCertificate(int $userId): bool
-    {
-        return Certificate::query()
-            ->where('user_id', $userId)
-            ->where('event_type', 'event')
-            ->exists();
     }
 
     private function isWithinEventDates(string $date): bool
