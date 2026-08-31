@@ -14,6 +14,15 @@ import {
     X,
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const getRoleName = (roleId: number | string) => {
@@ -166,8 +175,26 @@ const deleteUser = (id: number) => {
 };
 
 const openGafetePrint = (userId: number) => {
-    window.open('/users/' + userId + '/gafete/imprimir', '_blank');
+    printModal.value = {
+        open: true,
+        url: `/users/${userId}/gafete/imprimir`,
+        title: 'Credencial',
+    };
 };
+
+const openGafetesPrintAll = () => {
+    printModal.value = {
+        open: true,
+        url: '/users/gafetes/imprimir',
+        title: 'Credenciales de usuarios activos',
+    };
+};
+
+const printModal = ref<{ open: boolean; url: string; title: string }>({
+    open: false,
+    url: '',
+    title: '',
+});
 
 const sendResetPassword = () => {
     router.post(
@@ -311,15 +338,13 @@ const handleFileUpload = (event: Event) => {
                         <span class="hidden sm:inline">Multiple</span>
                     </button>
 
-                    <a
-                        href="/users/gafetes/imprimir"
-                        target="_blank"
-                        rel="noopener"
+                    <button
+                        @click="openGafetesPrintAll"
                         class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 sm:px-4"
                     >
                         <Printer class="h-4 w-4 shrink-0" />
                         <span class="hidden sm:inline">Credenciales</span>
-                    </a>
+                    </button>
 
                     <a
                         href="/users/gafetes/imprimir/pdf"
@@ -1130,5 +1155,31 @@ const handleFileUpload = (event: Event) => {
                 </div>
             </div>
         </div>
+
+        <Dialog v-model:open="printModal.open">
+            <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+                <DialogHeader>
+                    <DialogTitle>{{ printModal.title }}</DialogTitle>
+                    <DialogDescription class="sr-only">
+                        Vista imprimible de credenciales
+                    </DialogDescription>
+                </DialogHeader>
+
+                <iframe
+                    :src="printModal.open ? printModal.url : ''"
+                    class="h-[75vh] w-full rounded-md border border-gray-200 dark:border-zinc-700"
+                    title="Impresión de credenciales"
+                ></iframe>
+
+                <DialogFooter class="sm:justify-center">
+                    <DialogClose
+                        as-child
+                        class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-6 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                    >
+                        <button type="button">Cerrar</button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

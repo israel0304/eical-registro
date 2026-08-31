@@ -11,6 +11,15 @@ import {
     Printer,
 } from 'lucide-vue-next';
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 defineProps<{
@@ -245,8 +254,18 @@ const clearResult = () => {
     result.value = null;
 };
 
+const printModal = ref<{ open: boolean; url: string; title: string }>({
+    open: false,
+    url: '',
+    title: '',
+});
+
 const openBadgePrint = (userId: number) => {
-    window.open(`/checkin/gafete/${userId}/imprimir`, '_blank');
+    printModal.value = {
+        open: true,
+        url: `/checkin/gafete/${userId}/imprimir`,
+        title: 'Credencial',
+    };
 };
 
 const openBadgePdf = (userId: number) => {
@@ -687,5 +706,31 @@ onBeforeUnmount(() => {
                 </div>
             </div>
         </div>
+
+        <Dialog v-model:open="printModal.open">
+            <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+                <DialogHeader>
+                    <DialogTitle>{{ printModal.title }}</DialogTitle>
+                    <DialogDescription class="sr-only">
+                        Vista imprimible de la credencial
+                    </DialogDescription>
+                </DialogHeader>
+
+                <iframe
+                    :src="printModal.open ? printModal.url : ''"
+                    class="h-[75vh] w-full rounded-md border border-gray-200 dark:border-zinc-700"
+                    title="Impresión de credencial"
+                ></iframe>
+
+                <DialogFooter class="sm:justify-center">
+                    <DialogClose
+                        as-child
+                        class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-6 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                    >
+                        <button type="button">Cerrar</button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>
