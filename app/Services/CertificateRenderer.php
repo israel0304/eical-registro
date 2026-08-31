@@ -509,7 +509,7 @@ HTML;
     {
         $metadata = $this->buildBadgeMetadata($user);
         $qr = $this->qrDataUri($this->badgeUrl($user), png: $forPdf);
-        $photo = $this->photoDataUri($user);
+        $photo = $this->badgePhotoFor($user, $forPdf);
 
         if ($template === null) {
             return <<<HTML
@@ -1290,6 +1290,27 @@ HTML;
             $mime = Storage::disk('public')->mimeType($user->profile_photo_path) ?: 'image/png';
 
             return 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($user->profile_photo_path));
+        }
+
+        return $this->initialsPlaceholder($user);
+    }
+
+    /**
+     * Photo source for a badge. For the printable HTML document we reference
+     * the public URL so the generated page stays small in memory (avoiding
+     * exhaustion when rendering many users at once); the PDF path inlines the
+     * binary as a data URI because Dompdf cannot load external images.
+     */
+    private function badgePhotoFor(User $user, bool $forPdf): string
+    {
+        if ($user->profile_photo_path && Storage::disk('public')->exists($user->profile_photo_path)) {
+            if ($forPdf) {
+                $mime = Storage::disk('public')->mimeType($user->profile_photo_path) ?: 'image/png';
+
+                return 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($user->profile_photo_path));
+            }
+
+            return '/storage/'.$user->profile_photo_path;
         }
 
         return $this->initialsPlaceholder($user);

@@ -97,6 +97,7 @@ class GafeteController extends Controller
     public function asistentesBadgesPrint(Request $request)
     {
         abort_unless($request->user()->can('users.view'), 403);
+        ini_set('memory_limit', '512M');
 
         return response($this->renderer->renderBadges($this->activeUsers()), 200, [
             'Content-Type' => 'text/html',
@@ -106,6 +107,7 @@ class GafeteController extends Controller
     public function asistentesBadgesPrintPdf(Request $request)
     {
         abort_unless($request->user()->can('users.view'), 403);
+        ini_set('memory_limit', '512M');
 
         return response($this->renderer->renderBadgesPdf($this->activeUsers()), 200, [
             'Content-Type' => 'application/pdf',

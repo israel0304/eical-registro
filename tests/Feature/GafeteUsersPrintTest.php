@@ -6,6 +6,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class GafeteUsersPrintTest extends TestCase
@@ -76,6 +77,27 @@ class GafeteUsersPrintTest extends TestCase
             ->assertDontSee('Zena Inactiva');
 
         $this->assertStringNotContainsString('Zena Inactiva', $response->getContent());
+    }
+
+    public function test_bulk_print_uses_photo_url_not_inline_data_uri(): void
+    {
+        $admin = $this->userWithPermissions(['users.view'], ['Administrator']);
+
+        $path = 'profile-photos/test-photo.png';
+        Storage::disk('public')->put($path, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='));
+        $target = User::factory()->create(['first_name' => 'Foto', 'last_name' => 'Perfil', 'is_active' => true]);
+        $target->update(['profile_photo_path' => $path]);
+
+        $content = $this->actingAs($admin)
+            ->get('/users/gafetes/imprimir')
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('/storage/'.$path, $content);
+
+        $photoBlock = 'src="/storage/'.$path.'"';
+        $this->assertStringContainsString($photoBlock, $content);
+        $this->assertStringNotContainsString('data:image/png;base64,'.base64_encode(Storage::disk('public')->get($path)), $content);
     }
 
     public function test_bulk_print_pdf_returns_pdf(): void
