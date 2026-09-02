@@ -32,7 +32,7 @@ class Conference extends Model
     ];
 
     protected $casts = [
-        'day' => 'date',
+        'day' => 'date:Y-m-d',
     ];
 
     public function creator(): BelongsTo
