@@ -8,6 +8,8 @@ import {
     MapPin,
     Hash,
     Pencil,
+    ChevronDown,
+    ChevronUp,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import DisciplineInput from '@/components/DisciplineInput.vue';
@@ -84,6 +86,29 @@ const formatDay = (day: string) => {
 
 const authors = ref(props.presentation.authors);
 const toggling = ref<number | null>(null);
+
+const expandedAuthors = ref<Set<number>>(new Set());
+const expandedMods = ref<Set<number>>(new Set());
+
+const toggleAuthorSemblanza = (userId: number) => {
+    const expanded = expandedAuthors.value;
+    if (expanded.has(userId)) {
+        expanded.delete(userId);
+    } else {
+        expanded.add(userId);
+    }
+    void expanded; // mutado in-situ (mismo ref)
+};
+
+const toggleModSemblanza = (userId: number) => {
+    const expanded = expandedMods.value;
+    if (expanded.has(userId)) {
+        expanded.delete(userId);
+    } else {
+        expanded.add(userId);
+    }
+    void expanded; // mutado in-situ (mismo ref)
+};
 
 const togglePresented = (userId: number, presented: boolean) => {
     toggling.value = userId;
@@ -251,7 +276,12 @@ const disciplinesList = computed(() => {
                     <li
                         v-for="author in authors"
                         :key="author.id"
-                        class="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+                        class="flex flex-wrap items-start gap-2 rounded-lg border p-2.5 text-sm text-gray-700 dark:text-gray-300"
+                        :class="
+                            expandedAuthors.has(author.id)
+                                ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-950/40'
+                                : 'border-transparent'
+                        "
                     >
                         <span
                             class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300"
@@ -259,17 +289,44 @@ const disciplinesList = computed(() => {
                             {{ author.first_name?.[0]
                             }}{{ author.last_name?.[0] }}
                         </span>
-                        <div class="flex-1">
-                            <span class="font-medium"
-                                >{{ author.first_name }}
-                                {{ author.last_name }}</span
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="font-medium"
+                                    >{{ author.first_name }}
+                                    {{ author.last_name }}</span
+                                >
+                                <span
+                                    v-if="author.affiliation"
+                                    class="text-xs text-gray-400"
+                                >
+                                    ({{ author.affiliation }})
+                                </span>
+                            </div>
+                            <button
+                                v-if="author.semblanza"
+                                type="button"
+                                class="mt-1 inline-flex items-center gap-1 rounded-full border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 hover:text-indigo-800 dark:border-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 dark:hover:text-indigo-200"
+                                @click="toggleAuthorSemblanza(author.id)"
                             >
-                            <span
-                                v-if="author.affiliation"
-                                class="ml-1 text-xs text-gray-400"
+                                <ChevronDown
+                                    v-if="!expandedAuthors.has(author.id)"
+                                    class="h-3.5 w-3.5"
+                                />
+                                <ChevronUp v-else class="h-3.5 w-3.5" />
+                                {{ expandedAuthors.has(author.id)
+                                    ? 'Ocultar semblanza'
+                                    : 'Ver semblanza'
+                                }}
+                            </button>
+                            <p
+                                v-if="
+                                    author.semblanza &&
+                                    expandedAuthors.has(author.id)
+                                "
+                                class="mt-1 text-sm leading-relaxed whitespace-pre-line text-gray-600 dark:text-gray-400"
                             >
-                                ({{ author.affiliation }})
-                            </span>
+                                {{ author.semblanza }}
+                            </p>
                         </div>
 
                         <div
@@ -351,23 +408,56 @@ const disciplinesList = computed(() => {
                     <li
                         v-for="mod in presentation.moderators"
                         :key="mod.id"
-                        class="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+                        class="flex flex-wrap items-start gap-2 rounded-lg border p-2.5 text-sm text-gray-700 dark:text-gray-300"
+                        :class="
+                            expandedMods.has(mod.id)
+                                ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-950/40'
+                                : 'border-transparent'
+                        "
                     >
                         <span
                             class="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-medium text-amber-700 dark:bg-amber-900 dark:text-amber-300"
                         >
                             {{ mod.first_name?.[0] }}{{ mod.last_name?.[0] }}
                         </span>
-                        <div class="flex-1">
-                            <span class="font-medium"
-                                >{{ mod.first_name }} {{ mod.last_name }}</span
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="font-medium"
+                                    >{{ mod.first_name }}
+                                    {{ mod.last_name }}</span
+                                >
+                                <span
+                                    v-if="mod.affiliation"
+                                    class="text-xs text-gray-400"
+                                >
+                                    ({{ mod.affiliation }})
+                                </span>
+                            </div>
+                            <button
+                                v-if="mod.semblanza"
+                                type="button"
+                                class="mt-1 inline-flex items-center gap-1 rounded-full border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 hover:text-indigo-800 dark:border-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 dark:hover:text-indigo-200"
+                                @click="toggleModSemblanza(mod.id)"
                             >
-                            <span
-                                v-if="mod.affiliation"
-                                class="ml-1 text-xs text-gray-400"
+                                <ChevronDown
+                                    v-if="!expandedMods.has(mod.id)"
+                                    class="h-3.5 w-3.5"
+                                />
+                                <ChevronUp v-else class="h-3.5 w-3.5" />
+                                {{ expandedMods.has(mod.id)
+                                    ? 'Ocultar semblanza'
+                                    : 'Ver semblanza'
+                                }}
+                            </button>
+                            <p
+                                v-if="
+                                    mod.semblanza &&
+                                    expandedMods.has(mod.id)
+                                "
+                                class="mt-1 text-sm leading-relaxed whitespace-pre-line text-gray-600 dark:text-gray-400"
                             >
-                                ({{ mod.affiliation }})
-                            </span>
+                                {{ mod.semblanza }}
+                            </p>
                         </div>
                         <span v-if="mod.email" class="text-xs text-gray-400">
                             {{ mod.email }}

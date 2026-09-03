@@ -452,7 +452,7 @@ const formatDate = (dateStr: string) => {
                                     scope="col"
                                     class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
                                 >
-                                    Instructor
+                                    Fecha
                                 </th>
                                 <th
                                     scope="col"
@@ -465,6 +465,18 @@ const formatDate = (dateStr: string) => {
                                     class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
                                 >
                                     Lugar
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
+                                >
+                                    Instructor
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
+                                >
+                                    Moderador
                                 </th>
                                 <th
                                     scope="col"
@@ -507,11 +519,22 @@ const formatDate = (dateStr: string) => {
                                             Eliminado
                                         </span>
                                     </div>
-                                    <div
-                                        class="text-xs text-gray-500 dark:text-gray-400"
-                                    >
-                                        {{ formatDate(workshop.day) }}
-                                    </div>
+                                </td>
+                                <td
+                                    class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
+                                >
+                                    {{ formatDate(workshop.day) || '—' }}
+                                </td>
+                                <td
+                                    class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
+                                >
+                                    {{ workshop.start_time || '—' }} -
+                                    {{ workshop.end_time || '—' }}
+                                </td>
+                                <td
+                                    class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
+                                >
+                                    {{ workshop.location }}
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
@@ -543,13 +566,29 @@ const formatDate = (dateStr: string) => {
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
                                 >
-                                    {{ workshop.start_time }} -
-                                    {{ workshop.end_time }}
-                                </td>
-                                <td
-                                    class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    {{ workshop.location }}
+                                    <div class="flex items-center -space-x-2">
+                                        <span
+                                            v-for="moderator in workshop.moderators"
+                                            :key="moderator.id"
+                                            :title="
+                                                moderator.name +
+                                                (moderator.affiliation
+                                                    ? ' — ' +
+                                                      moderator.affiliation
+                                                    : '')
+                                            "
+                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-700 ring-2 ring-white dark:bg-zinc-700 dark:text-gray-200 dark:ring-zinc-900"
+                                        >
+                                            {{ moderator.first_name?.[0]
+                                            }}{{ moderator.last_name?.[0] }}
+                                        </span>
+                                    </div>
+                                    <div
+                                        v-if="!workshop.moderators?.length"
+                                        class="text-gray-400"
+                                    >
+                                        —
+                                    </div>
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"

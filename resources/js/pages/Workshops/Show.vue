@@ -15,6 +15,8 @@ import {
     MapPin,
     UserCheck,
     Users,
+    ChevronDown,
+    ChevronUp,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted, nextTick, watch } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
@@ -90,6 +92,17 @@ const toggleInstructorConstancia = (userId: number) => {
             preserveScroll: true,
         },
     );
+};
+
+const expandedInstructors = ref<Set<number>>(new Set());
+const toggleInstructorSemblanza = (userId: number) => {
+    const expanded = expandedInstructors.value;
+    if (expanded.has(userId)) {
+        expanded.delete(userId);
+    } else {
+        expanded.add(userId);
+    }
+    void expanded; // mutado in-situ (mismo ref)
 };
 
 const myEnrollment = computed(() => {
@@ -399,7 +412,14 @@ watch(
                                 <div
                                     v-for="instructor in workshop.instructors"
                                     :key="instructor.id"
-                                    class="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+                                    class="flex flex-wrap items-center gap-2 rounded-lg border p-2.5 text-sm text-gray-700 dark:text-gray-300"
+                                    :class="
+                                        expandedInstructors.has(
+                                            instructor.id,
+                                        )
+                                            ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-950/40'
+                                            : 'border-transparent'
+                                    "
                                 >
                                     <UserCheck
                                         class="h-4 w-4 shrink-0 text-gray-400"
@@ -417,6 +437,46 @@ watch(
                                         >
                                             ({{ instructor.affiliation }})
                                         </span>
+                                        <button
+                                            v-if="instructor.semblanza"
+                                            type="button"
+                                            class="mt-1 inline-flex items-center gap-1 rounded-full border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 hover:text-indigo-800 dark:border-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 dark:hover:text-indigo-200"
+                                            @click="
+                                                toggleInstructorSemblanza(
+                                                    instructor.id,
+                                                )
+                                            "
+                                        >
+                                            <ChevronDown
+                                                v-if="
+                                                    !expandedInstructors.has(
+                                                        instructor.id,
+                                                    )
+                                                "
+                                                class="h-3.5 w-3.5"
+                                            />
+                                            <ChevronUp
+                                                v-else
+                                                class="h-3.5 w-3.5"
+                                            />
+                                            {{ expandedInstructors.has(
+                                                instructor.id,
+                                            )
+                                                ? 'Ocultar semblanza'
+                                                : 'Ver semblanza'
+                                            }}
+                                        </button>
+                                        <p
+                                            v-if="
+                                                instructor.semblanza &&
+                                                expandedInstructors.has(
+                                                    instructor.id,
+                                                )
+                                            "
+                                            class="mt-1 text-sm leading-relaxed whitespace-pre-line text-gray-600 dark:text-gray-400"
+                                        >
+                                            {{ instructor.semblanza }}
+                                        </p>
                                     </div>
                                     <div
                                         v-if="can('workshops.activate')"
