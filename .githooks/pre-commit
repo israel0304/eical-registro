@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Bloquea secretos en el staging. Lee los patrones desde secret-patterns.txt
+# y se excluye a sí mismo (y a su carpeta) del auto-escaneeo.
+set -o pipefail
+
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+PATTERNS_FILE="$HOOK_DIR/secret-patterns.txt"
+
+FORBIDDEN=(
+    "AGENTS.md"
+    "ARCHITECTURE.md"
+    "scripts/.deploy.env"
+)
+
+mapfile -t SECRET_VALUES < "$PATTERNS_FILE"
+
+err=0
+
+for f in "${FORBIDDEN[@]}"; do
+    if git diff --cached --name-only | grep -qxF "$f"; then
+        echo "PRE-COMMIT: '$f' está prohibido versionar. Quítalo del staging." >&2
+        err=1
+    fi
+done
+
+while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    case "$f" in .githooks/*) continue ;; esac
+    blob="$(git show :"$f" 2>/dev/null || true)"
+    for v in "${SECRET_VALUES[@]}"; do
+        [ -n "$v" ] || continue
+        if printf '%s' "$blob" | grep -qF "$v"; then
+            echo "PRE-COMMIT: valor sensible detectado en '$f'." >&2
+            err=1
+        fi
+    done
+done < <(git diff --cached --name-only)
+
+if [ "$err" -ne 0 ]; then
+    echo "PRE-COMMIT: commit bloqueado (secretos)." >&2
+    exit 1
+fi
+exit 0
