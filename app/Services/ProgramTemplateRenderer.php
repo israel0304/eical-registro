@@ -100,8 +100,7 @@ HTML;
 
         $style = $this->styles($config, $forPdf);
         $stage = $forPdf ? '' : $this->screenOverlay($pageW, $pageH);
-        $script = $forPdf ? '' : $this->fitScript($pageW, $pageH);
-        $toolbar = $forPdf ? '' : $this->printToolbar($meta['eventName']);
+        $toolbar = $forPdf ? '' : $this->printToolbar();
 
         return <<<HTML
 <!DOCTYPE html>
@@ -118,7 +117,6 @@ HTML;
 <body>
     {$pages}
     {$toolbar}
-    {$script}
 </body>
 </html>
 HTML;
@@ -477,83 +475,40 @@ CSS;
 CSS;
     }
 
-    private function printToolbar(string $eventName): string
+    private function printToolbar(): string
     {
-        return <<<HTML
+        return <<<'HTML'
 <style>
 @media screen {
-    .print-toolbar {
+    .print-btn {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        padding: 10px 24px;
-        background: #111827;
-        color: #fff;
-        z-index: 9999;
-        display: flex;
+        top: 16px;
+        right: 16px;
+        z-index: 1000;
+        display: inline-flex;
         align-items: center;
-        box-sizing: border-box;
-        gap: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-    }
-    .print-toolbar .print-title {
-        font-weight: 600;
-        min-width: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .print-toolbar .print-btn {
-        background: #fff;
-        color: #111827;
+        gap: 8px;
+        padding: 10px 18px;
         border: none;
-        border-radius: 6px;
-        padding: 8px 18px;
+        border-radius: 8px;
+        background: #dc2626;
+        color: #ffffff;
+        font-family: system-ui, sans-serif;
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
-        white-space: nowrap;
-        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
-    .print-toolbar .print-btn:hover { background: #f3f4f6; }
-    body { padding-top: 56px; }
+    .print-btn:hover { background: #b91c1c; }
 }
 @media print {
-    .print-toolbar { display: none !important; }
+    .print-btn { display: none !important; }
 }
 </style>
-<div class="print-toolbar">
-    <span class="print-title">Vista de impresión - {$eventName}</span>
-    <button class="print-btn" onclick="window.print()">Imprimir</button>
-</div>
+<button class="print-btn" onclick="window.print()">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    Imprimir
+</button>
 HTML;
-    }
-
-    private function fitScript(int $pageW, int $pageH): string
-    {
-        return <<<JS
-<script>
-(function () {
-    function fit(reset) {
-        var scale = reset ? 1 : Math.min((window.innerWidth - 48) / {$pageW}, (window.innerHeight - 220) / {$pageH}, 1);
-        document.querySelectorAll('.page-holder').forEach(function (holder) {
-            var page = holder.firstElementChild;
-            if (!page) return;
-            page.style.width = {$pageW} + 'px';
-            page.style.height = {$pageH} + 'px';
-            page.style.transform = 'scale(' + scale + ')';
-            holder.style.width = Math.round({$pageW} * scale) + 'px';
-            holder.style.height = Math.round({$pageH} * scale) + 'px';
-            holder.style.margin = '0 auto ' + (reset ? '24px' : '12px');
-        });
-    }
-    document.addEventListener('DOMContentLoaded', function () { fit(); });
-    window.addEventListener('resize', function () { fit(); });
-    window.addEventListener('beforeprint', function () { fit(true); });
-    window.addEventListener('afterprint', function () { fit(); });
-})();
-</script>
-JS;
     }
 }

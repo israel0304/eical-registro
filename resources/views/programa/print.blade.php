@@ -55,43 +55,28 @@
         .meta { color: #6b7280; font-size: 12px; margin-top: 2px; }
         .empty { color: #9ca3af; font-style: italic; }
         .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 24px; }
-        .print-toolbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            padding: 10px 24px;
-            background: #111827;
-            color: #fff;
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            box-sizing: border-box;
-            gap: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-        }
-        .print-toolbar .print-title {
-            font-weight: 600;
-            min-width: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
         .print-btn {
-            background: #fff;
-            color: #111827;
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 1000;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
             border: none;
-            border-radius: 6px;
-            padding: 8px 18px;
+            border-radius: 8px;
+            background: #dc2626;
+            color: #ffffff;
+            font-family: system-ui, sans-serif;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            white-space: nowrap;
-            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
-        .print-btn:hover { background: #f3f4f6; }
+        .print-btn:hover { background: #b91c1c; }
         @media print {
-            .print-toolbar { display: none; }
+            .print-btn { display: none; }
             body { padding: 0; }
             thead { display: table-header-group; }
             tr { break-inside: avoid; page-break-inside: avoid; }
@@ -99,10 +84,10 @@
     </style>
 </head>
 <body>
-    <div class="print-toolbar">
-        <span class="print-title">Vista de impresión</span>
-        <button class="print-btn" onclick="window.print()">Imprimir</button>
-    </div>
+    <button class="print-btn" onclick="window.print()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimir
+    </button>
     <div class="header">
         <h1>Programa del evento</h1>
         <p>{{ $eventName }}</p>
