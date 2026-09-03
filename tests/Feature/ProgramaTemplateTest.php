@@ -271,7 +271,7 @@ class ProgramaTemplateTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Programa/Plantillas/Edit')
                 ->has('groups', 1)
-                ->where('groups.0.label', 'Día 1 de 3')
+                ->where('groups.0.label', 'Lunes 5')
                 ->has('groups.0.items', 3)
                 ->where('groups.0.items.0.title', 'Bloque 1')
                 ->where('groups.0.items.0.kind', 'block')

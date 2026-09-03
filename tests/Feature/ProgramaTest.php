@@ -133,7 +133,7 @@ class ProgramaTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Programa/Index')
                 ->has('groups', 1)
-                ->where('groups.0.label', '13 de agosto de 2026')
+                ->where('groups.0.label', 'Jueves 13')
                 ->has('groups.0.items', 1)
                 ->where('groups.0.items.0.title', 'Taller de prueba'));
     }
@@ -149,7 +149,7 @@ class ProgramaTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Programa/Index')
                 ->has('groups', 1)
-                ->where('groups.0.label', '5 de octubre de 2026')
+                ->where('groups.0.label', 'Lunes 5')
                 ->where('groups.0.items.0.title', 'Taller de prueba'));
     }
 
