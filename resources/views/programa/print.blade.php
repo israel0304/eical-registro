@@ -10,6 +10,7 @@
         body {
             margin: 0;
             padding: 32px;
+            padding-top: 72px;
             font-family: system-ui, -apple-system, sans-serif;
             color: #111827;
         }
@@ -54,7 +55,33 @@
         .meta { color: #6b7280; font-size: 12px; margin-top: 2px; }
         .empty { color: #9ca3af; font-style: italic; }
         .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 24px; }
+        .print-toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px 24px;
+            background: #111827;
+            color: #fff;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        }
+        .print-toolbar .print-title { font-weight: 600; margin-right: auto; }
+        .print-btn {
+            background: #fff;
+            color: #111827;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .print-btn:hover { background: #f3f4f6; }
         @media print {
+            .print-toolbar { display: none; }
             body { padding: 0; }
             thead { display: table-header-group; }
             tr { break-inside: avoid; page-break-inside: avoid; }
@@ -62,6 +89,10 @@
     </style>
 </head>
 <body>
+    <div class="print-toolbar">
+        <span class="print-title">Vista de impresión</span>
+        <button class="print-btn" onclick="window.print()">Imprimir</button>
+    </div>
     <div class="header">
         <h1>Programa del evento</h1>
         <p>{{ $eventName }}</p>

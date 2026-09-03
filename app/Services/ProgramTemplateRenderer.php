@@ -101,6 +101,7 @@ HTML;
         $style = $this->styles($config, $forPdf);
         $stage = $forPdf ? '' : $this->screenOverlay($pageW, $pageH);
         $script = $forPdf ? '' : $this->fitScript($pageW, $pageH);
+        $toolbar = $forPdf ? '' : $this->printToolbar($meta['eventName']);
 
         return <<<HTML
 <!DOCTYPE html>
@@ -116,6 +117,7 @@ HTML;
 </head>
 <body>
     {$pages}
+    {$toolbar}
     {$script}
 </body>
 </html>
@@ -473,6 +475,56 @@ CSS;
     .page { transform-origin: top left; box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18); }
 }
 CSS;
+    }
+
+    private function printToolbar(string $eventName): string
+    {
+        return <<<HTML
+<style>
+@media screen {
+    .print-toolbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 10px 24px;
+        background: #111827;
+        color: #fff;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+    .print-toolbar .print-title {
+        font-weight: 600;
+        margin-right: auto;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .print-toolbar .print-btn {
+        background: #fff;
+        color: #111827;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 18px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-left: 12px;
+    }
+    .print-toolbar .print-btn:hover { background: #f3f4f6; }
+    body { padding-top: 56px; }
+}
+@media print {
+    .print-toolbar { display: none !important; }
+}
+</style>
+<div class="print-toolbar">
+    <span class="print-title">Vista de impresión - {$eventName}</span>
+    <button class="print-btn" onclick="window.print()">Imprimir</button>
+</div>
+HTML;
     }
 
     private function fitScript(int $pageW, int $pageH): string

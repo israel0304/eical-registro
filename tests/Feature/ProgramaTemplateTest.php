@@ -183,6 +183,8 @@ class ProgramaTemplateTest extends TestCase
         $firstPage = strstr($html, '<div class="page" id="page-2"', true) ?: $html;
         $this->assertStringNotContainsString('Bloque 45', $firstPage);
         $this->assertStringContainsString('Bloque 1', $html);
+        $this->assertStringContainsString('print-toolbar', $html);
+        $this->assertStringContainsString('onclick="window.print()"', $html);
         $this->assertStringContainsString('@page { size: 816px 1056px;', $html);
     }
 
@@ -242,6 +244,8 @@ class ProgramaTemplateTest extends TestCase
 
         $this->assertStringContainsString('Programa del evento', $html);
         $this->assertStringContainsString('table-header-group', $html);
+        $this->assertStringContainsString('print-toolbar', $html);
+        $this->assertStringContainsString('onclick="window.print()"', $html);
         $this->assertStringNotContainsString('<div class="page-holder">', $html);
     }
 
