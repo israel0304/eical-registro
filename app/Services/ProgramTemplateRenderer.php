@@ -81,11 +81,13 @@ class ProgramTemplateRenderer
             $pageNo = $i + 1;
             $letterheadHtml = $this->renderLetterhead($letterhead, $meta, $store = compact('qr'), $pageNo, $total);
             $listHtml = $this->renderList($chunk, $config, $listW);
+            $bgStyle = $background
+                ? "background-image:url('{$background}');background-size:cover;background-position:center;"
+                : '';
 
             $pages .= <<<HTML
 <div class="page-holder">
-    <div class="page" id="page-{$pageNo}">
-        {$background}
+    <div class="page" id="page-{$pageNo}" style="{$bgStyle}">
         {$letterheadHtml}
         <div class="program-list" style="left:{$listX}px;top:{$listY}px;width:{$listW}px;">
             {$listHtml}
@@ -374,7 +376,7 @@ HTML;
 
         $data = Storage::disk('public')->get($template->background_path);
 
-        return '<img class="bg" src="data:image/png;base64,'.base64_encode($data).'" alt="" />';
+        return 'data:image/png;base64,'.base64_encode($data);
     }
 
     private function imageDataUri(string $path): string
@@ -430,11 +432,9 @@ HTML;
     .page-holder { width: {$this->pageW()}px !important; height: {$this->pageH()}px !important; margin: 0 !important; }
     .page { transform: none !important; width: {$this->pageW()}px !important; height: {$this->pageH()}px !important; page-break-after: always; }
     .page:last-child { page-break-after: auto; }
-    .bg { position: absolute; inset: 0; width: 100%; height: 100%; }
 }
 .page { position: relative; width: {$this->pageW()}px; height: {$this->pageH()}px; overflow: hidden; margin: 0 auto; font-family: Helvetica, Arial, sans-serif; }
 {$pageBreak}
-.bg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .program-list { position: absolute; box-sizing: border-box; overflow: hidden; }
 .pd { font-size: {$dayFont}px; font-weight: 800; color: {$accent}; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 2px solid {$accent}; padding-bottom: 4px; margin-bottom: 2px; }
 .pi { display: flex; gap: 16px; padding: {$rowPad}px 0; border-bottom: 1px solid #e5e7eb; }
