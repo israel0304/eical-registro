@@ -12,7 +12,10 @@ FORBIDDEN=(
     "scripts/.deploy.env"
 )
 
-mapfile -t SECRET_VALUES < "$PATTERNS_FILE"
+SECRET_VALUES=()
+while IFS= read -r line; do
+    [ -n "$line" ] && SECRET_VALUES+=("$line")
+done < "$PATTERNS_FILE"
 
 err=0
 
