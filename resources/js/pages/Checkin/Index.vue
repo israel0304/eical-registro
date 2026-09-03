@@ -60,6 +60,7 @@ const readerEl = ref<HTMLDivElement | null>(null);
 let html5Qr: any = null;
 let lastToken = '';
 let lastScannedAt = 0;
+let restartTimer: number | undefined;
 
 const extractToken = (text: string) => {
     const match = text.match(/[?&]token=([^&\s]+)/);
@@ -125,6 +126,10 @@ const register = async (token: string) => {
 };
 
 const stopScanner = async () => {
+    if (restartTimer) {
+        window.clearTimeout(restartTimer);
+        restartTimer = undefined;
+    }
     scannerActive.value = false;
     if (html5Qr) {
         try {
@@ -141,29 +146,42 @@ const stopScanner = async () => {
     }
 };
 
-const startScanner = async () => {
-    scannerError.value = null;
-    result.value = null;
-    scannerActive.value = true;
+const scheduleRestart = (delay = 700) => {
+    if (restartTimer) window.clearTimeout(restartTimer);
+    restartTimer = window.setTimeout(() => {
+        restartTimer = undefined;
+        if (scannerActive.value || processing.value) return;
+        startScanner();
+    }, delay);
+};
 
-    await nextTick();
-    if (!readerEl.value) return;
+const handleScan = (decodedText: string) => {
+    const token = extractToken(decodedText);
+    if (!token) return;
+
+    const now = Date.now();
+    if (token === lastToken && now - lastScannedAt < 3000) return;
+    lastToken = token;
+    lastScannedAt = now;
+
+    stopScanner();
+    scanning.value = false;
+    register(token).finally(() => {
+        if (!scannerActive.value && !processing.value) {
+            scheduleRestart(result.value?.success ? 700 : 2200);
+        }
+    });
+};
+
+const bootCamera = async () => {
+    const reader = readerEl.value;
+    if (!reader) return false;
 
     const { Html5Qrcode } = await import('html5-qrcode');
     html5Qr = new Html5Qrcode('qr-reader', { verbose: false });
 
     const onSuccess = (decodedText: string) => {
-        const token = extractToken(decodedText);
-        if (!token) return;
-
-        const now = Date.now();
-        if (token === lastToken && now - lastScannedAt < 3000) return;
-        lastToken = token;
-        lastScannedAt = now;
-
-        stopScanner();
-        scanning.value = false;
-        register(token);
+        handleScan(decodedText);
     };
 
     const onError = (err: any) => {
@@ -194,11 +212,27 @@ const startScanner = async () => {
             onSuccess,
             onError,
         );
+        scannerError.value = null;
+        return true;
     } catch {
         scannerActive.value = false;
         scannerError.value =
             'No se pudo acceder a la cámara. Verifica que el navegador tenga permiso y que el sitio use HTTPS o localhost.';
+        return false;
     }
+};
+
+const startScanner = async () => {
+    if (restartTimer) {
+        window.clearTimeout(restartTimer);
+        restartTimer = undefined;
+    }
+    scannerError.value = null;
+    result.value = null;
+    scannerActive.value = true;
+
+    await nextTick();
+    await bootCamera();
 };
 
 const submitManual = () => {
@@ -278,6 +312,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
     stopScanner();
+    if (restartTimer) window.clearTimeout(restartTimer);
     if (searchTimer) window.clearTimeout(searchTimer);
 });
 </script>
