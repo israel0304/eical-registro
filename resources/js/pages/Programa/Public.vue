@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { Calendar, Download, List, Printer } from 'lucide-vue-next';
+import { Calendar, List, Printer } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -196,12 +196,6 @@ const closeDetail = () => {
                         <a href="/programa/publico/imprimir" target="_blank">
                             <Printer class="h-4 w-4" />
                             Imprimir
-                        </a>
-                    </Button>
-                    <Button variant="outline" size="sm" as-child>
-                        <a href="/programa/publico/imprimir/pdf">
-                            <Download class="h-4 w-4" />
-                            Descargar PDF
                         </a>
                     </Button>
                 </div>

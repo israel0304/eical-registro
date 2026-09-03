@@ -59,7 +59,6 @@ Route::get('gafete/escaneo', [GafeteController::class, 'scanInfo'])->name('gafet
 // Programa público (sin auth)
 Route::get('programa/publico', [ProgramController::class, 'publicIndex'])->name('programa.public');
 Route::get('programa/publico/imprimir', [ProgramController::class, 'printPublic'])->name('programa.public.print');
-Route::get('programa/publico/imprimir/pdf', [ProgramController::class, 'printPublicPdf'])->name('programa.public.print.pdf');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
@@ -469,7 +468,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('can:programa.view')->group(function () {
         Route::get('programa', [ProgramController::class, 'index'])->name('programa.index');
         Route::get('programa/imprimir', [ProgramController::class, 'print'])->middleware('can:programa.print')->name('programa.print');
-        Route::get('programa/imprimir/pdf', [ProgramController::class, 'printPdf'])->middleware('can:programa.print')->name('programa.print.pdf');
 
         Route::middleware('can:programa.manage')->group(function () {
             Route::post('programa', [ProgramController::class, 'store'])->name('programa.store');

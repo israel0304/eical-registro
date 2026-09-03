@@ -8,7 +8,6 @@ import {
     Printer,
     Trash2,
     Code,
-    Download,
     LayoutTemplate,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -313,17 +312,6 @@ const remove = (item: any) => {
                         <a href="/programa/imprimir" target="_blank">
                             <Printer class="h-4 w-4" />
                             Imprimir
-                        </a>
-                    </Button>
-                    <Button
-                        v-if="canPrint"
-                        variant="outline"
-                        size="sm"
-                        as-child
-                    >
-                        <a href="/programa/imprimir/pdf">
-                            <Download class="h-4 w-4" />
-                            Descargar PDF
                         </a>
                     </Button>
                     <Button

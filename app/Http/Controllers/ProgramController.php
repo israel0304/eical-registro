@@ -9,7 +9,6 @@ use App\Models\Workshop;
 use App\Services\ProgramService;
 use App\Services\ProgramTemplateRenderer;
 use App\Support\EventSettings;
-use Dompdf\Dompdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Inertia\Inertia;
@@ -121,21 +120,9 @@ class ProgramController extends Controller
         return $this->printHtml();
     }
 
-    public function printPdf(Request $request)
-    {
-        abort_unless($request->user()->can('programa.print'), 403);
-
-        return $this->printPdfResponse();
-    }
-
     public function printPublic()
     {
         return $this->printHtml();
-    }
-
-    public function printPublicPdf()
-    {
-        return $this->printPdfResponse();
     }
 
     private function printHtml(): Response
@@ -155,31 +142,6 @@ class ProgramController extends Controller
         ]), 200);
     }
 
-    private function printPdfResponse(): Response
-    {
-        $data = $this->printData();
-        $template = ProgramTemplateRenderer::activeTemplate();
-
-        if ($template !== null) {
-            $html = (new ProgramTemplateRenderer)->render($template, $data['groups'], $data['meta'], forPdf: true);
-
-            return response($this->dompdf($html, $template->width ?: 816, $template->height ?: 1056), 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename=programa-eical.pdf',
-            ]);
-        }
-
-        $html = view('programa.print', [
-            'groups' => $data['groups'],
-            'eventName' => $data['meta']['eventName'],
-        ])->render();
-
-        return response($this->dompdf($html, 816, 1056, letterFallback: true), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename=programa-eical.pdf',
-        ]);
-    }
-
     private function printData(): array
     {
         return [
@@ -190,23 +152,6 @@ class ProgramController extends Controller
                 'lugar' => EventSettings::lugar(),
             ],
         ];
-    }
-
-    private function dompdf(string $html, int $width, int $height, bool $letterFallback = false): string
-    {
-        $dompdf = new Dompdf;
-
-        $dompdf->loadHtml($html);
-
-        if ($letterFallback) {
-            $dompdf->setPaper('letter');
-        } else {
-            $dompdf->setPaper([0, 0, $width * 0.75, $height * 0.75]);
-        }
-
-        $dompdf->render();
-
-        return $dompdf->output();
     }
 
     private function validateBlock(Request $request): array

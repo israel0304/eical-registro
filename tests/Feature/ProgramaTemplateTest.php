@@ -245,50 +245,6 @@ class ProgramaTemplateTest extends TestCase
         $this->assertStringNotContainsString('<div class="page-holder">', $html);
     }
 
-    public function test_pdf_uses_template_on_letter_paper(): void
-    {
-        $admin = $this->admin();
-        $this->blocks($admin, 5);
-
-        CertificateTemplate::create([
-            'name' => 'Programa PDF',
-            'kind' => 'program',
-            'is_active' => true,
-            'width' => 816,
-            'height' => 1056,
-        ]);
-
-        $this->actingAs($admin);
-
-        $response = $this->get('/programa/imprimir/pdf');
-
-        $response->assertOk();
-        $response->assertHeader('Content-Type', 'application/pdf');
-        $response->assertHeader('Content-Disposition', 'attachment; filename=programa-eical.pdf');
-
-        $pdf = $response->getContent();
-        $this->assertStringStartsWith('%PDF', $pdf);
-
-        preg_match('/MediaBox\s*\[\s*[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)\s*\]/', $pdf, $matches);
-        $this->assertNotEmpty($matches, 'No se encontró MediaBox en el PDF del programa');
-        $this->assertEqualsWithDelta(612, (float) $matches[1], 0.5);
-        $this->assertEqualsWithDelta(792, (float) $matches[2], 0.5);
-    }
-
-    public function test_pdf_falls_back_to_letter_when_no_active_template(): void
-    {
-        $admin = $this->admin();
-        $this->blocks($admin, 2);
-
-        $this->actingAs($admin);
-
-        $response = $this->get('/programa/imprimir/pdf');
-
-        $response->assertOk();
-        $response->assertHeader('Content-Type', 'application/pdf');
-        $this->assertStringStartsWith('%PDF', $response->getContent());
-    }
-
     public function test_edit_page_exposes_program_groups_and_meta(): void
     {
         Setting::updateOrCreate(['key' => 'evento_nombre'], ['value' => 'EICAL Grupos']);
@@ -355,13 +311,6 @@ class ProgramaTemplateTest extends TestCase
         $this->assertStringContainsString('background: #475569', $html);
     }
 
-    public function test_regular_user_cannot_download_program_pdf(): void
-    {
-        $this->actingAs($this->regularUser());
-
-        $this->get('/programa/imprimir/pdf')->assertForbidden();
-    }
-
     public function test_public_print_renders_active_template_without_auth(): void
     {
         CertificateTemplate::create([
@@ -382,20 +331,5 @@ class ProgramaTemplateTest extends TestCase
         $this->get('/programa/publico/imprimir')
             ->assertOk()
             ->assertSee('Programa del evento');
-    }
-
-    public function test_public_pdf_downloads_without_auth(): void
-    {
-        CertificateTemplate::create([
-            'name' => 'Programa público pdf',
-            'kind' => 'program',
-            'is_active' => true,
-            'width' => 816,
-            'height' => 1056,
-        ]);
-
-        $this->get('/programa/publico/imprimir/pdf')
-            ->assertOk()
-            ->assertHeader('Content-Type', 'application/pdf');
     }
 }
