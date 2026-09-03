@@ -59,16 +59,24 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
+            right: 0;
             padding: 10px 24px;
             background: #111827;
             color: #fff;
             z-index: 9999;
             display: flex;
             align-items: center;
+            box-sizing: border-box;
+            gap: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
         }
-        .print-toolbar .print-title { font-weight: 600; margin-right: auto; }
+        .print-toolbar .print-title {
+            font-weight: 600;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
         .print-btn {
             background: #fff;
             color: #111827;
@@ -78,6 +86,8 @@
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         .print-btn:hover { background: #f3f4f6; }
         @media print {
