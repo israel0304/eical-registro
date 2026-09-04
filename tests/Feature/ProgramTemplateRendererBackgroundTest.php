@@ -76,7 +76,30 @@ class ProgramTemplateRendererBackgroundTest extends TestCase
         ]);
     }
 
-    public function test_every_page_includes_background_image(): void
+    public function test_every_page_includes_background_image_on_screen(): void
+    {
+        $template = $this->makeTemplate();
+        $renderer = new ProgramTemplateRenderer;
+
+        $html = $renderer->render(
+            $template,
+            $this->bigGroups(),
+            ['eventName' => 'EICAL', 'fechas' => '2026-10-05', 'lugar' => 'Ciudad'],
+            false,
+        );
+
+        // En pantalla cada página conserva su <img class="bg"> dentro de .page.
+        $pageCount = substr_count($html, 'class="page"');
+        $this->assertGreaterThan(1, $pageCount, 'Se esperaba más de una página de programa.');
+
+        $this->assertSame(
+            $pageCount,
+            substr_count($html, 'class="bg"'),
+            'Cada página en pantalla debe llevar un <img class="bg"> de fondo.',
+        );
+    }
+
+    public function test_pdf_uses_single_fixed_background_div(): void
     {
         $template = $this->makeTemplate();
         $renderer = new ProgramTemplateRenderer;
@@ -88,28 +111,12 @@ class ProgramTemplateRendererBackgroundTest extends TestCase
             true,
         );
 
-        // Cada página debe llevar su propia imagen <img class="bg"> para que
-        // Dompdf no desduplique el recurso (bug: fondo solo en la primera hoja).
-        $pageCount = substr_count($html, 'class="page"');
-        $this->assertGreaterThan(1, $pageCount, 'Se esperaba más de una página de programa.');
-
-        $this->assertSame(
-            $pageCount,
-            substr_count($html, 'class="bg"'),
-            'Cada página debe llevar un <img class="bg"> de fondo.',
-        );
-
-        // Cada fondo debe llevar un sufijo de página distinto (#N) para que
-        // Dompdf los trate como recursos únicos y los incruste en todas las hojas.
-        preg_match_all('/class="bg" src="[^"]*#(\d+)"/', $html, $matches);
-        $suffixes = array_map('intval', $matches[1]);
-        sort($suffixes);
-
-        $this->assertSame(
-            range(1, $pageCount),
-            $suffixes,
-            'Los sufijos de fondo (#N) deben asignarse de forma única a cada página.',
-        );
+        // En PDF el fondo se emite una sola vez como <img> position:fixed a nivel
+        // de body, sin <img class="bg"> por página (que Dompdf no repite).
+        $this->assertSame(1, substr_count($html, 'class="bg-fixed"'));
+        $this->assertSame(0, substr_count($html, 'class="bg"'));
+        $this->assertStringContainsString('position: fixed', $html);
+        $this->assertStringContainsString('class="bg-fixed" style="top:0px;left:0px;', $html);
     }
 
     public function test_rendered_pdf_embeds_background_on_every_page(): void
@@ -130,17 +137,12 @@ class ProgramTemplateRendererBackgroundTest extends TestCase
         $dompdf->render();
         $pdf = $dompdf->output();
 
-        // Antes del fix Dompdf desduplicaba el data-URI idéntico y producía
-        // N-1 XObject (la última hoja quedaba sin fondo). Con sufijos únicos
-        // por página, cada página referencia su propia imagen.
+        // El div position:fixed se incrusta como imagen en el PDF (referenciado
+        // en todas las hojas). El fallo previo dejaba el fondo sin incrustar.
         $pages = preg_match_all('/\/Type\s*\/Page\b/', $pdf);
         $images = substr_count($pdf, '/Image');
 
         $this->assertGreaterThan(1, $pages, 'Se esperaba más de una página en el PDF.');
-        $this->assertGreaterThanOrEqual(
-            $pages,
-            $images,
-            'Cada página del PDF debe tener su imagen de fondo (imágenes >= páginas).',
-        );
+        $this->assertGreaterThanOrEqual(1, $images, 'El fondo fixeado debe incrustarse en el PDF.');
     }
 }

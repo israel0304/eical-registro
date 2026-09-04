@@ -117,21 +117,33 @@ class ProgramController extends Controller
     {
         abort_unless($request->user()->can('programa.print'), 403);
 
-        return $this->printHtml();
+        return $this->printHtml(route('programa.print-pdf'));
+    }
+
+    public function printPdf(Request $request)
+    {
+        abort_unless($request->user()->can('programa.print'), 403);
+
+        return $this->printPdfResponse();
     }
 
     public function printPublic()
     {
-        return $this->printHtml();
+        return $this->printHtml(route('programa.public.print-pdf'));
     }
 
-    private function printHtml(): Response
+    public function printPublicPdf()
+    {
+        return $this->printPdfResponse();
+    }
+
+    private function printHtml(?string $pdfUrl): Response
     {
         $data = $this->printData();
         $template = ProgramTemplateRenderer::activeTemplate();
 
         if ($template !== null) {
-            return response((new ProgramTemplateRenderer)->render($template, $data['groups'], $data['meta']), 200, [
+            return response((new ProgramTemplateRenderer)->render($template, $data['groups'], $data['meta'], forPdf: false, pdfUrl: $pdfUrl), 200, [
                 'Content-Type' => 'text/html',
             ]);
         }
@@ -139,7 +151,30 @@ class ProgramController extends Controller
         return response(view('programa.print', [
             'groups' => $data['groups'],
             'eventName' => $data['meta']['eventName'],
+            'pdfUrl' => $pdfUrl,
+            'forPdf' => false,
         ]), 200);
+    }
+
+    private function printPdfResponse(): Response
+    {
+        $data = $this->printData();
+        $template = ProgramTemplateRenderer::activeTemplate();
+        $renderer = new ProgramTemplateRenderer;
+
+        $pdf = $template !== null
+            ? $renderer->renderPdf($template, $data['groups'], $data['meta'])
+            : $renderer->renderBladePdf((string) view('programa.print', [
+                'groups' => $data['groups'],
+                'eventName' => $data['meta']['eventName'],
+                'pdfUrl' => null,
+                'forPdf' => true,
+            ]));
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename=programa_'.date('Y-m-d').'.pdf',
+        ]);
     }
 
     private function printData(): array

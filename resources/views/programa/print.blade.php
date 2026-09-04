@@ -9,8 +9,8 @@
         * { box-sizing: border-box; }
         body {
             margin: 0;
-            padding: 32px;
-            padding-top: 72px;
+            padding: {{ $forPdf ?? false ? '14mm' : '32px' }};
+            padding-top: {{ $forPdf ?? false ? '0' : '72px' }};
             font-family: system-ui, -apple-system, sans-serif;
             color: #111827;
         }
@@ -55,28 +55,41 @@
         .meta { color: #6b7280; font-size: 12px; margin-top: 2px; }
         .empty { color: #9ca3af; font-style: italic; }
         .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 24px; }
-        .print-btn {
+        .print-actions {
             position: fixed;
             top: 16px;
             right: 16px;
             z-index: 1000;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             padding: 10px 18px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        .print-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
             border: none;
             border-radius: 8px;
-            background: #dc2626;
-            color: #ffffff;
             font-family: system-ui, sans-serif;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            text-decoration: none;
         }
-        .print-btn:hover { background: #b91c1c; }
+        .print-action.print { background: #dc2626; color: #ffffff; }
+        .print-action.print:hover { background: #b91c1c; }
+        .print-action-pdf {
+            background: #ffffff;
+            color: #111827;
+            border: 1px solid #d1d5db;
+        }
+        .print-action-pdf:hover { background: #f3f4f6; }
         @media print {
-            .print-btn { display: none; }
+            .print-actions { display: none; }
             body { padding: 0; }
             thead { display: table-header-group; }
             tr { break-inside: avoid; page-break-inside: avoid; }
@@ -84,10 +97,18 @@
     </style>
 </head>
 <body>
-    <button class="print-btn" onclick="window.print()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-        Imprimir
-    </button>
+    @if (! ($forPdf ?? false))
+        <div class="print-actions">
+            <a class="print-action print-action-pdf" href="{{ $pdfUrl ?? '/programa/imprimir/pdf' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12m-4.19-1.63-1.81-2.94v6.53V17h-.7V12h5.28l.16-1.13h-5.53V12Z-2.73.44-1.62-1.5"/><rect x="7" y="10.5" width="10" height="3" rx="1.5" ry="1.5"/></svg>
+                Descargar PDF
+            </a>
+            <button class="print-action print" onclick="window.print()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Imprimir
+            </button>
+        </div>
+    @endif
     <div class="header">
         <h1>Programa del evento</h1>
         <p>{{ $eventName }}</p>

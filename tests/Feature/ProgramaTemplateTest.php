@@ -194,7 +194,7 @@ class ProgramaTemplateTest extends TestCase
         $secondPageOn = strstr($html, '<div class="page" id="page-2"') ?: '';
         $this->assertStringContainsString('Lunes 5', $secondPageOn);
         $this->assertStringContainsString('<div class="pd">Lunes 5</div>', $html);
-        $this->assertStringContainsString('print-btn', $html);
+        $this->assertStringContainsString('print-actions', $html);
         $this->assertStringContainsString('onclick="window.print()"', $html);
         $this->assertStringContainsString('@page { size: 816px 1056px;', $html);
     }
@@ -311,9 +311,60 @@ class ProgramaTemplateTest extends TestCase
 
         $this->assertStringContainsString('Programa del evento', $html);
         $this->assertStringContainsString('table-header-group', $html);
-        $this->assertStringContainsString('print-btn', $html);
+        $this->assertStringContainsString('print-actions', $html);
         $this->assertStringContainsString('onclick="window.print()"', $html);
         $this->assertStringNotContainsString('<div class="page-holder">', $html);
+    }
+
+    public function test_print_pdf_downloads_program_template_pdf(): void
+    {
+        Setting::updateOrCreate(['key' => 'evento_nombre'], ['value' => 'EICAL Prueba']);
+        Setting::updateOrCreate(['key' => 'evento_lugar'], ['value' => 'Casa de la Ciencia']);
+
+        $admin = $this->admin();
+        $this->blocks($admin, 5);
+        $this->programTemplate();
+
+        $this->actingAs($admin);
+
+        $response = $this->get('/programa/imprimir/pdf');
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $response->assertHeader('Content-Disposition', 'attachment; filename=programa_'.date('Y-m-d').'.pdf');
+        $this->assertGreaterThan(0, strlen($response->getContent()));
+    }
+
+    public function test_public_print_pdf_downloads_program_template_pdf(): void
+    {
+        Setting::updateOrCreate(['key' => 'evento_nombre'], ['value' => 'EICAL Prueba']);
+        Setting::updateOrCreate(['key' => 'evento_lugar'], ['value' => 'Casa de la Ciencia']);
+
+        $admin = $this->admin();
+        $this->blocks($admin, 5);
+        $this->programTemplate();
+
+        $response = $this->get('/programa/publico/imprimir/pdf');
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $response->assertHeader('Content-Disposition', 'attachment; filename=programa_'.date('Y-m-d').'.pdf');
+        $this->assertGreaterThan(0, strlen($response->getContent()));
+    }
+
+    public function test_print_pdf_downloads_blade_fallback(): void
+    {
+        $admin = $this->admin();
+        $this->blocks($admin, 2);
+
+        $this->actingAs($admin);
+
+        $response = $this->get('/programa/imprimir/pdf');
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $response->assertHeader('Content-Disposition', 'attachment; filename=programa_'.date('Y-m-d').'.pdf');
+        $this->assertGreaterThan(0, strlen($response->getContent()));
     }
 
     public function test_edit_page_exposes_program_groups_and_meta(): void

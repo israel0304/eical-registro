@@ -7,6 +7,7 @@ use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
+use Dompdf\Dompdf;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
@@ -43,7 +44,7 @@ class ProgramTemplateRenderer
      * @param  Collection<int, array>  $groups  grupos serializados del programa
      * @param  array<string, string>  $meta  {eventName, fechas, lugar}
      */
-    public function render(CertificateTemplate $template, Collection $groups, array $meta, bool $forPdf = false): string
+    public function render(CertificateTemplate $template, Collection $groups, array $meta, bool $forPdf = false, ?string $pdfUrl = null): string
     {
         $template->loadMissing('elements');
 
@@ -81,8 +82,8 @@ class ProgramTemplateRenderer
             $pageNo = $i + 1;
             $letterheadHtml = $this->renderLetterhead($letterhead, $meta, $store = compact('qr'), $pageNo, $total);
             $listHtml = $this->renderList($chunk, $config, $listW);
-            $bgImg = $background
-                ? '<img class="bg" src="'.$background.'#'.$pageNo.'" alt="" />'
+            $bgImg = ($background && ! $forPdf)
+                ? '<img class="bg" style="top:0px;left:0px;width:'.$pageW.'px;height:'.$pageH.'px;" src="'.$background.'#'.$pageNo.'" alt="" />'
                 : '';
 
             $pages .= <<<HTML
@@ -98,9 +99,15 @@ class ProgramTemplateRenderer
 HTML;
         }
 
-        $style = $this->styles($config, $forPdf);
+        // En PDF Dompdf no repite los elementos absolute por página: se usa un
+        // único <img> position:fixed a nivel de body, que sí se dibuja en cada hoja.
+        $bgFixed = ($background && $forPdf)
+            ? '<img class="bg-fixed" style="top:0px;left:0px;width:'.$pageW.'px;height:'.$pageH.'px;" src="'.$background.'" alt="" />'
+            : '';
+
+        $style = $this->styles($config, $listW, $forPdf);
         $stage = $forPdf ? '' : $this->screenOverlay($pageW, $pageH);
-        $toolbar = $forPdf ? '' : $this->printToolbar();
+        $toolbar = $forPdf ? '' : $this->printToolbar($pdfUrl);
 
         return <<<HTML
 <!DOCTYPE html>
@@ -115,11 +122,42 @@ HTML;
     </style>
 </head>
 <body>
+    {$bgFixed}
     {$pages}
     {$toolbar}
 </body>
 </html>
 HTML;
+    }
+
+    /**
+     * Genera el PDF del programa a partir del mismo HTML de la plantilla
+     * personalizada (modo forPdf): sin overlay ni botón flotante, con el
+     * fondo en todas las hojas y un layout de filas compatible con Dompdf.
+     */
+    public function renderPdf(CertificateTemplate $template, Collection $groups, array $meta): string
+    {
+        $html = $this->render($template, $groups, $meta, forPdf: true);
+
+        $pageW = (int) ($template->width ?: 816);
+        $pageH = (int) ($template->height ?: 1056);
+
+        $dompdf = new Dompdf;
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper([0, 0, $pageW * 72 / 96, $pageH * 72 / 96]);
+        $dompdf->render();
+
+        return $dompdf->output();
+    }
+
+    public function renderBladePdf(string $html): string
+    {
+        $dompdf = new Dompdf;
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('letter');
+        $dompdf->render();
+
+        return $dompdf->output();
     }
 
     /** Plantilla activa kind=program, o null. */
@@ -421,7 +459,7 @@ HTML;
         return 'data:image/svg+xml;base64,'.base64_encode((new Writer($renderer))->writeString($data));
     }
 
-    private function styles(array $config, bool $forPdf): string
+    private function styles(array $config, int $listW, bool $forPdf): string
     {
         $accent = $config['accent_color'];
         $text = $config['text_color'];
@@ -433,6 +471,20 @@ HTML;
         $metaFont = $font - 1;
         $peopleFont = $font - 2;
         $typeColors = $this->typeColors($config);
+        $bodyW = $this->bodyWidth($config, $listW);
+
+        // Dompdf no soporta flexbox: en modo PDF se usa una fila de celdas.
+        $rowLayout = $forPdf
+            ? <<<CSS
+.pi { display: table; width: 100%; padding: {$rowPad}px 0; border-bottom: 1px solid #e5e7eb; }
+.pi-time { display: table-cell; width: {$timeCol}px; font-size: {$font}px; font-weight: 700; color: {$accent}; line-height: 1.3; }
+.pi-body { display: table-cell; width: {$bodyW}px; }
+CSS
+            : <<<CSS
+.pi { display: flex; gap: 16px; padding: {$rowPad}px 0; border-bottom: 1px solid #e5e7eb; }
+.pi-time { width: {$timeCol}px; font-size: {$font}px; font-weight: 700; color: {$accent}; line-height: 1.3; flex-shrink: 0; }
+.pi-body { flex: 1; min-width: 0; }
+CSS;
 
         $pageBreak = $forPdf
             ? '.page { page-break-after: always; }
@@ -445,16 +497,15 @@ HTML;
     .page-holder { width: {$this->pageW()}px !important; height: {$this->pageH()}px !important; margin: 0 !important; }
     .page { transform: none !important; width: {$this->pageW()}px !important; height: {$this->pageH()}px !important; page-break-after: always; }
     .page:last-child { page-break-after: auto; }
-    .bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .bg { position: absolute; }
 }
 .page { position: relative; width: {$this->pageW()}px; height: {$this->pageH()}px; overflow: hidden; margin: 0 auto; font-family: Helvetica, Arial, sans-serif; }
 {$pageBreak}
-.bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bg { position: absolute; }
+.bg-fixed { position: fixed; top: 0; left: 0; width: {$this->pageW()}px; height: {$this->pageH()}px; z-index: -1; }
 .program-list { position: absolute; box-sizing: border-box; overflow: hidden; }
 .pd { font-size: {$dayFont}px; font-weight: 800; color: {$accent}; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 2px solid {$accent}; padding-bottom: 4px; margin-bottom: 2px; }
-.pi { display: flex; gap: 16px; padding: {$rowPad}px 0; border-bottom: 1px solid #e5e7eb; }
-.pi-time { width: {$timeCol}px; font-size: {$font}px; font-weight: 700; color: {$accent}; line-height: 1.3; flex-shrink: 0; }
-.pi-body { flex: 1; min-width: 0; }
+{$rowLayout}
 .pi-badge { display: inline-block; font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; color: {$badgeText}; border-radius: 999px; padding: 2px 8px; margin-bottom: 3px; }
 .pi-badge-workshop { background: {$typeColors['workshop']}; }
 .pi-badge-presentation { background: {$typeColors['presentation']}; }
@@ -487,40 +538,65 @@ CSS;
 CSS;
     }
 
-    private function printToolbar(): string
+    private function printToolbar(?string $pdfUrl): string
     {
-        return <<<'HTML'
+        $pdfBtn = $pdfUrl === null
+            ? ''
+            : <<<HTML
+<a class="print-action print-action-pdf" href="{$pdfUrl}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12m-4.19-1.63-1.81-2.94v6.53V17h-.7V12h5.28l.16-1.13h-5.53V12Z-2.73.44-1.62-1.5"/><rect x="7" y="10.5" width="10" height="3" rx="1.5" ry="1.5"/></svg>
+    Descargar PDF
+</a>
+HTML;
+
+        return <<<HTML
 <style>
 @media screen {
-    .print-btn {
+    .print-actions {
         position: fixed;
         top: 16px;
         right: 16px;
         z-index: 1000;
         display: inline-flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         padding: 10px 18px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    .print-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
         border: none;
         border-radius: 8px;
-        background: #dc2626;
-        color: #ffffff;
         font-family: system-ui, sans-serif;
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        text-decoration: none;
     }
-    .print-btn:hover { background: #b91c1c; }
+    .print-action.print { background: #dc2626; color: #ffffff; }
+    .print-action.print:hover { background: #b91c1c; }
+    .print-action-pdf {
+        background: #ffffff;
+        color: #111827;
+        border: 1px solid #d1d5db;
+    }
+    .print-action-pdf:hover { background: #f3f4f6; }
 }
 @media print {
-    .print-btn { display: none !important; }
+    .print-actions { display: none !important; }
 }
 </style>
-<button class="print-btn" onclick="window.print()">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-    Imprimir
-</button>
+<div class="print-actions">
+    {$pdfBtn}
+    <button class="print-action print" onclick="window.print()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimir
+    </button>
+</div>
 HTML;
     }
 }
