@@ -329,4 +329,75 @@ class ProgramaTest extends TestCase
 
         $this->get('/programa/imprimir')->assertForbidden();
     }
+
+    public function test_presentations_order_by_location_within_same_start_time(): void
+    {
+        $admin = $this->admin();
+
+        $this->workshopFor($admin, ['day' => '2026-10-05', 'start_time' => '09:00', 'location' => 'Auditorio A']);
+
+        $late = Presentation::create([
+            'title' => 'Ponencia Auditorio B',
+            'day' => '2026-10-05',
+            'start_time' => '09:00',
+            'location' => 'Auditorio B',
+        ]);
+        $early = Presentation::create([
+            'title' => 'Ponencia Lobby',
+            'day' => '2026-10-05',
+            'start_time' => '09:00',
+            'location' => 'Lobby',
+        ]);
+        $nosala = Presentation::create([
+            'title' => 'Ponencia sin sala',
+            'day' => '2026-10-05',
+            'start_time' => '09:00',
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/programa')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Programa/Index')
+                ->has('groups', 1)
+                ->where('groups.0.label', 'Lunes 5')
+                ->has('groups.0.items', 4)
+                ->where('groups.0.items.0.title', 'Ponencia sin sala')
+                ->where('groups.0.items.1.title', 'Ponencia Auditorio B')
+                ->where('groups.0.items.2.title', 'Ponencia Lobby')
+                ->where('groups.0.items.3.title', 'Taller de prueba'));
+    }
+
+    public function test_presentations_index_orders_by_location_within_same_start_time(): void
+    {
+        $admin = $this->admin();
+
+        $latest = Presentation::create([
+            'title' => 'Ponencia Auditorio B',
+            'day' => '2026-10-05',
+            'start_time' => '09:00',
+            'location' => 'Auditorio B',
+        ]);
+        $earliest = Presentation::create([
+            'title' => 'Ponencia Lobby',
+            'day' => '2026-10-05',
+            'start_time' => '09:00',
+            'location' => 'Lobby',
+        ]);
+        $nosala = Presentation::create([
+            'title' => 'Ponencia sin sala',
+            'day' => '2026-10-05',
+            'start_time' => '09:00',
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/presentations')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Presentations/Index')
+                ->has('presentations.data', 3)
+                ->where('presentations.data.0.title', 'Ponencia sin sala')
+                ->where('presentations.data.1.title', 'Ponencia Auditorio B')
+                ->where('presentations.data.2.title', 'Ponencia Lobby'));
+    }
 }

@@ -28,7 +28,7 @@ class PresentationController extends Controller
             });
         }
 
-        $presentations = $query->orderBy('day')->orderBy('start_time')->paginate(15)->withQueryString();
+        $presentations = $query->orderBy('day')->orderBy('start_time')->orderBy('location')->paginate(15)->withQueryString();
 
         return Inertia::render('Presentations/Index', [
             'presentations' => $presentations,

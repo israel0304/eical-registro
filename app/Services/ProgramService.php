@@ -23,6 +23,8 @@ class ProgramService
             ->with(['activity'])
             ->orderBy('day')
             ->orderBy('start_time')
+            ->orderByRaw("CASE WHEN activity_type = 'presentation' THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE WHEN activity_type = 'presentation' THEN location END")
             ->orderBy('id')
             ->get();
 
