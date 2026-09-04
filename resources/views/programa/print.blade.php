@@ -88,6 +88,25 @@
             border: 1px solid #d1d5db;
         }
         .print-action-pdf:hover { background: #f3f4f6; }
+        @media screen and (max-width: 480px) {
+            .print-actions {
+                top: 8px;
+                right: 8px;
+                left: 8px;
+                max-width: calc(100vw - 16px);
+                flex-wrap: wrap;
+                justify-content: center;
+                box-sizing: border-box;
+                gap: 8px;
+                padding: 8px 12px;
+            }
+            .print-action {
+                flex: 1 1 auto;
+                padding: 7px 10px;
+                font-size: 13px;
+                gap: 6px;
+            }
+        }
         @media print {
             .print-actions { display: none; }
             body { padding: 0; }
