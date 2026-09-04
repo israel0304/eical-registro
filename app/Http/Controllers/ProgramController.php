@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Conference;
 use App\Models\Presentation;
 use App\Models\ProgramItem;
+use App\Models\Role;
+use App\Models\User;
 use App\Models\Workshop;
 use App\Services\ProgramService;
 use App\Services\ProgramTemplateRenderer;
@@ -65,7 +67,7 @@ class ProgramController extends Controller
 
         $validated = $this->validateBlock($request);
 
-        ProgramItem::create([
+        $programItem = ProgramItem::create([
             'title' => $validated['title'],
             'day' => $validated['day'],
             'start_time' => $validated['start_time'] ?? null,
@@ -74,6 +76,10 @@ class ProgramController extends Controller
             'block_type' => $validated['block_type'],
             'created_by' => $request->user()->id,
         ]);
+
+        $moderatorIds = $validated['moderator_ids'] ?? [];
+        $programItem->moderators()->sync($moderatorIds);
+        $this->syncModeratorRoles($moderatorIds);
 
         return back()->with('success', 'Bloque agregado al programa.');
     }
@@ -98,6 +104,10 @@ class ProgramController extends Controller
             'location' => $validated['location'] ?? null,
             'block_type' => $validated['block_type'],
         ]);
+
+        $moderatorIds = $validated['moderator_ids'] ?? [];
+        $programItem->moderators()->sync($moderatorIds);
+        $this->syncModeratorRoles($moderatorIds);
 
         return back()->with('success', 'Bloque actualizado.');
     }
@@ -198,6 +208,8 @@ class ProgramController extends Controller
             'end_time' => ['nullable', 'date_format:H:i'],
             'location' => ['nullable', 'string', 'max:255'],
             'block_type' => ['required', 'string', 'in:'.implode(',', array_keys(config('program.block_types', [])))],
+            'moderator_ids' => ['nullable', 'array'],
+            'moderator_ids.*' => ['exists:users,id'],
         ]);
     }
 
@@ -218,9 +230,22 @@ class ProgramController extends Controller
 
         $validated = $request->validate(array_merge($requiredFields, [
             'location' => ['nullable', 'string', 'max:255'],
+            'moderator_ids' => ['nullable', 'array'],
+            'moderator_ids.*' => ['exists:users,id'],
         ]));
 
+        $moderatorIds = $validated['moderator_ids'] ?? [];
+        unset($validated['moderator_ids']);
+
         $activity->update($validated);
+
+        if ($activity instanceof Conference) {
+            $this->syncConferenceModerators($activity, $moderatorIds);
+        } else {
+            $activity->moderators()->sync($moderatorIds);
+        }
+
+        $this->syncModeratorRoles($moderatorIds);
     }
 
     private function serialize(ProgramItem $item): array
@@ -235,6 +260,19 @@ class ProgramController extends Controller
     {
         $activity = $item->activity;
 
+        if ($activity === null) {
+            $item->loadMissing(['moderators:id,first_name,last_name,affiliation']);
+
+            return [
+                'description' => null,
+                'moderators' => $item->moderators->map(fn ($user) => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'affiliation' => $user->affiliation,
+                ])->values(),
+            ];
+        }
+
         if ($activity instanceof Workshop) {
             $activity->loadMissing(['instructors:id,first_name,last_name,affiliation', 'moderators:id,first_name,last_name,affiliation']);
 
@@ -244,10 +282,12 @@ class ProgramController extends Controller
                 'enrolled_count' => $activity->enrolledCount(),
                 'available_spots' => $activity->hasAvailableSpots() ? $activity->availableSpots() : 0,
                 'instructors' => $activity->instructors->map(fn ($user) => [
+                    'id' => $user->id,
                     'name' => $user->name,
                     'affiliation' => $user->affiliation,
                 ])->values(),
                 'moderators' => $activity->moderators->map(fn ($user) => [
+                    'id' => $user->id,
                     'name' => $user->name,
                     'affiliation' => $user->affiliation,
                 ])->values(),
@@ -265,10 +305,12 @@ class ProgramController extends Controller
                 'discipline' => $activity->discipline,
                 'keywords' => $activity->keywords,
                 'authors' => $authors->map(fn ($user) => [
+                    'id' => $user->id,
                     'name' => $user->name,
                     'affiliation' => $user->affiliation,
                 ])->values(),
                 'moderators' => $activity->moderators->map(fn ($user) => [
+                    'id' => $user->id,
                     'name' => $user->name,
                     'affiliation' => $user->affiliation,
                 ])->values(),
@@ -281,6 +323,7 @@ class ProgramController extends Controller
             $people = fn ($role) => $members
                 ->filter(fn ($user) => $user->pivot->role === $role)
                 ->map(fn ($user) => [
+                    'id' => $user->id,
                     'name' => $user->name,
                     'affiliation' => $user->affiliation,
                 ])
@@ -296,5 +339,29 @@ class ProgramController extends Controller
         }
 
         return [];
+    }
+
+    private function syncConferenceModerators(Conference $conference, array $moderatorIds): void
+    {
+        $conference->members()
+            ->wherePivot('role', 'moderator')
+            ->detach();
+
+        $conference->members()->syncWithoutDetaching(
+            collect($moderatorIds)->mapWithKeys(fn ($id) => [$id => ['role' => 'moderator']])->all(),
+        );
+    }
+
+    private function syncModeratorRoles(array $moderatorIds): void
+    {
+        $moderatorRoleId = Role::where('name', 'Moderator')->value('id');
+
+        if ($moderatorRoleId === null) {
+            return;
+        }
+
+        foreach ($moderatorIds as $moderatorId) {
+            User::find($moderatorId)?->roles()->syncWithoutDetaching([$moderatorRoleId]);
+        }
     }
 }

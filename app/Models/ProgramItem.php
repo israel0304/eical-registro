@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class ProgramItem extends Model
@@ -33,6 +34,12 @@ class ProgramItem extends Model
     public function activity(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function moderators(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'program_item_moderators')
+            ->withTimestamps();
     }
 
     public function createdBy(): BelongsTo

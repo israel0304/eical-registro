@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Conference;
 use App\Models\Presentation;
 use App\Models\ProgramItem;
 use App\Models\Role;
@@ -399,5 +400,145 @@ class ProgramaTest extends TestCase
                 ->where('presentations.data.0.title', 'Ponencia sin sala')
                 ->where('presentations.data.1.title', 'Ponencia Auditorio B')
                 ->where('presentations.data.2.title', 'Ponencia Lobby'));
+    }
+
+    public function test_admin_can_create_block_with_moderators(): void
+    {
+        $admin = $this->admin();
+        $moderator = User::factory()->create();
+
+        $this->actingAs($admin)
+            ->post('/programa', $this->blockPayload([
+                'moderator_ids' => [$moderator->id],
+            ]))
+            ->assertRedirect();
+
+        $item = ProgramItem::where('title', 'Registro de asistentes')->firstOrFail();
+
+        $this->assertDatabaseHas('program_item_moderators', [
+            'program_item_id' => $item->id,
+            'user_id' => $moderator->id,
+        ]);
+        $this->assertTrue($moderator->hasRole('Moderator'));
+    }
+
+    public function test_admin_can_update_block_moderators(): void
+    {
+        $admin = $this->admin();
+        $moderatorA = User::factory()->create();
+        $moderatorB = User::factory()->create();
+
+        $this->actingAs($admin)->post('/programa', $this->blockPayload([
+            'moderator_ids' => [$moderatorA->id],
+        ]));
+
+        $item = ProgramItem::where('title', 'Registro de asistentes')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->put('/programa/'.$item->id, $this->blockPayload([
+                'title' => 'Registro actualizado',
+                'moderator_ids' => [$moderatorB->id],
+            ]))
+            ->assertRedirect();
+
+        $item->refresh();
+
+        $this->assertDatabaseHas('program_item_moderators', [
+            'program_item_id' => $item->id,
+            'user_id' => $moderatorB->id,
+        ]);
+        $this->assertDatabaseMissing('program_item_moderators', [
+            'program_item_id' => $item->id,
+            'user_id' => $moderatorA->id,
+        ]);
+    }
+
+    public function test_updating_linked_workshop_assigns_moderators(): void
+    {
+        $admin = $this->admin();
+        $moderator = User::factory()->create();
+        $workshop = $this->workshopFor($admin, [
+            'day' => '2026-10-05',
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+        ]);
+
+        $item = ProgramItem::where('activity_type', 'workshop')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->put('/programa/'.$item->id, [
+                'day' => '2026-10-05',
+                'start_time' => '09:00',
+                'end_time' => '12:00',
+                'location' => 'Auditorio A',
+                'moderator_ids' => [$moderator->id],
+            ])
+            ->assertRedirect();
+
+        $workshop->refresh();
+        $this->assertTrue($workshop->moderators()->where('users.id', $moderator->id)->exists());
+        $this->assertTrue($moderator->refresh()->hasRole('Moderator'));
+    }
+
+    public function test_updating_linked_conference_preserves_speakers_and_sets_moderators(): void
+    {
+        $admin = $this->admin();
+        $speaker = User::factory()->create();
+        $moderator = User::factory()->create();
+        $conference = Conference::create([
+            'title' => 'Conferencia magistral',
+            'kind' => 'magistral',
+            'day' => '2026-10-05',
+            'start_time' => '09:00',
+            'end_time' => '10:00',
+            'created_by' => $admin->id,
+        ]);
+        $conference->members()->attach($speaker->id, ['role' => 'speaker']);
+
+        $item = ProgramItem::where('activity_type', 'conference')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->put('/programa/'.$item->id, [
+                'day' => '2026-10-05',
+                'start_time' => '09:00',
+                'end_time' => '10:00',
+                'location' => null,
+                'moderator_ids' => [$moderator->id],
+            ])
+            ->assertRedirect();
+
+        $conference->refresh();
+        $this->assertTrue($conference->speakers()->where('users.id', $speaker->id)->exists());
+        $this->assertTrue($conference->moderators()->where('users.id', $moderator->id)->exists());
+    }
+
+    public function test_program_serializes_moderator_ids_in_details(): void
+    {
+        $admin = $this->admin();
+        $moderator = User::factory()->create();
+        $this->workshopFor($admin, [
+            'day' => '2026-10-05',
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+        ]);
+
+        $item = ProgramItem::where('activity_type', 'workshop')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->put('/programa/'.$item->id, [
+                'day' => '2026-10-05',
+                'start_time' => '09:00',
+                'end_time' => '12:00',
+                'location' => 'Auditorio A',
+                'moderator_ids' => [$moderator->id],
+            ]);
+
+        $this->actingAs($admin)
+            ->get('/programa')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Programa/Index')
+                ->has('groups.0.items.0.details.moderators', 1)
+                ->where('groups.0.items.0.details.moderators.0.id', $moderator->id));
     }
 }
