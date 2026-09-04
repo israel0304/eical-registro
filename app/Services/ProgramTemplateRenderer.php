@@ -297,6 +297,7 @@ HTML;
         $showTime = $config['show_time'] ?? true;
         $showLocation = $config['show_location'] ?? true;
         $showPersons = $config['show_persons'] ?? true;
+        $typeColors = $this->typeColors($config);
 
         $html = '';
 
@@ -324,7 +325,7 @@ HTML;
             $html .= '<div class="pi-title">'.e((string) ($item['title'] ?? '')).'</div>';
 
             if ($showLocation && ! empty($item['location'])) {
-                $html .= '<div class="pi-meta">'.e((string) $item['location']).'</div>';
+                $html .= '<div class="pi-meta" style="color:'.e($typeColors[$badgeKind]).'">'.e((string) $item['location']).'</div>';
             }
 
             if ($showPersons) {
@@ -512,7 +513,7 @@ CSS;
 .pi-badge-conference { background: {$typeColors['conference']}; }
 .pi-badge-block { background: {$typeColors['block']}; }
 .pi-title { font-size: {$font}px; font-weight: 700; color: {$text}; line-height: 1.3; }
-.pi-meta { font-size: {$metaFont}px; color: #6b7280; line-height: 1.3; margin-top: 1px; }
+.pi-meta { font-size: {$metaFont}px; font-weight: 600; color: {$text}; line-height: 1.3; margin-top: 1px; }
 .pi-people { font-size: {$peopleFont}px; color: #374151; line-height: 1.3; }
 CSS;
     }

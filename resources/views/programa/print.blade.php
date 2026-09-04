@@ -52,7 +52,8 @@
         .badge.block { background: #fef3c7; color: #92400e; }
         .badge.activity { background: #e0f2fe; color: #075985; }
         .title { font-weight: 600; }
-        .meta { color: #6b7280; font-size: 12px; margin-top: 2px; }
+        .meta { color: #075985; font-weight: 600; font-size: 12px; margin-top: 2px; }
+        .meta.block { color: #92400e; }
         .empty { color: #9ca3af; font-style: italic; }
         .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 24px; }
         .print-actions {
@@ -154,7 +155,7 @@
                                 </span>
                                 <div class="title">{{ $item['title'] }}</div>
                                 @if ($item['location'] || $item['activity_name'])
-                                    <div class="meta">
+                                    <div class="meta {{ $item['kind'] === 'activity' ? '' : 'block' }}">
                                         {{ $item['location'] }}
                                         @if ($item['location'] && $item['activity_name'])
                                             ·
