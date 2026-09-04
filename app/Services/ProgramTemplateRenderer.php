@@ -170,16 +170,28 @@ HTML;
         $pages = [];
         $current = [];
         $used = 0;
+        $dayH = $this->dayHeight($config);
+        $activeDay = null;
 
         foreach ($rows as $row) {
-            $h = $row['type'] === 'day'
-                ? $this->dayHeight($config)
-                : $this->itemHeight($row['item'], $config, $listW);
+            $isDay = $row['type'] === 'day';
+            if ($isDay) {
+                $activeDay = $row['label'];
+            }
+            $h = $isDay ? $dayH : $this->itemHeight($row['item'], $config, $listW);
 
-            if (! empty($current) && $used + $h > $budget) {
+            // Un día nuevo siempre arranca en una hoja nueva.
+            if ($isDay && ! empty($current)) {
                 $pages[] = $current;
                 $current = [];
                 $used = 0;
+                // Un item que no cabe se desborda y repite el rótulo del día activo.
+            } elseif (! empty($current) && $used + $h > $budget) {
+                $pages[] = $current;
+                $current = [];
+                $used = 0;
+                $current[] = ['type' => 'day', 'label' => $activeDay];
+                $used += $dayH;
             }
 
             $current[] = $row;

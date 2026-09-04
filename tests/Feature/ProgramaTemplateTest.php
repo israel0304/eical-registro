@@ -34,12 +34,12 @@ class ProgramaTemplateTest extends TestCase
         return $user;
     }
 
-    private function blocks(User $user, int $count): void
+    private function blocks(User $user, int $count, string $day = '2026-10-05'): void
     {
         for ($i = 1; $i <= $count; $i++) {
             ProgramItem::create([
                 'title' => "Bloque {$i}",
-                'day' => '2026-10-05',
+                'day' => $day,
                 'start_time' => sprintf('%02d:00', 8 + ($i % 10)),
                 'end_time' => sprintf('%02d:00', 9 + ($i % 10)),
                 'location' => 'Sala '.$i,
@@ -47,6 +47,32 @@ class ProgramaTemplateTest extends TestCase
                 'created_by' => $user->id,
             ]);
         }
+    }
+
+    private function programTemplate(): CertificateTemplate
+    {
+        $template = CertificateTemplate::create([
+            'name' => 'Programa activo',
+            'kind' => 'program',
+            'is_active' => true,
+            'width' => 816,
+            'height' => 1056,
+        ]);
+
+        $template->elements()->create([
+            'type' => 'text',
+            'content' => '{evento} · {lugar_evento}',
+            'x' => 48,
+            'y' => 56,
+            'width' => 720,
+            'height' => 60,
+            'font_size' => 28,
+            'font_weight' => 'bold',
+            'text_align' => 'center',
+            'z_index' => 1,
+        ]);
+
+        return $template;
     }
 
     public function test_admin_can_index_program_templates(): void
@@ -150,25 +176,7 @@ class ProgramaTemplateTest extends TestCase
 
         $admin = $this->admin();
         $this->blocks($admin, 45);
-
-        CertificateTemplate::create([
-            'name' => 'Programa activo',
-            'kind' => 'program',
-            'is_active' => true,
-            'width' => 816,
-            'height' => 1056,
-        ])->elements()->create([
-            'type' => 'text',
-            'content' => '{evento} · {lugar_evento}',
-            'x' => 48,
-            'y' => 56,
-            'width' => 720,
-            'height' => 60,
-            'font_size' => 28,
-            'font_weight' => 'bold',
-            'text_align' => 'center',
-            'z_index' => 1,
-        ]);
+        $this->programTemplate();
 
         $this->actingAs($admin);
 
@@ -183,9 +191,68 @@ class ProgramaTemplateTest extends TestCase
         $firstPage = strstr($html, '<div class="page" id="page-2"', true) ?: $html;
         $this->assertStringNotContainsString('Bloque 45', $firstPage);
         $this->assertStringContainsString('Bloque 1', $html);
+        $secondPageOn = strstr($html, '<div class="page" id="page-2"') ?: '';
+        $this->assertStringContainsString('Lunes 5', $secondPageOn);
+        $this->assertStringContainsString('<div class="pd">Lunes 5</div>', $html);
         $this->assertStringContainsString('print-btn', $html);
         $this->assertStringContainsString('onclick="window.print()"', $html);
         $this->assertStringContainsString('@page { size: 816px 1056px;', $html);
+    }
+
+    public function test_print_starts_each_new_day_on_a_fresh_page(): void
+    {
+        Setting::updateOrCreate(['key' => 'evento_nombre'], ['value' => 'EICAL Prueba']);
+        Setting::updateOrCreate(['key' => 'evento_lugar'], ['value' => 'Casa de la Ciencia']);
+
+        $admin = $this->admin();
+        $this->blocks($admin, 40, '2026-10-05');
+        $this->blocks($admin, 3, '2026-10-06');
+        $this->programTemplate();
+
+        $this->actingAs($admin);
+
+        $response = $this->get('/programa/imprimir');
+        $html = $response->getContent();
+
+        $response->assertOk();
+        $this->assertGreaterThan(2, substr_count($html, '<div class="page"'));
+        $this->assertStringContainsString('<div class="pd">Lunes 5</div>', $html);
+        $this->assertStringContainsString('<div class="pd">Martes 6</div>', $html);
+
+        // "Lunes 5" se repite en las hojas que continúan el día 1.
+        $this->assertGreaterThan(1, substr_count($html, '<div class="pd">Lunes 5</div>'));
+
+        // Cada hoja se extrae y se comprueba que nunca mezcla ambos días.
+        $pages = $this->extractPages($html);
+        $this->assertNotEmpty($pages);
+        foreach ($pages as $page) {
+            $hasMonday = str_contains($page, 'Lunes 5');
+            $hasTuesday = str_contains($page, 'Martes 6');
+            $this->assertFalse($hasMonday && $hasTuesday, 'Una hoja no debe mezclar dos días distintos.');
+        }
+
+        // "Martes 6" aparece una sola vez, en una hoja propia cuyo listado
+        // arranca con el rótulo del día (Regla B: día nuevo en hoja nueva).
+        $this->assertEquals(1, count(array_filter($pages, fn (string $p) => str_contains($p, 'Martes 6'))));
+        $tuesdayPage = collect($pages)->first(fn (string $p) => str_contains($p, 'Martes 6'));
+        $firstDayHead = mb_substr($tuesdayPage, mb_strpos($tuesdayPage, '<div class="pd">'), mb_strlen('<div class="pd">Martes 6</div>'));
+        $this->assertSame('<div class="pd">Martes 6</div>', $firstDayHead);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractPages(string $html): array
+    {
+        $pages = [];
+        foreach (explode('<div class="page" id="page-', $html) as $i => $fragment) {
+            if ($i === 0) {
+                continue;
+            }
+            $pages[] = substr($fragment, strpos($fragment, '">') + 2);
+        }
+
+        return $pages;
     }
 
     public function test_print_shows_people_for_activities(): void
