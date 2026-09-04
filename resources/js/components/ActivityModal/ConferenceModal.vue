@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3';
-import { X, Calendar, Clock, MapPin } from 'lucide-vue-next';
+import { X, Calendar, Clock, MapPin, ChevronDown, ChevronUp } from 'lucide-vue-next';
 import { computed, ref, onMounted } from 'vue';
 
 const props = defineProps<{
@@ -54,6 +54,17 @@ const kindLabel = (kind: string) =>
 
 const roleLabel = (role: string) =>
     ({ speaker: 'Speaker', moderator: 'Moderador' })[role] ?? role;
+
+const expandedSemblanzas = ref<Set<number>>(new Set());
+const toggleSemblanza = (userId: number) => {
+    const expanded = expandedSemblanzas.value;
+    if (expanded.has(userId)) {
+        expanded.delete(userId);
+    } else {
+        expanded.add(userId);
+    }
+    void expanded; // mutado in-situ (mismo ref)
+};
 
 const toggleActivation = (userId: number) => {
     router.post(
@@ -248,6 +259,36 @@ onMounted(() => {
                                     >
                                         {{ roleLabel(member.pivot?.role) }}
                                     </span>
+                                    <button
+                                        v-if="member.semblanza"
+                                        type="button"
+                                        class="mt-1 flex items-center gap-1 rounded-full border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 hover:text-indigo-800 dark:border-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 dark:hover:text-indigo-200"
+                                        @click="toggleSemblanza(member.id)"
+                                    >
+                                        <ChevronDown
+                                            v-if="
+                                                !expandedSemblanzas.has(
+                                                    member.id,
+                                                )
+                                            "
+                                            class="h-3.5 w-3.5"
+                                        />
+                                        <ChevronUp v-else class="h-3.5 w-3.5" />
+                                        {{
+                                            expandedSemblanzas.has(member.id)
+                                                ? 'Ocultar semblanza'
+                                                : 'Ver semblanza'
+                                        }}
+                                    </button>
+                                    <p
+                                        v-if="
+                                            member.semblanza &&
+                                            expandedSemblanzas.has(member.id)
+                                        "
+                                        class="mt-1 text-sm leading-relaxed whitespace-pre-line text-gray-600 dark:text-gray-400"
+                                    >
+                                        {{ member.semblanza }}
+                                    </p>
                                 </div>
 
                                 <template

@@ -8,6 +8,8 @@ import {
     Users,
     UserCheck,
     Check,
+    ChevronDown,
+    ChevronUp,
     Download,
     Trash2,
     QrCode,
@@ -34,6 +36,17 @@ const currentUserId = computed(() => page.props.auth.user?.id);
 const loading = ref(true);
 const workshop = ref<any>(null);
 const error = ref('');
+
+const expandedSemblanzas = ref<Set<number>>(new Set());
+const toggleSemblanza = (userId: number) => {
+    const expanded = expandedSemblanzas.value;
+    if (expanded.has(userId)) {
+        expanded.delete(userId);
+    } else {
+        expanded.add(userId);
+    }
+    void expanded; // mutado in-situ (mismo ref)
+};
 
 const activeTab = ref<'enrolled' | 'cancelled'>('enrolled');
 const qrCanvas = ref<HTMLCanvasElement | null>(null);
@@ -436,6 +449,50 @@ watch(
                                                     instructor.affiliation
                                                 }})
                                             </span>
+                                            <div
+                                                v-if="instructor.semblanza"
+                                                class="mt-1"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    class="inline-flex items-center gap-1 rounded-full border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 hover:text-indigo-800 dark:border-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 dark:hover:text-indigo-200"
+                                                    @click="
+                                                        toggleSemblanza(
+                                                            instructor.id,
+                                                        )
+                                                    "
+                                                >
+                                                    <ChevronDown
+                                                        v-if="
+                                                            !expandedSemblanzas.has(
+                                                                instructor.id,
+                                                            )
+                                                        "
+                                                        class="h-3.5 w-3.5"
+                                                    />
+                                                    <ChevronUp
+                                                        v-else
+                                                        class="h-3.5 w-3.5"
+                                                    />
+                                                    {{
+                                                        expandedSemblanzas.has(
+                                                            instructor.id,
+                                                        )
+                                                            ? 'Ocultar semblanza'
+                                                            : 'Ver semblanza'
+                                                    }}
+                                                </button>
+                                                <p
+                                                    v-if="
+                                                        expandedSemblanzas.has(
+                                                            instructor.id,
+                                                        )
+                                                    "
+                                                    class="mt-1 text-sm leading-relaxed whitespace-pre-line text-gray-600 dark:text-gray-400"
+                                                >
+                                                    {{ instructor.semblanza }}
+                                                </p>
+                                            </div>
                                         </div>
                                         <div
                                             v-if="

@@ -8,6 +8,8 @@ import {
     MapPin,
     Hash,
     Pencil,
+    ChevronDown,
+    ChevronUp,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted } from 'vue';
 import DisciplineInput from '@/components/DisciplineInput.vue';
@@ -69,6 +71,17 @@ const savePresentation = () => {
 
 const authors = ref<any[]>([]);
 const toggling = ref<number | null>(null);
+
+const expandedSemblanzas = ref<Set<number>>(new Set());
+const toggleSemblanza = (userId: number) => {
+    const expanded = expandedSemblanzas.value;
+    if (expanded.has(userId)) {
+        expanded.delete(userId);
+    } else {
+        expanded.add(userId);
+    }
+    void expanded; // mutado in-situ (mismo ref)
+};
 
 const togglePresented = (userId: number, presented: boolean) => {
     toggling.value = userId;
@@ -330,6 +343,36 @@ onMounted(() => {
                                     >
                                         ({{ author.affiliation }})
                                     </span>
+                                    <button
+                                        v-if="author.semblanza"
+                                        type="button"
+                                        class="mt-1 flex items-center gap-1 rounded-full border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 hover:text-indigo-800 dark:border-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 dark:hover:text-indigo-200"
+                                        @click="toggleSemblanza(author.id)"
+                                    >
+                                        <ChevronDown
+                                            v-if="
+                                                !expandedSemblanzas.has(
+                                                    author.id,
+                                                )
+                                            "
+                                            class="h-3.5 w-3.5"
+                                        />
+                                        <ChevronUp v-else class="h-3.5 w-3.5" />
+                                        {{
+                                            expandedSemblanzas.has(author.id)
+                                                ? 'Ocultar semblanza'
+                                                : 'Ver semblanza'
+                                        }}
+                                    </button>
+                                    <p
+                                        v-if="
+                                            author.semblanza &&
+                                            expandedSemblanzas.has(author.id)
+                                        "
+                                        class="mt-1 text-sm leading-relaxed whitespace-pre-line text-gray-600 dark:text-gray-400"
+                                    >
+                                        {{ author.semblanza }}
+                                    </p>
                                 </div>
 
                                 <div
@@ -413,6 +456,34 @@ onMounted(() => {
                                     >
                                         ({{ mod.affiliation }})
                                     </span>
+                                    <button
+                                        v-if="mod.semblanza"
+                                        type="button"
+                                        class="mt-1 flex items-center gap-1 rounded-full border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 hover:text-indigo-800 dark:border-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 dark:hover:text-indigo-200"
+                                        @click="toggleSemblanza(mod.id)"
+                                    >
+                                        <ChevronDown
+                                            v-if="
+                                                !expandedSemblanzas.has(mod.id)
+                                            "
+                                            class="h-3.5 w-3.5"
+                                        />
+                                        <ChevronUp v-else class="h-3.5 w-3.5" />
+                                        {{
+                                            expandedSemblanzas.has(mod.id)
+                                                ? 'Ocultar semblanza'
+                                                : 'Ver semblanza'
+                                        }}
+                                    </button>
+                                    <p
+                                        v-if="
+                                            mod.semblanza &&
+                                            expandedSemblanzas.has(mod.id)
+                                        "
+                                        class="mt-1 text-sm leading-relaxed whitespace-pre-line text-gray-600 dark:text-gray-400"
+                                    >
+                                        {{ mod.semblanza }}
+                                    </p>
                                 </div>
                                 <span
                                     v-if="mod.email"
