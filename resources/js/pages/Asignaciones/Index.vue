@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { Calendar, Clock, MapPin, Eye, CheckCircle2 } from 'lucide-vue-next';
+import { Calendar, Clock, MapPin, Eye, CheckCircle2, Printer } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import ConferenceModal from '@/components/ActivityModal/ConferenceModal.vue';
 import PresentationModal from '@/components/ActivityModal/PresentationModal.vue';
 import WorkshopModal from '@/components/ActivityModal/WorkshopModal.vue';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const props = defineProps<{
@@ -103,6 +104,17 @@ const groupedAssignments = computed(() => {
                         moderador.
                     </p>
                 </div>
+                <Button
+                    v-if="assignments.length > 0"
+                    variant="outline"
+                    size="sm"
+                    as-child
+                >
+                    <a href="/mis-asignaciones/imprimir" target="_blank">
+                        <Printer class="h-4 w-4" />
+                        Imprimir
+                    </a>
+                </Button>
             </div>
 
             <div v-if="assignments.length > 0" class="space-y-8">

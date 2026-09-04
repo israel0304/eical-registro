@@ -166,6 +166,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Mis asignaciones (moderador)
     Route::get('mis-asignaciones', [AssignmentController::class, 'index'])->middleware('can:asignaciones.view')->name('asignaciones.index');
+    Route::get('mis-asignaciones/imprimir', [AssignmentController::class, 'print'])->middleware('can:asignaciones.view')->name('asignaciones.print');
+    Route::get('mis-asignaciones/imprimir/pdf', [AssignmentController::class, 'printPdf'])->middleware('can:asignaciones.view')->name('asignaciones.print-pdf');
     Route::get('mis-asignaciones/{type}/{id}', [AssignmentController::class, 'show'])->middleware('can:asignaciones.view')->name('asignaciones.show');
 
     // Conferences
