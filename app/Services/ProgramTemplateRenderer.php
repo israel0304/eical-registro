@@ -544,7 +544,7 @@ CSS;
             ? ''
             : <<<HTML
 <a class="print-action print-action-pdf" href="{$pdfUrl}">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12m-4.19-1.63-1.81-2.94v6.53V17h-.7V12h5.28l.16-1.13h-5.53V12Z-2.73.44-1.62-1.5"/><rect x="7" y="10.5" width="10" height="3" rx="1.5" ry="1.5"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
     Descargar PDF
 </a>
 HTML;

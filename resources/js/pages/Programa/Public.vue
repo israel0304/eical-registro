@@ -39,7 +39,7 @@ const props = defineProps<{
     days: string[];
 }>();
 
-const viewMode = ref<'list' | 'calendar'>('list');
+const viewMode = ref<'list' | 'calendar'>('calendar');
 const showList = computed(() => viewMode.value === 'list');
 const detailId = ref<number | null>(null);
 const detailOpen = computed(() => detailId.value !== null);
