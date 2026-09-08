@@ -14,6 +14,8 @@ import {
     Trash2,
     QrCode,
     Send,
+    UserMinus,
+    UserPlus,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted, nextTick, watch } from 'vue';
 
@@ -73,6 +75,71 @@ const canToggleAttendance = computed(
         can('workshops.attendance') &&
         (can('workshops.view') || isAssignedModerator.value),
 );
+
+const isEnrolled = computed(() => {
+    return workshop.value?.enrollments?.some(
+        (e: any) =>
+            e.user?.id === currentUserId.value && e.status === 'enrolled',
+    );
+});
+const myEnrollment = computed(() => {
+    return workshop.value?.enrollments?.find(
+        (e: any) =>
+            e.user?.id === currentUserId.value && e.status === 'enrolled',
+    );
+});
+const isFull = computed(() => {
+    return (
+        (workshop.value?.enrolled_count || 0) >=
+        (workshop.value?.capacity || 0)
+    );
+});
+const canCancelSelf = computed(() => {
+    if (!myEnrollment.value) return false;
+    if (myEnrollment.value.has_attendance) return false;
+    const start = new Date(
+        workshop.value.day + 'T' + workshop.value.start_time,
+    );
+    const now = new Date();
+    const diffMs = start.getTime() - now.getTime();
+    if (diffMs <= 0) return false;
+    const diffMin = diffMs / 60000;
+    return diffMin > 10;
+});
+const actionError = ref('');
+const enrollSelf = () => {
+    actionError.value = '';
+    router.post(
+        '/workshops/' + workshop.value.id + '/enroll',
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                fetchData();
+            },
+            onError: (errs) => {
+                actionError.value =
+                    errs.error || 'No fue posible inscribirse.';
+            },
+        },
+    );
+};
+const unenrollSelf = () => {
+    actionError.value = '';
+    router.delete(
+        '/workshops/' + workshop.value.id + '/unenroll',
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                fetchData();
+            },
+            onError: (errs) => {
+                actionError.value =
+                    errs.error || 'No fue posible cancelar la inscripción.';
+            },
+        },
+    );
+};
 
 const filteredEnrollments = computed(() => {
     return (
@@ -396,6 +463,47 @@ watch(
                                     }"
                                 ></div>
                             </div>
+                        </div>
+
+                        <!-- Self-enrollment (assigned moderator) -->
+                        <div
+                            v-if="isAssignedModerator"
+                            class="mt-3 flex flex-wrap items-center gap-2"
+                        >
+                            <span
+                                v-if="isEnrolled"
+                                class="inline-flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-2 text-sm font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                            >
+                                <Check class="h-4 w-4" /> Inscrito
+                            </span>
+                            <button
+                                v-if="canCancelSelf"
+                                @click="unenrollSelf"
+                                class="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 dark:border-red-800 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-950"
+                            >
+                                <UserMinus class="h-4 w-4" /> Cancelar
+                                inscripción
+                            </button>
+                            <button
+                                v-else-if="!isEnrolled && !isFull"
+                                @click="enrollSelf"
+                                class="inline-flex items-center gap-2 rounded-lg bg-black px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+                            >
+                                <UserPlus class="h-4 w-4" /> Inscribirse
+                            </button>
+                            <button
+                                v-else-if="!isEnrolled"
+                                disabled
+                                class="inline-flex items-center gap-2 rounded-lg bg-gray-300 px-3 py-2 text-sm font-medium text-gray-500 cursor-not-allowed dark:bg-zinc-700 dark:text-zinc-400"
+                            >
+                                Cupo lleno
+                            </button>
+                            <p
+                                v-if="actionError"
+                                class="w-full text-sm text-red-600 dark:text-red-400"
+                            >
+                                {{ actionError }}
+                            </p>
                         </div>
 
                         <!-- Description -->

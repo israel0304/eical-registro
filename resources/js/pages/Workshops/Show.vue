@@ -48,6 +48,9 @@ const canToggleAttendance = computed(
         can('workshops.attendance') &&
         (can('workshops.view') || isAssignedModerator.value),
 );
+const showSelfEnrollment = computed(
+    () => !canManage.value || isAssignedModerator.value,
+);
 
 const props = defineProps<{
     workshop: any;
@@ -524,9 +527,9 @@ watch(
                     </div>
                 </div>
 
-                <!-- Enrollment buttons (non-admin/non-moderator) -->
+                <!-- Enrollment buttons (non-admin/non-moderator, and assigned moderators) -->
                 <div
-                    v-if="!canManage"
+                    v-if="showSelfEnrollment"
                     class="mt-4 border-t border-gray-100 pt-4 dark:border-zinc-800"
                 >
                     <button

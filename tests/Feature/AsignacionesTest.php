@@ -184,4 +184,32 @@ class AsignacionesTest extends TestCase
             ->assertOk()
             ->assertSee('No tienes actividades asignadas como moderador actualmente.');
     }
+
+    public function test_assigned_moderator_can_enroll_in_workshop(): void
+    {
+        $moderator = $this->moderator();
+        $workshop = $this->workshopFor($moderator);
+        $workshop->instructors()->attach($this->participant()->id);
+        $workshop->moderators()->attach($moderator->id);
+
+        $this->actingAs($moderator)
+            ->post('/workshops/'.$workshop->id.'/enroll')
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('workshop_enrollments', [
+            'workshop_id' => $workshop->id,
+            'user_id' => $moderator->id,
+            'status' => 'enrolled',
+        ]);
+
+        $this->actingAs($moderator)
+            ->delete('/workshops/'.$workshop->id.'/unenroll')
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('workshop_enrollments', [
+            'workshop_id' => $workshop->id,
+            'user_id' => $moderator->id,
+            'status' => 'cancelled',
+        ]);
+    }
 }
