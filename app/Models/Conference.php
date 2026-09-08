@@ -16,7 +16,7 @@ class Conference extends Model
 
     protected static string $programActivityType = 'conference';
 
-    public const KINDS = ['magistral', 'especial', 'simposio', 'mesa_dialogo'];
+    public const KINDS = ['magistral', 'especial', 'simposio', 'grupo_tematico'];
 
     public const ROLES = ['speaker', 'moderator'];
 

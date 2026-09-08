@@ -22,7 +22,7 @@ return [
             'magistral' => 'Magistral',
             'especial' => 'Especial',
             'simposio' => 'Simposio',
-            'mesa_dialogo' => 'Mesa de diálogo',
+            'grupo_tematico' => 'Grupo temático',
         ],
         'event' => [
             'carta' => 'Carta de invitación',

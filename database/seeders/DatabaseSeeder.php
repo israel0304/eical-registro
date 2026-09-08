@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
             ['key' => 'conferencia_magistral', 'label' => 'Conferencista magistral', 'event_kind' => 'conference', 'kind' => 'magistral', 'role' => 'speaker'],
             ['key' => 'conferencia_especial', 'label' => 'Conferencista especial', 'event_kind' => 'conference', 'kind' => 'especial', 'role' => 'speaker'],
             ['key' => 'simposiasta', 'label' => 'Simposiasta', 'event_kind' => 'conference', 'kind' => 'simposio', 'role' => 'speaker'],
-            ['key' => 'moderador_mesa', 'label' => 'Moderador de mesa', 'event_kind' => 'conference', 'kind' => 'mesa_dialogo', 'role' => 'moderator'],
+            ['key' => 'moderador_mesa', 'label' => 'Moderador de mesa', 'event_kind' => 'conference', 'kind' => 'grupo_tematico', 'role' => 'moderator'],
             ['key' => 'moderador_simposio', 'label' => 'Moderador de simposio', 'event_kind' => 'conference', 'kind' => 'simposio', 'role' => 'moderator'],
             ['key' => 'evento_asistencia', 'label' => 'Asistente al evento', 'event_kind' => 'event', 'kind' => null, 'role' => null, 'manual_generable' => false],
             ['key' => 'staff', 'label' => 'Personal de apoyo', 'event_kind' => 'staff', 'kind' => null, 'role' => null, 'manual_generable' => true],

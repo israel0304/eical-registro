@@ -127,7 +127,7 @@ class AssignmentController extends Controller
             'magistral' => 'Magistral',
             'especial' => 'Especial',
             'simposio' => 'Simposio',
-            'mesa_dialogo' => 'Mesa de dialogo',
+            'grupo_tematico' => 'Grupo temático',
         ];
 
         $conferences = $user->moderatedConferences()

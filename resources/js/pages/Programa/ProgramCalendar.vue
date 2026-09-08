@@ -198,10 +198,10 @@ const EVENT_COLORS: Record<
         borderColor: '#0f766e',
         label: 'Simposios',
     },
-    'conference:mesa_dialogo': {
+    'conference:grupo_tematico': {
         backgroundColor: '#f97316',
         borderColor: '#c2410c',
-        label: 'Mesas de diálogo',
+        label: 'Grupos temáticos',
     },
     conference: {
         backgroundColor: '#6366f1',
