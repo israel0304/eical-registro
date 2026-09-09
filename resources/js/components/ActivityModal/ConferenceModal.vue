@@ -220,7 +220,7 @@ onMounted(() => {
                         <span
                             class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
                         >
-                            Descripcion
+                            Descripción
                         </span>
                         <p
                             class="mt-2 text-sm leading-relaxed whitespace-pre-line text-gray-700 dark:text-gray-300"

@@ -780,6 +780,25 @@ const formatDate = (dateStr: string) => {
                                     </p>
                                 </div>
 
+                                <div class="sm:col-span-2">
+                                    <label
+                                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                        >Descripción</label
+                                    >
+                                    <textarea
+                                        v-model="form.description"
+                                        rows="4"
+                                        placeholder="Descripción de la conferencia..."
+                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    ></textarea>
+                                    <p
+                                        v-if="form.errors.description"
+                                        class="mt-1 text-xs text-red-500"
+                                    >
+                                        {{ form.errors.description }}
+                                    </p>
+                                </div>
+
                                 <div
                                     class="border-t border-gray-100 pt-4 sm:col-span-2 dark:border-zinc-800"
                                 >
