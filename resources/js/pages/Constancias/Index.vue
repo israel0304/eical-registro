@@ -20,6 +20,12 @@ const props = defineProps<{
     presentationCertificates?: any[];
     cartaPresentations?: any[];
     conferenceCertificates?: any[];
+    moderatorConstancia?: {
+        activated: boolean;
+        folio: string | null;
+        conference_count: number;
+        conference_titles: string[];
+    } | null;
     eventCertificate?: any;
     eventAttendance?: {
         has: boolean;
@@ -66,6 +72,10 @@ const downloadConferencia = (conferenceId: number) => {
     );
 };
 
+const downloadModerador = () => {
+    window.open('/constancias/moderador/constancia', '_blank');
+};
+
 const downloadEvento = () => {
     window.open('/constancias/evento/download', '_blank');
 };
@@ -91,6 +101,7 @@ const hasAnyCertificates = computed(() => {
         (!!canSeePonencias.value && !!props.presentationCertificates?.length) ||
         (!!canSeePonencias.value && !!props.cartaPresentations?.length) ||
         !!props.conferenceCertificates?.length ||
+        !!props.moderatorConstancia ||
         !!props.eventCertificate ||
         !!props.eventAttendance?.has ||
         !!props.invitationLetters?.length
@@ -602,18 +613,94 @@ const missingDays = computed(() => {
                             <button
                                 v-if="conference.activated"
                                 @click="downloadConferencia(conference.id)"
-                                class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 sm:w-auto dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
                             >
                                 <Download class="h-4 w-4" /> Descargar
                                 Constancia
                             </button>
                             <div
                                 v-else
-                                class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-500"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400 sm:w-auto dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-500"
                             >
                                 <Clock class="h-4 w-4" /> Pendiente de
                                 activación
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Constancia de Moderador -->
+            <div v-if="moderatorConstancia">
+                <h2
+                    class="mb-4 text-xl font-normal tracking-tight text-gray-800 dark:text-gray-200"
+                >
+                    Constancia de Moderador
+                </h2>
+                <div
+                    class="max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                    <div class="flex items-start gap-4">
+                        <div
+                            class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30"
+                        >
+                            <Mic
+                                class="h-6 w-6 text-amber-600 dark:text-amber-400"
+                            />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3
+                                class="text-sm font-semibold text-gray-900 dark:text-white"
+                            >
+                                Constancia de Moderador
+                            </h3>
+                            <p
+                                class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                            >
+                                Por tu participación como moderador de
+                                {{
+                                    moderatorConstancia.conference_count
+                                }}
+                                {{
+                                    moderatorConstancia.conference_count === 1
+                                        ? 'conferencia'
+                                        : 'conferencias'
+                                }}.
+                            </p>
+                            <p
+                                v-if="
+                                    moderatorConstancia.conference_titles
+                                        ?.length
+                                "
+                                class="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400"
+                            >
+                                {{
+                                    moderatorConstancia.conference_titles.join(
+                                        ' · ',
+                                    )
+                                }}
+                            </p>
+                            <p
+                                v-if="moderatorConstancia.folio"
+                                class="mt-1 font-mono text-[11px] text-amber-600 dark:text-amber-400"
+                            >
+                                Folio: {{ moderatorConstancia.folio }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button
+                            v-if="moderatorConstancia.activated"
+                            @click="downloadModerador"
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 sm:w-auto dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                        >
+                            <Download class="h-4 w-4" /> Descargar Constancia
+                        </button>
+                        <div
+                            v-else
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400 sm:w-auto dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-500"
+                        >
+                            <Clock class="h-4 w-4" /> Pendiente de activación
                         </div>
                     </div>
                 </div>

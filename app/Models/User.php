@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -166,6 +167,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsToMany(Conference::class, 'conference_members')
             ->wherePivot('role', 'moderator')
             ->withTimestamps();
+    }
+
+    public function constanciaModerador(): HasOne
+    {
+        return $this->hasOne(ModeradorConstancia::class);
     }
 
     public function enrolledWorkshops(): BelongsToMany

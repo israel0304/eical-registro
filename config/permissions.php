@@ -44,6 +44,7 @@ return [
         'constancias.view' => 'Ver mis constancias',
         'constancias.templates.manage' => 'Gestionar plantillas de constancias',
         'constancias.types.manage' => 'Gestionar tipos de participación',
+        'constancias.moderators.manage' => 'Gestionar constancias de moderadores',
         'constancias.download' => 'Descargar constancias',
         'constancias.invitaciones.download' => 'Descargar carta de invitación',
         'constancias.evento.manage' => 'Gestionar constancias de asistencia al evento',

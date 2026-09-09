@@ -145,6 +145,44 @@ class CertificateRenderer
     }
 
     /**
+     * Find or create the single moderator certificate for the user. A
+     * moderator receives a single certificate (event_id 0) that lists all the
+     * conferences they moderated, instead of one certificate per conference.
+     */
+    public function issueModerador(User $user): ?Certificate
+    {
+        $type = ParticipationType::query()
+            ->where('key', 'moderador')
+            ->where('event_kind', 'conference')
+            ->whereNull('kind')
+            ->where('role', 'moderator')
+            ->where('is_active', true)
+            ->first();
+
+        if ($type === null) {
+            return null;
+        }
+
+        $metadata = $this->buildModeradorMetadata($user, $type);
+        $template = $this->defaultTemplateFor($type, 'certificate');
+
+        $certificate = Certificate::query()->firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'participation_type_id' => $type->id,
+                'event_type' => 'conference',
+                'event_id' => 0,
+            ],
+            [
+                'template_id' => $template?->id,
+                'metadata' => $metadata,
+            ],
+        );
+
+        return $this->finalize($certificate, $template, $metadata);
+    }
+
+    /**
      * Find or create a certificate for a generic (non-activity) participation
      * type, used by event attendance and manually generated certificates.
      */
@@ -1116,6 +1154,33 @@ HTML;
             'tipo_participacion' => $type->label,
             'evento' => $this->eventName(),
             'fecha_evento' => '',
+            'location' => null,
+            'folio' => '',
+        ];
+    }
+
+    private function buildModeradorMetadata(User $user, ParticipationType $type): array
+    {
+        $nombre = trim($user->first_name.' '.$user->last_name);
+        $role = Role::where('name', 'Moderator')->first();
+        $trabajos = $role !== null ? $this->workTitlesForRole($user, $role) : [];
+        $autores = $role !== null ? $this->authorNamesForRole($user, $role) : [];
+
+        return [
+            'nombre' => $nombre,
+            'nombre_completo' => $nombre,
+            'rol' => 'Moderador',
+            'tipo_participacion' => $type->label,
+            'evento' => $this->eventName(),
+            'nombre_evento' => $this->eventName(),
+            'fecha_evento' => $this->eventDateRange(),
+            'fecha' => $this->formatSpanishDate($user->created_at->toDateString()),
+            'institucion' => (string) ($user->affiliation ?? ''),
+            'pais' => (string) ($user->country ?? ''),
+            'ponencia' => $trabajos[0] ?? '',
+            'actividad' => $trabajos[0] ?? '',
+            'trabajos' => $trabajos,
+            'autores' => implode(', ', array_unique($autores)),
             'location' => null,
             'folio' => '',
         ];

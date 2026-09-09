@@ -234,8 +234,10 @@ const toggleActivation = (userId: number) => {
 
                         <template
                             v-if="
+                                member.pivot?.role !== 'moderator' &&
                                 can('conferences.activate') &&
-                                (can('conferences.view') || isAssignedModerator)
+                                (can('conferences.view') ||
+                                    isAssignedModerator)
                             "
                         >
                             <div class="flex items-center gap-2">
@@ -266,7 +268,10 @@ const toggleActivation = (userId: number) => {
                         </template>
 
                         <span
-                            v-else-if="member.pivot?.activated"
+                            v-else-if="
+                                member.pivot?.role !== 'moderator' &&
+                                member.pivot?.activated
+                            "
                             class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-200"
                         >
                             Constancia activada

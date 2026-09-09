@@ -160,6 +160,14 @@ const mainNavItems = computed<NavItem[]>(() => {
         });
     }
 
+    if (can('constancias.moderators.manage')) {
+        items.push({
+            title: 'Moderadores',
+            href: '/admin/constancias/moderadores',
+            icon: Users,
+        });
+    }
+
     if (can('roles.manage')) {
         items.push({ title: 'Roles', href: '/admin/roles', icon: ShieldCheck });
     }

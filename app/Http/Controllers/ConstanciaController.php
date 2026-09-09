@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\Certificate;
 use App\Models\Conference;
+use App\Models\ModeradorConstancia;
 use App\Models\ParticipationType;
 use App\Models\Presentation;
 use App\Models\Role;
@@ -64,13 +65,15 @@ class ConstanciaController extends Controller
             ->get();
 
         $conferenceCertificates = Conference::whereHas('members', function ($q) use ($user) {
-            $q->where('users.id', $user->id);
+            $q->where('users.id', $user->id)->where('conference_members.role', 'speaker');
         })
             ->with(['members' => function ($q) use ($user) {
                 $q->where('users.id', $user->id)->withPivot('role', 'activated', 'activated_at');
             }])
             ->orderBy('day')
             ->get();
+
+        $moderatorConstancia = $this->moderatorConstanciaFor($user);
 
         $certificates = Certificate::query()
             ->where('user_id', $user->id)
@@ -173,11 +176,49 @@ class ConstanciaController extends Controller
             'presentationCertificates' => $presentationCertificates,
             'cartaPresentations' => $cartaPresentations,
             'conferenceCertificates' => $conferenceCertificates,
+            'moderatorConstancia' => $moderatorConstancia,
             'eventCertificate' => $eventCertificate,
             'eventAttendance' => $eventAttendance,
             'invitationLetters' => $invitationLetters,
             'user' => $user,
         ]);
+    }
+
+    private function moderatorConstanciaFor(User $user): ?array
+    {
+        $moderated = $user->moderatedConferences()
+            ->orderBy('day')
+            ->get(['conferences.id', 'conferences.title', 'conferences.day']);
+
+        if ($moderated->isEmpty()) {
+            return null;
+        }
+
+        $type = ParticipationType::query()
+            ->where('key', 'moderador')
+            ->where('event_kind', 'conference')
+            ->whereNull('kind')
+            ->where('role', 'moderator')
+            ->where('is_active', true)
+            ->first();
+
+        $certificate = $type !== null
+            ? Certificate::query()
+                ->where('user_id', $user->id)
+                ->where('participation_type_id', $type->id)
+                ->where('event_type', 'conference')
+                ->where('event_id', 0)
+                ->first()
+            : null;
+
+        $activation = ModeradorConstancia::where('user_id', $user->id)->first();
+
+        return [
+            'activated' => (bool) $activation?->activated,
+            'folio' => $certificate?->folio,
+            'conference_count' => $moderated->count(),
+            'conference_titles' => $moderated->pluck('title')->map(fn ($t) => (string) $t)->all(),
+        ];
     }
 
     public function downloadInvitacion(Request $request)
@@ -415,12 +456,51 @@ class ConstanciaController extends Controller
         return $this->respondWithHtml($certificate);
     }
 
+    public function downloadModerador(Request $request)
+    {
+        $user = $request->user();
+
+        $isModerator = $user->moderatedConferences()->exists();
+
+        if (! $isModerator) {
+            return back()->withErrors(['error' => 'No eres moderador de ninguna conferencia.']);
+        }
+
+        $activated = ModeradorConstancia::where('user_id', $user->id)->value('activated');
+
+        if (! $activated) {
+            return back()->withErrors(['error' => 'Tu constancia aún no ha sido activada.']);
+        }
+
+        $certificate = $this->renderer->issueModerador($user);
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible generar la constancia.']);
+        }
+
+        $certificate->update(['downloaded_at' => now()]);
+
+        return $this->respondWithHtml($certificate);
+    }
+
     public function adminDownloadConferencia(Conference $conference, User $user)
     {
         $currentUser = request()->user();
         $isAssignedModerator = $conference->moderators()->where('users.id', $currentUser->id)->exists();
 
         abort_unless($currentUser->canScoped('constancias.download', 'constancias.view', $isAssignedModerator), 403);
+
+        if ($conference->moderators()->where('users.id', $user->id)->exists()) {
+            $certificate = $this->renderer->issueModerador($user);
+
+            if ($certificate === null) {
+                return back()->withErrors(['error' => 'No fue posible generar la constancia de moderador.']);
+            }
+
+            $certificate->update(['downloaded_at' => now()]);
+
+            return $this->respondWithHtml($certificate);
+        }
 
         $certificate = $this->renderer->issue($user, 'conference', $conference);
 

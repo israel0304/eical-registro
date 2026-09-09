@@ -70,7 +70,7 @@ class ParticipationTypeControllerTest extends TestCase
         $this->post('/admin/constancias/tipos', $this->storePayload(['key' => 'otra_clave']))
             ->assertSessionHasErrors('role');
 
-        $this->assertDatabaseCount('participation_types', 1);
+        $this->assertDatabaseMissing('participation_types', ['key' => 'otra_clave']);
     }
 
     public function test_cannot_use_role_not_allowed_for_event_kind(): void
@@ -83,7 +83,7 @@ class ParticipationTypeControllerTest extends TestCase
             'role' => 'moderator',
         ]))->assertSessionHasErrors('role');
 
-        $this->assertDatabaseCount('participation_types', 0);
+        $this->assertDatabaseMissing('participation_types', ['key' => 'workshop_bad']);
     }
 
     public function test_event_type_cannot_have_role(): void
@@ -93,7 +93,10 @@ class ParticipationTypeControllerTest extends TestCase
         $this->post('/admin/constancias/tipos', $this->storePayload(['role' => 'speaker']))
             ->assertSessionHasErrors('role');
 
-        $this->assertDatabaseCount('participation_types', 0);
+        $this->assertDatabaseMissing('participation_types', [
+            'key' => 'evento_asistencia',
+            'role' => 'speaker',
+        ]);
     }
 
     public function test_admin_can_edit_type(): void

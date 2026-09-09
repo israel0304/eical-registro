@@ -13,6 +13,7 @@ use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\EventoController;
 use App\Http\Controllers\GafeteController;
 use App\Http\Controllers\InvitationTemplateController;
+use App\Http\Controllers\ModeradoresController;
 use App\Http\Controllers\ParticipationTypeController;
 use App\Http\Controllers\PonenteActivationController;
 use App\Http\Controllers\PresentationController;
@@ -411,6 +412,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('constancias/conferencia/{conference}/download', [ConstanciaController::class, 'downloadConferencia'])->middleware('can:constancias.download')->name('constancias.conferencia.download');
     Route::get('admin/constancias/conferencia/{conference}/{user}/download', [ConstanciaController::class, 'adminDownloadConferencia'])->name('constancias.conferencia.admin-download');
 
+    // Constancia única de moderador
+    Route::get('constancias/moderador/constancia', [ConstanciaController::class, 'downloadModerador'])->middleware('can:constancias.download')->name('constancias.moderador.download');
+
     // Generación manual de constancias de tipos marcados como "manuales" (ej. staff)
     Route::get('admin/constancias/tipos/{type}/usuario/{user}/generar', [ConstanciaController::class, 'adminGenerate'])->middleware('can:constancias.download')->name('constancias.tipos.admin-generate');
 
@@ -514,6 +518,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('admin/constancias/tipos', [ParticipationTypeController::class, 'store'])->name('constancias.types.store');
         Route::put('admin/constancias/tipos/{type}', [ParticipationTypeController::class, 'update'])->name('constancias.types.update');
         Route::delete('admin/constancias/tipos/{type}', [ParticipationTypeController::class, 'destroy'])->name('constancias.types.destroy');
+    });
+
+    // Admin: moderadores (constancia única)
+    Route::middleware('can:constancias.moderators.manage')->group(function () {
+        Route::get('admin/constancias/moderadores', [ModeradoresController::class, 'index'])->name('constancias.moderators.index');
+        Route::post('admin/constancias/moderadores/{user}/activar', [ModeradoresController::class, 'toggle'])->name('constancias.moderators.toggle');
+        Route::get('admin/constancias/moderadores/{user}/constancia', [ModeradoresController::class, 'download'])->name('constancias.moderators.download');
     });
 
     // Admin: roles & permissions
