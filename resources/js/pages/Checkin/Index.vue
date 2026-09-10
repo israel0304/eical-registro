@@ -9,8 +9,9 @@ import {
     CameraOff,
     Search,
     Printer,
+    SwitchCamera,
 } from 'lucide-vue-next';
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import {
     Dialog,
     DialogClose,
@@ -173,6 +174,33 @@ const handleScan = (decodedText: string) => {
     });
 };
 
+const facingMode = ref<'user' | 'environment'>('environment');
+
+let availableCameras: { id: string; label?: string }[] = [];
+let activeCameraIndex = -1;
+let camListAvailable = false;
+
+const isUsefulCameraList = (cameras: { id: string; label?: string }[]) => {
+    if (cameras.length < 2) return false;
+    const frontMatch = cameras.some((c) =>
+        /front|user|face|forward/i.test(c.label ?? ''),
+    );
+    const backMatch = cameras.some((c) =>
+        /back|environment|rear/i.test(c.label ?? ''),
+    );
+    return frontMatch || backMatch;
+};
+
+const mirrorPreview = computed(() => {
+    if (camListAvailable && activeCameraIndex >= 0) {
+        const camera = availableCameras[activeCameraIndex];
+        return camera
+            ? /front|user|face|forward/i.test(camera.label ?? '')
+            : false;
+    }
+    return facingMode.value === 'user';
+});
+
 const bootCamera = async () => {
     const reader = readerEl.value;
     if (!reader) return false;
@@ -191,23 +219,44 @@ const bootCamera = async () => {
         }
     };
 
-    try {
-        let cameraId: string | null = null;
+    if (availableCameras.length === 0) {
         try {
             const cameras = await Html5Qrcode.getCameras();
-            const preferred =
-                cameras.find((camera: any) =>
+            if (isUsefulCameraList(cameras)) {
+                availableCameras = cameras;
+                camListAvailable = true;
+                const back = cameras.findIndex((camera: any) =>
                     /back|environment|rear/i.test(camera.label ?? ''),
-                ) ?? cameras[0];
-            cameraId = preferred?.id ?? null;
+                );
+                activeCameraIndex = back >= 0 ? back : 0;
+            }
         } catch {
             // Sin acceso a la lista de cámaras; usamos facingMode.
         }
+    }
 
+    if (camListAvailable && availableCameras.length > 0) {
+        const cameraId = availableCameras[activeCameraIndex]?.id ?? null;
+        if (cameraId) {
+            try {
+                await html5Qr.start(
+                    { deviceId: { exact: cameraId } },
+                    { fps: 10, qrbox: { width: 260, height: 260 } },
+                    onSuccess,
+                    onError,
+                );
+                scannerError.value = null;
+                return true;
+            } catch {
+                // Si el deviceId falla (p. ej. en iOS), usamos facingMode.
+                camListAvailable = false;
+            }
+        }
+    }
+
+    try {
         await html5Qr.start(
-            cameraId
-                ? { deviceId: { exact: cameraId } }
-                : { facingMode: 'environment' },
+            { facingMode: facingMode.value },
             { fps: 10, qrbox: { width: 260, height: 260 } },
             onSuccess,
             onError,
@@ -220,6 +269,26 @@ const bootCamera = async () => {
             'No se pudo acceder a la cámara. Verifica que el navegador tenga permiso y que el sitio use HTTPS o localhost.';
         return false;
     }
+};
+
+const switchCamera = async () => {
+    if (!scannerActive.value) return;
+
+    if (camListAvailable && availableCameras.length > 1) {
+        activeCameraIndex = (activeCameraIndex + 1) % availableCameras.length;
+    } else {
+        facingMode.value =
+            facingMode.value === 'environment' ? 'user' : 'environment';
+    }
+
+    scannerError.value = null;
+    const wasActive = scannerActive.value;
+    await stopScanner();
+    await new Promise((resolve) => window.setTimeout(resolve, 350));
+    if (!wasActive || processing.value) return;
+    scannerActive.value = true;
+    await nextTick();
+    await bootCamera();
 };
 
 const startScanner = async () => {
@@ -365,27 +434,40 @@ onBeforeUnmount(() => {
                                 />
                                 Escáner
                             </h2>
-                            <button
-                                v-if="scannerActive"
-                                @click="stopScanner"
-                                class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300"
-                            >
-                                Detener
-                            </button>
-                            <button
-                                v-else
-                                @click="startScanner"
-                                class="rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-black"
-                            >
-                                Iniciar cámara
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <button
+                                    v-if="scannerActive"
+                                    @click="switchCamera"
+                                    class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                                >
+                                    <SwitchCamera class="h-3.5 w-3.5" />
+                                    Cambiar cámara
+                                </button>
+                                <button
+                                    v-if="scannerActive"
+                                    @click="stopScanner"
+                                    class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300"
+                                >
+                                    Detener
+                                </button>
+                                <button
+                                    v-else
+                                    @click="startScanner"
+                                    class="rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-black"
+                                >
+                                    Iniciar cámara
+                                </button>
+                            </div>
                         </div>
 
                         <div
                             id="qr-reader"
                             ref="readerEl"
                             class="overflow-hidden rounded-lg bg-gray-950"
-                            :class="scannerActive ? '' : 'hidden'"
+                            :class="[
+                                scannerActive ? '' : 'hidden',
+                                mirrorPreview ? 'scale-x-[-1]' : '',
+                            ]"
                         ></div>
 
                         <div
