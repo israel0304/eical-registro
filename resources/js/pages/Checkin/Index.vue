@@ -66,6 +66,37 @@ const processing = ref(false);
 const readerEl = ref<HTMLDivElement | null>(null);
 const selectedDay = ref(props.day);
 
+const localToday = () => {
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 10);
+};
+
+const formatDayName = (date: string) => {
+    try {
+        const label = new Date(`${date}T00:00:00`).toLocaleDateString('es-MX', {
+            weekday: 'long',
+            day: 'numeric',
+        });
+        return label.charAt(0).toUpperCase() + label.slice(1);
+    } catch {
+        return date;
+    }
+};
+
+const dayOptions = computed(() => {
+    const today = localToday();
+    const seen = new Set<string>();
+    const options = props.eventDays.map((eventDay) => eventDay.date);
+    if (!options.includes(today)) options.push(today);
+    if (!options.includes(selectedDay.value)) options.unshift(selectedDay.value);
+
+    return options
+        .filter((date) => !seen.has(date) && (seen.add(date), true))
+        .map((date) => ({ date, isToday: date === today }));
+});
+
 const resultType = computed<'success' | 'already' | 'not_found' | 'error'>(() => {
     if (result.value?.success) return 'success';
     if (result.value?.already) return 'already';
@@ -139,6 +170,10 @@ const changeDay = () => {
 };
 
 const closeResultModal = () => {
+    if (resultCloseTimer) {
+        window.clearTimeout(resultCloseTimer);
+        resultCloseTimer = undefined;
+    }
     scanResultOpen.value = false;
     clearResult();
 };
@@ -147,6 +182,7 @@ let html5Qr: any = null;
 let lastToken = '';
 let lastScannedAt = 0;
 let restartTimer: number | undefined;
+let resultCloseTimer: number | undefined;
 
 const extractToken = (text: string) => {
     const match = text.match(/[?&]token=([^&\s]+)/);
@@ -169,6 +205,10 @@ const register = async (token: string) => {
     if (!token || processing.value) return;
     processing.value = true;
     result.value = null;
+    if (resultCloseTimer) {
+        window.clearTimeout(resultCloseTimer);
+        resultCloseTimer = undefined;
+    }
 
     try {
         const response = await fetch('/checkin/register', {
@@ -196,16 +236,22 @@ const register = async (token: string) => {
             message: 'Respuesta inesperada del servidor.',
         };
 
+        resultCloseTimer = window.setTimeout(closeResultModal, 4000);
+
         if (data?.success) {
             searchResults.value = [];
             searchOpen.value = false;
-            router.reload({ only: ['attendances'] });
+            router.reload({
+                only: ['attendances'],
+                preserveState: true,
+            });
         }
     } catch {
         result.value = {
             success: false,
             message: 'Error de conexión. Intenta de nuevo.',
         };
+        resultCloseTimer = window.setTimeout(closeResultModal, 4000);
     } finally {
         processing.value = false;
     }
@@ -383,7 +429,6 @@ const startScanner = async () => {
         restartTimer = undefined;
     }
     scannerError.value = null;
-    result.value = null;
     scannerActive.value = true;
 
     await nextTick();
@@ -443,6 +488,10 @@ const selectUser = (user: any) => {
 };
 
 const clearResult = () => {
+    if (resultCloseTimer) {
+        window.clearTimeout(resultCloseTimer);
+        resultCloseTimer = undefined;
+    }
     result.value = null;
 };
 
@@ -470,6 +519,7 @@ onBeforeUnmount(() => {
     stopScanner();
     if (restartTimer) window.clearTimeout(restartTimer);
     if (searchTimer) window.clearTimeout(searchTimer);
+    if (resultCloseTimer) window.clearTimeout(resultCloseTimer);
 });
 </script>
 
@@ -492,7 +542,6 @@ onBeforeUnmount(() => {
                         evento.
                     </p>
                     <label
-                        v-if="eventDays.length"
                         class="mt-2 inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"
                     >
                         <CalendarDays
@@ -505,13 +554,13 @@ onBeforeUnmount(() => {
                             class="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
                         >
                             <option
-                                v-for="eventDay in eventDays"
-                                :key="eventDay.date"
-                                :value="eventDay.date"
+                                v-for="option in dayOptions"
+                                :key="option.date"
+                                :value="option.date"
                             >
                                 {{
-                                    eventDay.label +
-                                    (eventDay.is_today ? ' (hoy)' : '')
+                                    formatDayName(option.date) +
+                                    (option.isToday ? ' (hoy)' : '')
                                 }}
                             </option>
                         </select>
