@@ -10,8 +10,11 @@ import {
     Search,
     Printer,
     SwitchCamera,
+    AlertCircle,
+    CalendarCheck2,
+    CalendarDays,
 } from 'lucide-vue-next';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
     Dialog,
     DialogClose,
@@ -23,10 +26,11 @@ import {
 } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
-defineProps<{
+const props = defineProps<{
     attendances: any[];
     checkinEnabled: boolean;
-    dayLabel: string;
+    day: string;
+    eventDays: { date: string; label: string; is_today: boolean }[];
     requiredDays: number;
 }>();
 
@@ -34,8 +38,10 @@ type ScanResult = {
     success: boolean;
     message: string;
     already?: boolean;
-    certificate_issued?: boolean;
+    not_found?: boolean;
+    day?: string;
     day_label?: string;
+    certificate_issued?: boolean;
     days_attended?: number;
     required_days?: number;
     qualifies?: boolean;
@@ -54,9 +60,88 @@ const scannerActive = ref(false);
 const scanning = ref(false);
 const scannerError = ref<string | null>(null);
 const result = ref<ScanResult | null>(null);
+const scanResultOpen = ref(false);
 const manualToken = ref('');
 const processing = ref(false);
 const readerEl = ref<HTMLDivElement | null>(null);
+const selectedDay = ref(props.day);
+
+const resultType = computed<'success' | 'already' | 'not_found' | 'error'>(() => {
+    if (result.value?.success) return 'success';
+    if (result.value?.already) return 'already';
+    if (result.value?.not_found) return 'not_found';
+    return 'error';
+});
+
+const resultTitle = computed(() => {
+    switch (resultType.value) {
+        case 'success':
+            return 'Asistencia registrada';
+        case 'already':
+            return 'Ya registrado ese día';
+        case 'not_found':
+            return 'No se encontró al participante';
+        default:
+            return 'No se pudo registrar';
+    }
+});
+
+watch(result, (value) => {
+    scanResultOpen.value = value !== null;
+});
+
+let audioContext: AudioContext | null = null;
+
+const unlockAudio = () => {
+    try {
+        const Ctx =
+            window.AudioContext ??
+            (window as any).webkitAudioContext;
+        if (!Ctx) return;
+        if (!audioContext) audioContext = new Ctx();
+        if (audioContext.state === 'suspended') {
+            audioContext.resume().catch(() => {});
+        }
+    } catch {
+        // ignore
+    }
+};
+
+const playScanBeep = () => {
+    unlockAudio();
+    if (!audioContext) return;
+    try {
+        const now = audioContext.currentTime;
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    } catch {
+        // ignore
+    }
+};
+
+const changeDay = () => {
+    if (result.value) clearResult();
+    searchOpen.value = false;
+    router.reload({
+        data: { day: selectedDay.value },
+        only: ['attendances', 'day'],
+        preserveState: true,
+    });
+};
+
+const closeResultModal = () => {
+    scanResultOpen.value = false;
+    clearResult();
+};
 
 let html5Qr: any = null;
 let lastToken = '';
@@ -93,7 +178,7 @@ const register = async (token: string) => {
                 Accept: 'application/json',
                 'X-XSRF-TOKEN': getCookie('XSRF-TOKEN'),
             },
-            body: JSON.stringify({ token }),
+            body: JSON.stringify({ token, day: selectedDay.value }),
         });
 
         if (response.status === 419) {
@@ -165,6 +250,7 @@ const handleScan = (decodedText: string) => {
     lastToken = token;
     lastScannedAt = now;
 
+    playScanBeep();
     stopScanner();
     scanning.value = false;
     register(token).finally(() => {
@@ -326,7 +412,10 @@ const runLookup = async (search: string) => {
     searching.value = true;
     try {
         const response = await fetch(
-            '/checkin/lookup?search=' + encodeURIComponent(search.trim()),
+            '/checkin/lookup?search=' +
+                encodeURIComponent(search.trim()) +
+                '&day=' +
+                encodeURIComponent(selectedDay.value),
             { headers: { Accept: 'application/json' } },
         );
         if (!response.ok) {
@@ -371,11 +460,9 @@ const openBadgePrint = (userId: number) => {
     };
 };
 
-const openBadgePdf = (userId: number) => {
-    window.open(`/checkin/gafete/${userId}/imprimir/pdf`, '_blank');
-};
-
 onMounted(async () => {
+    document.addEventListener('pointerdown', unlockAudio, { once: true });
+    document.addEventListener('touchstart', unlockAudio, { once: true });
     await startScanner();
 });
 
@@ -404,11 +491,31 @@ onBeforeUnmount(() => {
                         Escanea el QR del gafete para registrar la asistencia al
                         evento.
                     </p>
-                    <p
-                        class="mt-1 text-sm font-medium text-indigo-600 dark:text-indigo-400"
+                    <label
+                        v-if="eventDays.length"
+                        class="mt-2 inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"
                     >
-                        {{ dayLabel }}
-                    </p>
+                        <CalendarDays
+                            class="h-4 w-4 text-indigo-500 dark:text-indigo-400"
+                        />
+                        <select
+                            v-model="selectedDay"
+                            :disabled="processing"
+                            @change="changeDay"
+                            class="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                        >
+                            <option
+                                v-for="eventDay in eventDays"
+                                :key="eventDay.date"
+                                :value="eventDay.date"
+                            >
+                                {{
+                                    eventDay.label +
+                                    (eventDay.is_today ? ' (hoy)' : '')
+                                }}
+                            </option>
+                        </select>
+                    </label>
                 </div>
                 <span
                     v-if="!checkinEnabled"
@@ -462,7 +569,7 @@ onBeforeUnmount(() => {
                         <div
                             id="qr-reader"
                             ref="readerEl"
-                            class="overflow-hidden rounded-lg bg-gray-950"
+                            class="h-80 overflow-hidden rounded-lg bg-gray-950"
                             :class="[
                                 scannerActive ? '' : 'hidden',
                                 mirrorPreview ? 'scale-x-[-1]' : '',
@@ -471,7 +578,7 @@ onBeforeUnmount(() => {
 
                         <div
                             v-if="!scannerActive && !scanning"
-                            class="flex h-48 items-center justify-center rounded-lg border border-dashed border-gray-300 dark:border-zinc-700"
+                            class="flex h-80 items-center justify-center rounded-lg border border-dashed border-gray-300 dark:border-zinc-700"
                         >
                             <div class="text-center">
                                 <QrCode
@@ -587,138 +694,6 @@ onBeforeUnmount(() => {
                             >
                                 Buscando...
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Result -->
-                    <div
-                        v-if="result"
-                        :class="[
-                            'rounded-xl border p-6 shadow-sm',
-                            result.success
-                                ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950'
-                                : 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950',
-                        ]"
-                    >
-                        <div class="flex items-start justify-between gap-4">
-                            <div class="flex min-w-0 items-start gap-4">
-                                <CheckCircle2
-                                    v-if="result.success"
-                                    class="mt-1 h-10 w-10 shrink-0 text-emerald-600 dark:text-emerald-400"
-                                />
-                                <XCircle
-                                    v-else
-                                    class="mt-1 h-10 w-10 shrink-0 text-red-600 dark:text-red-400"
-                                />
-                                <div class="min-w-0 flex-1">
-                                    <h3
-                                        class="font-semibold text-gray-900 dark:text-white"
-                                    >
-                                        {{ result.message }}
-                                    </h3>
-                                    <div
-                                        v-if="result.user"
-                                        class="mt-3 flex min-w-0 items-center gap-4"
-                                    >
-                                        <div
-                                            class="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700"
-                                        >
-                                            <img
-                                                v-if="result.user.photo"
-                                                :src="result.user.photo"
-                                                class="h-full w-full object-cover"
-                                            />
-                                            <UserRound
-                                                v-else
-                                                class="h-full w-full p-2 text-gray-400"
-                                            />
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <p
-                                                class="text-sm font-semibold text-gray-900 dark:text-white"
-                                            >
-                                                {{ result.user.name }}
-                                            </p>
-                                            <p
-                                                class="font-mono text-xs text-gray-500 dark:text-gray-400"
-                                            >
-                                                {{ result.user.dni }}
-                                            </p>
-                                            <div
-                                                v-if="
-                                                    result.day_label ||
-                                                    result.days_attended !==
-                                                        undefined
-                                                "
-                                                class="mt-2 space-y-1"
-                                            >
-                                                <p
-                                                    v-if="result.day_label"
-                                                    class="text-xs font-medium text-gray-600 dark:text-gray-300"
-                                                >
-                                                    {{ result.day_label }}
-                                                </p>
-                                                <p
-                                                    class="text-xs text-gray-500 dark:text-gray-400"
-                                                >
-                                                    Asistencia:
-                                                    {{ result.days_attended }}
-                                                    /
-                                                    {{ result.required_days }}
-                                                    días requeridos
-                                                </p>
-                                                <p
-                                                    v-if="
-                                                        result.certificate_issued
-                                                    "
-                                                    class="text-xs text-emerald-700 dark:text-emerald-300"
-                                                >
-                                                    Constancia de evento
-                                                    disponible.
-                                                </p>
-                                                <p
-                                                    v-else-if="result.success"
-                                                    class="text-xs text-gray-500 dark:text-gray-400"
-                                                >
-                                                    Faltan
-                                                    {{
-                                                        (result.required_days ??
-                                                            0) -
-                                                        (result.days_attended ??
-                                                            0)
-                                                    }}
-                                                    día(s) para la constancia.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <button
-                                @click="clearResult"
-                                class="rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div
-                            v-if="result.user"
-                            class="mt-4 flex flex-col gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:flex-wrap sm:items-center dark:border-zinc-700"
-                        >
-                            <button
-                                @click="openBadgePrint(result.user.id)"
-                                class="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-black px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-gray-800 sm:w-auto dark:bg-white dark:text-black dark:hover:bg-gray-200"
-                            >
-                                <Printer class="h-3.5 w-3.5" />
-                                Imprimir gafete
-                            </button>
-                            <button
-                                @click="openBadgePdf(result.user.id)"
-                                class="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-200 dark:hover:bg-zinc-700"
-                            >
-                                Descargar PDF
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -848,5 +823,137 @@ onBeforeUnmount(() => {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        <Dialog v-model:open="scanResultOpen">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader class="sm:text-left">
+                    <div class="flex items-start gap-4">
+                        <CheckCircle2
+                            v-if="resultType === 'success'"
+                            class="mt-1 h-10 w-10 shrink-0 text-emerald-600 dark:text-emerald-400"
+                        />
+                        <CalendarCheck2
+                            v-else-if="resultType === 'already'"
+                            class="mt-1 h-10 w-10 shrink-0 text-amber-500 dark:text-amber-400"
+                        />
+                        <XCircle
+                            v-else-if="resultType === 'not_found'"
+                            class="mt-1 h-10 w-10 shrink-0 text-red-600 dark:text-red-400"
+                        />
+                        <AlertCircle
+                            v-else
+                            class="mt-1 h-10 w-10 shrink-0 text-red-600 dark:text-red-400"
+                        />
+                        <div class="min-w-0 flex-1">
+                            <DialogTitle
+                                class="text-lg font-semibold text-gray-900 dark:text-white"
+                            >
+                                {{ resultTitle }}
+                            </DialogTitle>
+                            <DialogDescription
+                                class="mt-1.5 text-sm text-gray-500 dark:text-gray-400"
+                            >
+                                <p>{{ result?.message }}</p>
+                                <div
+                                    v-if="result?.user"
+                                    class="mt-3 flex min-w-0 items-center gap-3 rounded-lg border border-gray-100 p-3 dark:border-zinc-800"
+                                >
+                                    <div
+                                        class="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700"
+                                    >
+                                        <img
+                                            v-if="result.user.photo"
+                                            :src="result.user.photo"
+                                            class="h-full w-full object-cover"
+                                        />
+                                        <UserRound
+                                            v-else
+                                            class="h-full w-full p-2 text-gray-400"
+                                        />
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p
+                                            class="text-sm font-semibold text-gray-900 dark:text-white"
+                                        >
+                                            {{ result.user.name }}
+                                        </p>
+                                        <p
+                                            class="font-mono text-xs text-gray-500 dark:text-gray-400"
+                                        >
+                                            {{ result.user.dni }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div
+                                    v-if="
+                                        result?.day_label ||
+                                        result?.days_attended !== undefined
+                                    "
+                                    class="mt-3 space-y-1"
+                                >
+                                    <p
+                                        v-if="result.day_label"
+                                        class="text-xs font-medium text-gray-600 dark:text-gray-300"
+                                    >
+                                        {{ result.day_label }}
+                                    </p>
+                                    <p
+                                        v-if="
+                                            result.days_attended !== undefined
+                                        "
+                                        class="text-xs text-gray-500 dark:text-gray-400"
+                                    >
+                                        Asistencia:
+                                        {{ result.days_attended }} /
+                                        {{ result.required_days }} días
+                                        requeridos
+                                    </p>
+                                    <p
+                                        v-if="result.certificate_issued"
+                                        class="text-xs text-emerald-700 dark:text-emerald-300"
+                                    >
+                                        Constancia de evento disponible.
+                                    </p>
+                                    <p
+                                        v-else-if="resultType === 'success'"
+                                        class="text-xs text-gray-500 dark:text-gray-400"
+                                    >
+                                        Faltan
+                                        {{
+                                            (result.required_days ?? 0) -
+                                            (result.days_attended ?? 0)
+                                        }}
+                                        día(s) para la constancia.
+                                    </p>
+                                </div>
+                            </DialogDescription>
+                        </div>
+                    </div>
+                </DialogHeader>
+
+                <DialogFooter class="sm:justify-center">
+                    <DialogClose
+                        as-child
+                        class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-6 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                    >
+                        <button type="button" @click="closeResultModal">
+                            Cerrar
+                        </button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>
+
+<style scoped>
+#qr-reader {
+    height: 20rem;
+}
+
+#qr-reader video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+}
+</style>

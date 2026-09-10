@@ -474,6 +474,138 @@ class RegistroModuleTest extends TestCase
             ->assertJson(['already' => true]);
     }
 
+    public function test_checkin_can_register_for_previous_event_day()
+    {
+        $this->enableEventCheckin();
+        $this->eventoType();
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => now()->subDay()->format('Y-m-d')]);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => now()->addDay()->format('Y-m-d')]);
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = User::factory()->create();
+        $this->actingAs($staff);
+
+        $yesterday = now()->subDay()->format('Y-m-d');
+
+        $this->postJson('/checkin/register', ['token' => $participant->checkin_token, 'day' => $yesterday])
+            ->assertOk()
+            ->assertJson([
+                'success' => true,
+                'day' => $yesterday,
+                'day_label' => 'Día 1 de 3',
+            ]);
+
+        $this->assertDatabaseHas('attendances', [
+            'user_id' => $participant->id,
+            'event_day' => $yesterday,
+            'workshop_id' => null,
+            'presentation_id' => null,
+        ]);
+    }
+
+    public function test_checkin_rejects_future_or_out_of_range_day()
+    {
+        $this->enableEventCheckin();
+        $this->eventoType();
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => now()->subDay()->format('Y-m-d')]);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => now()->addDay()->format('Y-m-d')]);
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = User::factory()->create();
+        $this->actingAs($staff);
+
+        $this->postJson('/checkin/register', [
+            'token' => $participant->checkin_token,
+            'day' => now()->addDay()->format('Y-m-d'),
+        ])->assertStatus(422)->assertJson(['success' => false]);
+
+        $this->postJson('/checkin/register', [
+            'token' => $participant->checkin_token,
+            'day' => now()->subDays(5)->format('Y-m-d'),
+        ])->assertStatus(422)->assertJson(['success' => false]);
+
+        $this->assertDatabaseMissing('attendances', ['user_id' => $participant->id]);
+    }
+
+    public function test_checkin_register_is_scoped_to_selected_day()
+    {
+        $this->enableEventCheckin();
+        $this->eventoType();
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => now()->subDay()->format('Y-m-d')]);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => now()->addDay()->format('Y-m-d')]);
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = User::factory()->create();
+        $this->actingAs($staff);
+
+        $yesterday = now()->subDay()->format('Y-m-d');
+
+        $this->postJson('/checkin/register', ['token' => $participant->checkin_token, 'day' => $yesterday])->assertOk();
+        $this->postJson('/checkin/register', ['token' => $participant->checkin_token, 'day' => $yesterday])
+            ->assertOk()
+            ->assertJson(['already' => true, 'day' => $yesterday]);
+
+        $this->postJson('/checkin/register', ['token' => $participant->checkin_token])
+            ->assertOk()
+            ->assertJson(['success' => true, 'day' => now()->format('Y-m-d')]);
+
+        $this->assertSame(2, Attendance::query()
+            ->where('user_id', $participant->id)
+            ->whereNull('workshop_id')
+            ->whereNull('presentation_id')
+            ->distinct()
+            ->count('event_day'));
+    }
+
+    public function test_lookup_marks_registered_for_requested_day()
+    {
+        $this->enableEventCheckin();
+        $this->eventoType();
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => now()->subDay()->format('Y-m-d')]);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => now()->addDay()->format('Y-m-d')]);
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = User::factory()->create(['first_name' => 'Rosa', 'last_name' => 'Luque']);
+        $this->actingAs($staff);
+
+        $yesterday = now()->subDay()->format('Y-m-d');
+        $this->postJson('/checkin/register', ['token' => $participant->checkin_token, 'day' => $yesterday])->assertOk();
+
+        $this->get('/checkin/lookup?search=luq&day='.$yesterday)
+            ->assertOk()
+            ->assertJsonFragment(['id' => $participant->id, 'checked_in' => true]);
+
+        $this->get('/checkin/lookup?search=luq')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $participant->id, 'checked_in' => false]);
+    }
+
+    public function test_checkin_index_filters_attendances_by_requested_day()
+    {
+        $this->enableEventCheckin();
+        $this->eventoType();
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => now()->subDay()->format('Y-m-d')]);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => now()->addDay()->format('Y-m-d')]);
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = User::factory()->create();
+        $this->actingAs($staff);
+
+        $yesterday = now()->subDay()->format('Y-m-d');
+        $this->postJson('/checkin/register', ['token' => $participant->checkin_token, 'day' => $yesterday])->assertOk();
+
+        $this->get('/checkin?day='.$yesterday)
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Checkin/Index')
+                ->where('day', $yesterday)
+                ->where('dayLabel', 'Día 1 de 3')
+                ->has('attendances', 1)
+                ->has('eventDays', 2));
+
+        $this->get('/checkin')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Checkin/Index')
+                ->where('day', now()->format('Y-m-d'))
+                ->has('attendances', 0));
+    }
+
     public function test_checkin_is_disabled_when_setting_off()
     {
         Setting::create(['key' => 'evento_checkin_enabled', 'value' => '0']);
