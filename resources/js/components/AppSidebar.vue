@@ -1,24 +1,5 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import {
-    Home,
-    Users,
-    BookOpen,
-    Mic,
-    CalendarCheck,
-    Award,
-    BarChart3,
-    Presentation,
-    Tags,
-    ShieldCheck,
-    BadgeCheck,
-    ScanLine,
-    CalendarDays,
-    CalendarCog,
-    LayoutTemplate,
-    ClipboardCheck,
-    Mail,
-} from 'lucide-vue-next';
 import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -31,148 +12,17 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { availableModules } from '@/composables/useModuleNav';
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 
 const page = usePage();
 
-const can = (permission: string) =>
-    (page.props.auth.permissions as string[] | undefined)?.includes(
-        permission,
-    ) ?? false;
-
 const mainNavItems = computed<NavItem[]>(() => {
-    const items: NavItem[] = [];
+    const permissions =
+        (page.props.auth.permissions as string[] | undefined) ?? [];
 
-    if (can('dashboard.view')) {
-        items.push({ title: 'Inicio', href: dashboard(), icon: Home });
-    }
-
-    if (can('users.view')) {
-        items.push({ title: 'Usuarios', href: '/users', icon: Users });
-    }
-
-    if (can('workshops.view')) {
-        items.push({ title: 'Talleres', href: '/workshops', icon: BookOpen });
-    }
-
-    if (can('presentations.view')) {
-        items.push({ title: 'Ponencias', href: '/presentations', icon: Mic });
-    }
-
-    if (can('presentations.my')) {
-        items.push({
-            title: 'Mis Ponencias',
-            href: '/my-presentations',
-            icon: Mic,
-        });
-    }
-
-    if (can('conferences.view')) {
-        items.push({
-            title: 'Conferencias',
-            href: '/conferences',
-            icon: Presentation,
-        });
-    }
-
-    if (can('workshops.my')) {
-        items.push({
-            title: 'Mis Talleres',
-            href: '/my-workshops',
-            icon: CalendarCheck,
-        });
-    }
-
-    if (can('reportes.view')) {
-        items.push({
-            title: 'Reportes',
-            href: '/admin/reportes',
-            icon: BarChart3,
-        });
-    }
-
-    if (can('constancias.view')) {
-        items.push({
-            title: 'Mis Constancias',
-            href: '/constancias',
-            icon: Award,
-        });
-    }
-
-    if (can('gafete.view')) {
-        items.push({ title: 'Mi Gafete', href: '/gafete', icon: BadgeCheck });
-    }
-
-    if (can('asignaciones.view')) {
-        items.push({
-            title: 'Mis Asignaciones',
-            href: '/mis-asignaciones',
-            icon: ClipboardCheck,
-        });
-    }
-
-    if (can('checkin.scan')) {
-        items.push({ title: 'Check-in', href: '/checkin', icon: ScanLine });
-    }
-
-    if (can('programa.view')) {
-        items.push({
-            title: 'Programa',
-            href: '/programa',
-            icon: CalendarDays,
-        });
-    }
-
-    if (can('constancias.evento.manage')) {
-        items.push({
-            title: 'Evento',
-            href: '/admin/evento',
-            icon: CalendarCog,
-        });
-    }
-
-    if (
-        can('gafete.templates.manage') ||
-        can('constancias.templates.manage') ||
-        can('correos.templates.manage')
-    ) {
-        items.push({
-            title: 'Plantillas',
-            href: '/admin/plantillas',
-            icon: LayoutTemplate,
-        });
-    }
-
-    if (can('constancias.templates.manage')) {
-        items.push({
-            title: 'Cartas de Invitación',
-            href: '/admin/constancias/invitaciones/plantillas',
-            icon: Mail,
-        });
-    }
-
-    if (can('constancias.types.manage')) {
-        items.push({
-            title: 'Tipos',
-            href: '/admin/constancias/tipos',
-            icon: Tags,
-        });
-    }
-
-    if (can('constancias.moderators.manage')) {
-        items.push({
-            title: 'Moderadores',
-            href: '/admin/constancias/moderadores',
-            icon: Users,
-        });
-    }
-
-    if (can('roles.manage')) {
-        items.push({ title: 'Roles', href: '/admin/roles', icon: ShieldCheck });
-    }
-
-    return items;
+    return availableModules(permissions);
 });
 </script>
 
