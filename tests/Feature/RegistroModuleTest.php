@@ -708,11 +708,50 @@ class RegistroModuleTest extends TestCase
 
         $this->travelTo(now()->addDay()->startOfDay());
 
-        $this->postJson('/checkin/register', ['token' => $participant->checkin_token])
+        $this->postJson('/checkin/register', [
+            'token' => $participant->checkin_token,
+            'day' => now()->format('Y-m-d'),
+        ])
             ->assertOk()
             ->assertJson(['success' => true]);
 
         $this->travelBack();
+    }
+
+    public function test_checkin_works_without_event_dates_when_restriction_disabled()
+    {
+        $this->enableEventCheckin();
+        $this->eventoType();
+        Setting::updateOrCreate(['key' => 'evento_checkin_time_restricted'], ['value' => '0']);
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = User::factory()->create();
+        $this->actingAs($staff);
+
+        $this->postJson('/checkin/register', [
+            'token' => $participant->checkin_token,
+            'day' => now()->format('Y-m-d'),
+        ])
+            ->assertOk()
+            ->assertJson(['success' => true]);
+    }
+
+    public function test_checkin_rejects_future_day_even_without_time_restriction()
+    {
+        $this->enableEventCheckin();
+        $this->eventoType();
+        Setting::updateOrCreate(['key' => 'evento_checkin_time_restricted'], ['value' => '0']);
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => now()->format('Y-m-d')]);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => now()->addDays(3)->format('Y-m-d')]);
+        $staff = $this->userWith('Ponente', ['checkin.scan']);
+        $participant = User::factory()->create();
+        $this->actingAs($staff);
+
+        $this->postJson('/checkin/register', [
+            'token' => $participant->checkin_token,
+            'day' => now()->addDay()->format('Y-m-d'),
+        ])
+            ->assertStatus(422)
+            ->assertJson(['success' => false, 'message' => 'La fecha seleccionada no está dentro de las fechas del evento.']);
     }
 
     public function test_event_constancia_is_blocked_until_min_days_met()

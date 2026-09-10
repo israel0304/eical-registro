@@ -80,19 +80,30 @@ class CheckinController extends Controller
             ], 200);
         }
 
-        $requestedDay = $validated['day'] ?? null;
-        $day = $this->normalizedDay($requestedDay);
-
-        if ($day === null) {
-            return response()->json([
-                'success' => false,
-                'message' => 'La fecha seleccionada no está dentro de las fechas del evento.',
-            ], 422);
-        }
-
+        $requestedDay = trim((string) ($validated['day'] ?? ''));
         $today = now()->format('Y-m-d');
 
-        if ($day === $today && EventSettings::checkinTimeRestricted() && ! $this->isWithinEventDates($today)) {
+        if ($requestedDay !== '') {
+            try {
+                $requestedDay = CarbonImmutable::parse($requestedDay)->format('Y-m-d');
+            } catch (\Throwable) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La fecha seleccionada no es válida.',
+                ], 422);
+            }
+        }
+
+        $day = $requestedDay === '' ? $today : $requestedDay;
+
+        if ($day !== $today) {
+            if ($day > $today || ! in_array($day, EventSettings::eventDays(), true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La fecha seleccionada no está dentro de las fechas del evento.',
+                ], 422);
+            }
+        } elseif (EventSettings::checkinTimeRestricted() && ! $this->isWithinEventDates($today)) {
             return response()->json([
                 'success' => false,
                 'message' => 'El check-in solo está disponible durante las fechas del evento ('.EventSettings::startDate().' a '.EventSettings::endDate().').',
