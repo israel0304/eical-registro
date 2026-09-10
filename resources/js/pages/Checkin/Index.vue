@@ -438,10 +438,9 @@ onBeforeUnmount(() => {
                                 <button
                                     v-if="scannerActive"
                                     @click="switchCamera"
-                                    class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                                    class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
                                 >
                                     <SwitchCamera class="h-3.5 w-3.5" />
-                                    Cambiar cámara
                                 </button>
                                 <button
                                     v-if="scannerActive"
