@@ -280,6 +280,44 @@ class CertificateRenderer
     }
 
     /**
+     * Find or create the invitation letter for a conference speaker, bound to
+     * the conference's kind via its participation type. Unlike the constancia,
+     * it does not require the speaker to be activated (pre-event letter).
+     */
+    public function issueCartaForConference(User $user, Role $role, Conference $conference): ?Certificate
+    {
+        $template = $this->invitationTemplateForConference($conference);
+
+        if ($template === null) {
+            return null;
+        }
+
+        $type = $this->conferenceSpeakerType($conference);
+        $metadata = $this->buildCartaConferenceMetadata($user, $role, $conference);
+
+        $certificate = Certificate::query()->firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'participation_type_id' => $type?->id,
+                'role_id' => $role->id,
+                'event_type' => 'carta-conference',
+                'event_id' => $conference->id,
+            ],
+            [
+                'template_id' => $template->id,
+                'metadata' => $metadata,
+            ],
+        );
+
+        $certificate->update([
+            'template_id' => $template->id,
+            'metadata' => $metadata,
+        ]);
+
+        return $this->finalize($certificate, $template, $metadata);
+    }
+
+    /**
      * Resolve the active invitation template for a role. Prefers the default
      * active template, falling back to any active template of the role and
      * finally to a generic active invitation template (role_id null).
@@ -297,12 +335,69 @@ class CertificateRenderer
                 ->where('role_id', $role->id)
                 ->where('is_active', true)
                 ->first()
-            ?? CertificateTemplate::query()
+            ?? $this->genericInvitationTemplate();
+    }
+
+    /**
+     * Resolve the invitation template for a conference letter. Analyzes the
+     * conference kind to prefer a template bound to its participation type
+     * (Speaker - {tipo}), then falls back to the Speaker role template and
+     * finally to a generic active invitation template.
+     */
+    public function invitationTemplateForConference(Conference $conference): ?CertificateTemplate
+    {
+        $type = $this->conferenceSpeakerType($conference);
+
+        if ($type !== null) {
+            $byType = CertificateTemplate::query()
                 ->where('kind', 'invitation')
-                ->whereNull('role_id')
+                ->where('participation_type_id', $type->id)
                 ->where('is_active', true)
                 ->where('is_default', true)
                 ->first()
+                ?? CertificateTemplate::query()
+                    ->where('kind', 'invitation')
+                    ->where('participation_type_id', $type->id)
+                    ->where('is_active', true)
+                    ->first();
+
+            if ($byType !== null) {
+                return $byType;
+            }
+        }
+
+        $role = Role::query()->where('name', 'Speaker')->first();
+
+        return $role !== null
+            ? $this->invitationTemplateFor($role)
+            : $this->genericInvitationTemplate();
+    }
+
+    /**
+     * Participation type of a conference's kind for the speaker role.
+     */
+    public function conferenceSpeakerType(Conference $conference): ?ParticipationType
+    {
+        return ParticipationType::query()
+            ->where('event_kind', 'conference')
+            ->where('role', 'speaker')
+            ->where('kind', $conference->kind)
+            ->where('is_active', true)
+            ->first();
+    }
+
+    /**
+     * Latest generic active invitation template (role_id null), preferring the
+     * default one.
+     */
+    private function genericInvitationTemplate(): ?CertificateTemplate
+    {
+        return CertificateTemplate::query()
+            ->where('kind', 'invitation')
+            ->whereNull('role_id')
+            ->where('is_active', true)
+            ->where('is_default', true)
+            ->first()
             ?? CertificateTemplate::query()
                 ->where('kind', 'invitation')
                 ->whereNull('role_id')
@@ -1111,6 +1206,8 @@ HTML;
             '{actividad}' => $metadata['actividad'] ?? $metadata['ponencia'] ?? '',
             '{iniciales}' => $metadata['iniciales'] ?? '',
             '{autores}' => $metadata['autores'] ?? '',
+            '{speakers}' => $metadata['speakers'] ?? $metadata['autores'] ?? '',
+            '{horario}' => $metadata['horario'] ?? '',
         ];
 
         foreach ($replacements as $key => $value) {
@@ -1217,11 +1314,52 @@ HTML;
         ];
     }
 
+    private function buildCartaConferenceMetadata(User $user, Role $role, Conference $conference): array
+    {
+        $nombre = trim($user->first_name.' '.$user->last_name);
+        $type = $this->conferenceSpeakerType($conference);
+        $title = (string) $conference->title;
+        $speakers = $conference->speakers()
+            ->get()
+            ->map(fn ($u) => trim($u->first_name.' '.$u->last_name))
+            ->unique()
+            ->values()
+            ->all();
+
+        return [
+            'nombre' => $nombre,
+            'nombre_completo' => $nombre,
+            'rol' => 'Speaker',
+            'tipo_participacion' => $type?->label ?? $this->cartaRoleLabel($role),
+            'evento' => $title,
+            'nombre_evento' => $this->eventName(),
+            'fecha_evento' => $conference->day ? $this->formatSpanishDate($conference->day->toDateString()) : '',
+            'fecha' => $this->formatSpanishDate($user->created_at->toDateString()),
+            'institucion' => (string) ($user->affiliation ?? ''),
+            'pais' => (string) ($user->country ?? ''),
+            'ponencia' => $title,
+            'actividad' => $title,
+            'trabajos' => [$title],
+            'speakers' => implode(', ', $speakers),
+            'autores' => implode(', ', $speakers),
+            'location' => $conference->location,
+            'horario' => $this->scheduleRange($conference->start_time, $conference->end_time),
+            'folio' => '',
+        ];
+    }
+
     /**
-     * Títulos de los trabajos del usuario según su rol, usados por la
-     * variable {titulo_actividad}. Devuelve una lista vacía cuando el rol
-     * no tiene trabajos asociados.
+     * Start – end range for an activity schedule, e.g. "09:00 - 10:00".
      */
+    public function scheduleRange(?string $start, ?string $end): string
+    {
+        if ($start !== null && $end !== null) {
+            return substr($start, 0, 5).' - '.substr($end, 0, 5);
+        }
+
+        return (string) ($start ?? $end ?? '');
+    }
+
     private function workTitlesForRole(User $user, Role $role): array
     {
         return match ($role->name) {

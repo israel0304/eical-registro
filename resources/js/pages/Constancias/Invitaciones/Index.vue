@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { Plus, Pencil, Trash2, CheckCircle2 } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const props = defineProps<{
     templates: any[];
     roles: any[];
+    participationTypes: any[];
 }>();
 
 const showModal = ref(false);
@@ -16,6 +17,7 @@ const form = useForm({
     name: '',
     description: '',
     role_id: '' as number | string,
+    participation_type_id: '' as number | string,
     is_default: false,
     width: 816,
     height: 1056,
@@ -24,12 +26,18 @@ const form = useForm({
 
 const basePath = '/admin/constancias/invitaciones/plantillas';
 
+const selectedRole = computed(
+    () =>
+        props.roles.find((role) => role.id === form.role_id) ?? null,
+);
+
 const openCreateModal = () => {
     backgroundPreview.value = null;
     form.reset();
     form.width = 816;
     form.height = 1056;
     form.role_id = props.roles[0]?.id ?? '';
+    form.participation_type_id = '';
     showModal.value = true;
 };
 
@@ -114,12 +122,13 @@ const toggleActive = (template: any) => {
                         class="w-full table-fixed divide-y divide-gray-200 dark:divide-zinc-800"
                     >
                         <colgroup>
-                            <col class="w-[32%]" />
+                            <col class="w-[30%]" />
                             <col class="w-[12%]" />
                             <col class="w-[14%]" />
                             <col class="w-[10%]" />
-                            <col class="w-[10%]" />
-                            <col class="w-[12%]" />
+                            <col class="w-[8%]" />
+                            <col class="w-[8%]" />
+                            <col class="w-[8%]" />
                             <col class="w-[10%]" />
                         </colgroup>
                         <thead class="bg-gray-50 dark:bg-zinc-800/50">
@@ -133,6 +142,11 @@ const toggleActive = (template: any) => {
                                     class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300"
                                 >
                                     Rol
+                                </th>
+                                <th
+                                    class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300"
+                                >
+                                    Tipo
                                 </th>
                                 <th
                                     class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300"
@@ -183,6 +197,14 @@ const toggleActive = (template: any) => {
                                     class="px-5 py-3 text-sm text-gray-600 dark:text-gray-400"
                                 >
                                     {{ roleLabel(template) }}
+                                </td>
+                                <td
+                                    class="px-5 py-3 text-sm text-gray-600 dark:text-gray-400"
+                                >
+                                    {{
+                                        template.participation_type?.label ??
+                                        '—'
+                                    }}
                                 </td>
                                 <td
                                     class="px-5 py-3 text-sm text-gray-600 dark:text-gray-400"
@@ -251,7 +273,7 @@ const toggleActive = (template: any) => {
                             </tr>
                             <tr v-if="templates.length === 0">
                                 <td
-                                    colspan="7"
+                                    colspan="8"
                                     class="px-5 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
                                 >
                                     No hay plantillas de carta. Crea la primera
@@ -378,6 +400,41 @@ const toggleActive = (template: any) => {
                                     class="mt-1 text-xs text-red-500"
                                 >
                                     {{ form.errors.role_id }}
+                                </p>
+                            </div>
+
+                            <div v-if="selectedRole?.name === 'Speaker'">
+                                <label
+                                    class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
+                                >
+                                    Tipo de conferencia
+                                </label>
+                                <select
+                                    v-model="form.participation_type_id"
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                >
+                                    <option value="">
+                                        Todos (Speaker general)
+                                    </option>
+                                    <option
+                                        v-for="type in participationTypes"
+                                        :key="type.id"
+                                        :value="type.id"
+                                    >
+                                        {{ type.label }}
+                                    </option>
+                                </select>
+                                <p
+                                    class="mt-1 text-xs text-gray-400"
+                                >
+                                    Vincula la plantilla a un tipo de conferencia
+                                    para personalizar la carta de cada modalidad.
+                                </p>
+                                <p
+                                    v-if="form.errors.participation_type_id"
+                                    class="mt-1 text-xs text-red-500"
+                                >
+                                    {{ form.errors.participation_type_id }}
                                 </p>
                             </div>
 

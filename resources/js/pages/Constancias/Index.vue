@@ -19,6 +19,7 @@ const props = defineProps<{
     instructorWorkshops?: any[];
     presentationCertificates?: any[];
     cartaPresentations?: any[];
+    cartaConferences?: any[];
     conferenceCertificates?: any[];
     moderatorConstancia?: {
         activated: boolean;
@@ -91,6 +92,13 @@ const downloadInvitacionPonencia = (presentationId: number) => {
     );
 };
 
+const downloadInvitacionConferencia = (conferenceId: number) => {
+    window.open(
+        '/constancias/invitacion/conferencia/' + conferenceId + '/download',
+        '_blank',
+    );
+};
+
 const roleLabel = (role: string | null) =>
     ({ speaker: 'Speaker', moderator: 'Moderador' })[role ?? ''] ?? role ?? '';
 
@@ -100,6 +108,7 @@ const hasAnyCertificates = computed(() => {
         !!props.instructorWorkshops?.length ||
         (!!canSeePonencias.value && !!props.presentationCertificates?.length) ||
         (!!canSeePonencias.value && !!props.cartaPresentations?.length) ||
+        (!!canSeePonencias.value && !!props.cartaConferences?.length) ||
         !!props.conferenceCertificates?.length ||
         !!props.moderatorConstancia ||
         !!props.eventCertificate ||
@@ -551,6 +560,77 @@ const missingDays = computed(() => {
                         <div class="mt-4">
                             <button
                                 @click="downloadInvitacionPonencia(presentation.id)"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-900/30 dark:text-sky-300"
+                            >
+                                <Mail class="h-4 w-4" /> Carta de
+                                Invitación
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cartas de Invitación por Conferencia -->
+            <div v-if="canSeePonencias && cartaConferences?.length">
+                <h2
+                    class="mb-4 text-xl font-normal tracking-tight text-gray-800 dark:text-gray-200"
+                >
+                    Cartas de Invitación por Conferencia
+                </h2>
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div
+                        v-for="conference in cartaConferences"
+                        :key="'carta-conf-' + conference.id"
+                        class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+                    >
+                        <div class="flex items-start gap-4">
+                            <div
+                                class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/30"
+                            >
+                                <Mail
+                                    class="h-6 w-6 text-sky-600 dark:text-sky-400"
+                                />
+                            </div>
+                            <div class="flex-1">
+                                <h3
+                                    class="text-sm font-semibold text-gray-900 dark:text-white"
+                                >
+                                    {{ conference.title }}
+                                </h3>
+                                <p
+                                    class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                                >
+                                    {{
+                                        conference.tipo_participacion || '—'
+                                    }}
+                                </p>
+                                <p
+                                    class="text-xs text-gray-500 dark:text-gray-400"
+                                >
+                                    {{ conference.day || '—' }}
+                                    {{
+                                        conference.day && conference.location
+                                            ? '|'
+                                            : ''
+                                    }}
+                                    {{ conference.location || '' }}
+                                    {{
+                                        conference.horario
+                                            ? '· ' + conference.horario
+                                            : ''
+                                    }}
+                                </p>
+                                <p
+                                    v-if="conference.cartaFolio"
+                                    class="mt-1 font-mono text-[11px] text-sky-600 dark:text-sky-400"
+                                >
+                                    Carta: {{ conference.cartaFolio }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <button
+                                @click="downloadInvitacionConferencia(conference.id)"
                                 class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-900/30 dark:text-sky-300"
                             >
                                 <Mail class="h-4 w-4" /> Carta de

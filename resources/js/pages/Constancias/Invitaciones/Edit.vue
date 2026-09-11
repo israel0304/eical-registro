@@ -51,6 +51,7 @@ const props = defineProps<{
         name: string;
         description: string | null;
         role_id: number | null;
+        participation_type_id: number | null;
         is_default: boolean;
         is_active: boolean;
         background_path: string | null;
@@ -63,6 +64,11 @@ const props = defineProps<{
         id: number;
         name: string;
     }[];
+    participationTypes?: {
+        id: number;
+        label: string;
+        kind: string | null;
+    }[];
 }>();
 
 const basePath = '/admin/constancias/invitaciones/plantillas';
@@ -71,6 +77,7 @@ const form = useForm({
     name: props.template.name,
     description: props.template.description ?? '',
     role_id: props.template.role_id ?? '',
+    participation_type_id: props.template.participation_type_id ?? '',
     is_default: props.template.is_default,
     is_active: props.template.is_active ?? true,
     width: props.template.width,
@@ -81,6 +88,12 @@ const form = useForm({
 
 const designWidth = computed(() => form.width || 816);
 const designHeight = computed(() => form.height || 1056);
+
+const selectedRoleName = computed(
+    () =>
+        (props.roles ?? []).find((role) => role.id === form.role_id)?.name ??
+        '',
+);
 
 let uidCounter = 0;
 const nextUid = () => `el_${Date.now()}_${uidCounter++}`;
@@ -143,19 +156,22 @@ onBeforeUnmount(() => {
 // Sample data for live preview
 const SAMPLE: Record<string, string> = {
     '{nombre_completo}': 'María Fernanda López',
-    '{rol}': 'Ponente',
+    '{rol}': 'Speaker',
+    '{tipo_participacion}': 'Conferencista magistral',
     '{evento}': 'Inteligencia Artificial en la Educación',
     '{nombre_evento}': 'EICAL 2026',
     '{fecha_evento}': '12 al 15 de agosto de 2026',
     '{institucion}': 'Centro de Investigación y de Estudios Avanzados del IPN',
     '{pais}': 'México',
     '{autores}': 'María Fernanda López, Juan Pérez, Carlos García',
+    '{speakers}': 'María Fernanda López, Juan Pérez, Carlos García',
+    '{horario}': '09:00 - 10:30',
     '{fecha}': '13 de agosto de 2026',
 };
 
 const previewText = (content: string | null) =>
     (content ?? '').replace(
-        /\{nombre_completo\}|\{rol\}|\{evento\}|\{nombre_evento\}|\{fecha_evento\}|\{fecha\}|\{institucion\}|\{pais\}|\{autores\}/g,
+        /\{nombre_completo\}|\{rol\}|\{tipo_participacion\}|\{evento\}|\{nombre_evento\}|\{fecha_evento\}|\{fecha\}|\{institucion\}|\{pais\}|\{autores\}|\{speakers\}|\{horario\}/g,
         (m) => SAMPLE[m] ?? m,
     );
 
@@ -650,6 +666,32 @@ onMounted(() => {
                                         {{ role.name }}
                                     </option>
                                 </select>
+                            </div>
+                            <div v-if="selectedRoleName === 'Speaker'">
+                                <label
+                                    class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
+                                >
+                                    Tipo de conferencia
+                                </label>
+                                <select
+                                    v-model="form.participation_type_id"
+                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                >
+                                    <option value="">
+                                        Todos (Speaker general)
+                                    </option>
+                                    <option
+                                        v-for="type in participationTypes ?? []"
+                                        :key="type.id"
+                                        :value="type.id"
+                                    >
+                                        {{ type.label }}
+                                    </option>
+                                </select>
+                                <p class="mt-1 text-xs text-gray-400">
+                                    Usado en las cartas por conferencia para
+                                    personalizar cada modalidad.
+                                </p>
                             </div>
                             <label
                                 class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300"
