@@ -169,6 +169,13 @@ class User extends Authenticatable implements MustVerifyEmail
             ->withTimestamps();
     }
 
+    public function conferences(): BelongsToMany
+    {
+        return $this->belongsToMany(Conference::class, 'conference_members')
+            ->withPivot('role', 'activated', 'activated_at')
+            ->withTimestamps();
+    }
+
     public function constanciaModerador(): HasOne
     {
         return $this->hasOne(ModeradorConstancia::class);

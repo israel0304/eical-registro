@@ -14,6 +14,7 @@ use App\Http\Controllers\EventoController;
 use App\Http\Controllers\GafeteController;
 use App\Http\Controllers\InvitationTemplateController;
 use App\Http\Controllers\ModeradoresController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ParticipationTypeController;
 use App\Http\Controllers\PonenteActivationController;
 use App\Http\Controllers\PresentationController;
@@ -453,6 +454,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('admin/correos/disparadores/{trigger}', [EmailTriggerController::class, 'destroy'])->name('correos.triggers.destroy');
 
         Route::post('admin/correos/event-logs/{eventLog}/resend', [EmailTriggerController::class, 'resend'])->name('correos.logs.resend');
+    });
+
+    // Admin: notificaciones por correo (masivas e individuales)
+    Route::middleware('can:correos.notifications.manage')->prefix('admin/notificaciones')->name('correos.notificaciones.')->group(function () {
+        Route::get('/', [NotificationController::class, 'index'])->name('index');
+        Route::get('/enviar', [NotificationController::class, 'create'])->name('create');
+        Route::post('/preview', [NotificationController::class, 'preview'])->name('preview');
+        Route::get('/users', [NotificationController::class, 'users'])->name('users');
+        Route::get('/{notificationSend}', [NotificationController::class, 'show'])->name('show');
+        Route::post('/', [NotificationController::class, 'store'])->name('store');
+        Route::post('/{notificationSend}/reenviar-fallidos', [NotificationController::class, 'retryFailed'])->name('retry-failed');
     });
 
     // Admin: badge templates

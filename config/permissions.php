@@ -70,6 +70,7 @@ return [
     ],
     'Correos' => [
         'correos.templates.manage' => 'Gestionar plantillas de correo y disparadores',
+        'correos.notifications.manage' => 'Gestionar notificaciones por correo',
     ],
     'Roles' => [
         'roles.manage' => 'Gestionar roles y permisos',

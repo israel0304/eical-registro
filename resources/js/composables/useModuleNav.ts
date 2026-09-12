@@ -2,6 +2,7 @@ import {
     Award,
     BadgeCheck,
     BarChart3,
+    Bell,
     BookOpen,
     CalendarCheck,
     CalendarCog,
@@ -126,6 +127,12 @@ export const mainModules: AppModule[] = [
         href: '/admin/constancias/invitaciones/plantillas',
         icon: Mail,
         permissions: ['constancias.templates.manage'],
+    },
+    {
+        title: 'Notificaciones',
+        href: '/admin/notificaciones',
+        icon: Bell,
+        permissions: ['correos.notifications.manage'],
     },
     {
         title: 'Tipos',
