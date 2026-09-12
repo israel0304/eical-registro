@@ -7,6 +7,7 @@ use App\Models\NotificationSend;
 use App\Models\ParticipationType;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Workshop;
 use App\Services\NotificationAudienceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -158,7 +159,7 @@ class NotificationAudienceServiceTest extends TestCase
         ]);
         $user->roles()->sync([$role->id]);
 
-        $payload = $this->service->buildPayload($user, 'Conferencista magistral');
+        $payload = $this->service->buildPayload($user, 'Conferencista magistral', 'Taller de prueba');
 
         $this->assertSame($user->name, $payload['nombre_completo']);
         $this->assertSame('Luis', $payload['nombre']);
@@ -167,6 +168,59 @@ class NotificationAudienceServiceTest extends TestCase
         $this->assertSame('123456789', $payload['dni']);
         $this->assertSame('Asistente', $payload['rol']);
         $this->assertSame('Conferencista magistral', $payload['tipo_conferencia']);
+        $this->assertSame('Taller de prueba', $payload['nombre_taller']);
+    }
+
+    public function test_workshop_enrollment_returns_only_enrolled_active_users(): void
+    {
+        $workshop = Workshop::create([
+            'name' => 'Taller de prueba',
+            'description' => 'Descripción',
+            'capacity' => 10,
+            'location' => 'Aula 1',
+            'day' => now()->addDays(5)->format('Y-m-d'),
+            'start_time' => '09:00',
+            'end_time' => '11:00',
+            'qr_time_restricted' => false,
+            'created_by' => User::factory()->create()->id,
+        ]);
+
+        $enrolled = User::factory()->create();
+        $cancelled = User::factory()->create();
+        $inactive = User::factory()->create(['is_active' => false]);
+        $outside = User::factory()->create();
+
+        $workshop->enrollments()->create(['user_id' => $enrolled->id, 'enrolled_at' => now()]);
+        $workshop->enrollments()->create(['user_id' => $cancelled->id, 'enrolled_at' => now(), 'status' => 'cancelled']);
+        $workshop->enrollments()->create(['user_id' => $inactive->id, 'enrolled_at' => now()]);
+
+        $users = $this->service->workshopEnrollment($workshop->id);
+
+        $this->assertSame([$enrolled->id], $users->pluck('id')->all());
+        $this->assertNotContains($outside->id, $users->pluck('id'));
+        $this->assertSame('Taller de prueba', $this->service->workshopName($workshop->id));
+    }
+
+    public function test_resolve_maps_workshop_enrollment_audience(): void
+    {
+        $workshop = Workshop::create([
+            'name' => 'Taller para resolve',
+            'description' => 'Descripción',
+            'capacity' => 10,
+            'location' => 'Aula 2',
+            'day' => now()->addDays(5)->format('Y-m-d'),
+            'start_time' => '09:00',
+            'end_time' => '11:00',
+            'qr_time_restricted' => false,
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $user = User::factory()->create();
+        $workshop->enrollments()->create(['user_id' => $user->id, 'enrolled_at' => now()]);
+
+        $this->assertSame(
+            $user->id,
+            $this->service->resolve('workshop_enrollment', null, null, [], $workshop->id)->firstOrFail()->id
+        );
     }
 
     public function test_label_for_describes_each_audience(): void
@@ -219,11 +273,32 @@ class NotificationAudienceServiceTest extends TestCase
             'recipient_count' => 1,
             'status' => NotificationSend::STATUS_SENT,
         ]);
+        $workshop = Workshop::create([
+            'name' => 'Taller etiqueta',
+            'description' => 'Descripción',
+            'capacity' => 10,
+            'location' => 'Aula 3',
+            'day' => now()->addDays(5)->format('Y-m-d'),
+            'start_time' => '09:00',
+            'end_time' => '11:00',
+            'qr_time_restricted' => false,
+            'created_by' => $sender->id,
+        ]);
+        $sendWorkshop = NotificationSend::create([
+            'subject' => 'Taller',
+            'body_html' => '<p>x</p>',
+            'audience_type' => 'workshop_enrollment',
+            'audience_value' => ['workshop_id' => $workshop->id],
+            'sent_by' => $sender->id,
+            'recipient_count' => 1,
+            'status' => NotificationSend::STATUS_SENT,
+        ]);
 
         $this->assertSame('Todos los usuarios', $this->service->labelFor($sendAll));
         $this->assertSame('Rol: Comité', $this->service->labelFor($sendRole));
         $this->assertSame('Speakers por tipo: Conferencista magistral', $this->service->labelFor($sendKind));
         $this->assertSame('Individual (1)', $this->service->labelFor($sendIndividual));
+        $this->assertSame('Inscritos en taller: Taller etiqueta', $this->service->labelFor($sendWorkshop));
     }
 
     public function test_conference_kinds_returns_labels_from_participation_types(): void

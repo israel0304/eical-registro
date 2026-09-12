@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class NotificationSend extends Model
 {
-    public const AUDIENCE_TYPES = ['all_users', 'role', 'speakers_by_kind', 'individual'];
+    public const AUDIENCE_TYPES = ['all_users', 'role', 'speakers_by_kind', 'individual', 'workshop_enrollment'];
 
     public const STATUS_PENDING = 'pending';
 

@@ -456,8 +456,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('admin/correos/event-logs/{eventLog}/resend', [EmailTriggerController::class, 'resend'])->name('correos.logs.resend');
     });
 
-    // Admin: notificaciones por correo (masivas e individuales)
-    Route::middleware('can:correos.notifications.manage')->prefix('admin/notificaciones')->name('correos.notificaciones.')->group(function () {
+    // Correo: notificaciones (gestores y enviar a inscritos de talleres)
+    Route::middleware('notifications.manage')->prefix('admin/notificaciones')->name('correos.notificaciones.')->group(function () {
         Route::get('/', [NotificationController::class, 'index'])->name('index');
         Route::get('/enviar', [NotificationController::class, 'create'])->name('create');
         Route::post('/preview', [NotificationController::class, 'preview'])->name('preview');

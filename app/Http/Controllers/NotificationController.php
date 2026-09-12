@@ -9,6 +9,7 @@ use App\Models\NotificationRecipient;
 use App\Models\NotificationSend;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Workshop;
 use App\Services\NotificationAudienceService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -45,12 +46,17 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        $workshopId = (int) $request->query('workshop_id', 0);
+        $workshopName = $workshopId > 0 ? $this->audience->workshopName($workshopId) : null;
+
         return Inertia::render('Notificaciones/Create', [
             'roles' => Role::query()->orderBy('name')->get(['id', 'name']),
             'conferenceKinds' => $this->audience->conferenceKinds(),
             'templates' => EmailTemplate::query()->orderBy('name')->get(['id', 'name', 'subject', 'body_html']),
+            'workshopId' => $workshopId > 0 && $workshopName !== null ? $workshopId : null,
+            'workshopName' => $workshopName,
         ]);
     }
 
@@ -58,21 +64,28 @@ class NotificationController extends Controller
     {
         $data = $this->validateAudience($request);
 
+        $this->authorizeAudience($request, $data);
+
         $users = $this->audience->resolve(
             $data['audience_type'],
             $data['role_id'] ?? null,
             $data['kind'] ?? null,
             $data['user_ids'] ?? [],
+            $data['workshop_id'] ?? null,
         );
 
         $tipoConferencia = $data['audience_type'] === 'speakers_by_kind'
             ? $this->audience->kindLabel($data['kind'])
             : null;
 
+        $nombreTaller = $data['audience_type'] === 'workshop_enrollment'
+            ? $this->audience->workshopName((int) $data['workshop_id'])
+            : null;
+
         $sample = $users->take(5)->map(fn ($user) => [
             'email' => $user->email,
             'name' => $user->name,
-            'payload' => $this->audience->buildPayload($user, $tipoConferencia),
+            'payload' => $this->audience->buildPayload($user, $tipoConferencia, $nombreTaller),
         ])->values();
 
         return response()->json([
@@ -113,6 +126,8 @@ class NotificationController extends Controller
     {
         $data = $this->validateAudience($request);
 
+        $this->authorizeAudience($request, $data);
+
         $validated = $request->validate([
             'subject' => ['required', 'string', 'max:191'],
             'body_html' => ['required', 'string'],
@@ -124,6 +139,7 @@ class NotificationController extends Controller
             $data['role_id'] ?? null,
             $data['kind'] ?? null,
             $data['user_ids'] ?? [],
+            $data['workshop_id'] ?? null,
         );
 
         if ($users->isEmpty()) {
@@ -134,11 +150,16 @@ class NotificationController extends Controller
             'role' => ['role_id' => (int) $data['role_id']],
             'speakers_by_kind' => ['kind' => $data['kind']],
             'individual' => ['user_ids' => $users->pluck('id')->all()],
+            'workshop_enrollment' => ['workshop_id' => (int) $data['workshop_id']],
             default => null,
         };
 
         $tipoConferencia = $data['audience_type'] === 'speakers_by_kind'
             ? $this->audience->kindLabel($data['kind'])
+            : null;
+
+        $nombreTaller = $data['audience_type'] === 'workshop_enrollment'
+            ? $this->audience->workshopName((int) $data['workshop_id'])
             : null;
 
         $send = NotificationSend::create([
@@ -156,7 +177,7 @@ class NotificationController extends Controller
             $send->recipients()->create([
                 'email' => $user->email,
                 'name' => $user->name,
-                'payload' => $this->audience->buildPayload($user, $tipoConferencia),
+                'payload' => $this->audience->buildPayload($user, $tipoConferencia, $nombreTaller),
                 'status' => NotificationRecipient::STATUS_PENDING,
             ]);
         }
@@ -192,6 +213,44 @@ class NotificationController extends Controller
             'kind' => ['nullable', Rule::in(Conference::KINDS)],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['integer', 'exists:users,id'],
+            'workshop_id' => ['nullable', 'integer', 'exists:workshops,id'],
         ]);
+    }
+
+    /**
+     * Los gestores completos (correos.notifications.manage) envían a cualquier
+     * audiencia. El resto (instructores) solo a los inscritos de un taller que
+     * impartan.
+     */
+    private function authorizeAudience(Request $request, array $data): void
+    {
+        $user = $request->user();
+
+        if ($this->canManageAll($user)) {
+            return;
+        }
+
+        if ($data['audience_type'] !== 'workshop_enrollment') {
+            abort(403, 'Solo puedes enviar notificaciones a los inscritos de tus talleres.');
+        }
+
+        abort_unless(
+            $this->isInstructorOf($user, (int) ($data['workshop_id'] ?? 0)),
+            403,
+            'Solo puedes enviar notificaciones a los inscritos de tus talleres.',
+        );
+    }
+
+    private function canManageAll(User $user): bool
+    {
+        return $user->can('correos.notifications.manage');
+    }
+
+    private function isInstructorOf(User $user, int $workshopId): bool
+    {
+        return Workshop::query()
+            ->whereKey($workshopId)
+            ->whereHas('instructors', fn ($q) => $q->whereKey($user->id))
+            ->exists();
     }
 }

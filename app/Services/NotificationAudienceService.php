@@ -7,6 +7,7 @@ use App\Models\NotificationSend;
 use App\Models\ParticipationType;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Workshop;
 use Illuminate\Support\Collection;
 
 class NotificationAudienceService
@@ -14,13 +15,14 @@ class NotificationAudienceService
     /**
      * @return Collection<int, User>
      */
-    public function resolve(string $audienceType, ?int $roleId = null, ?string $kind = null, array $userIds = []): Collection
+    public function resolve(string $audienceType, ?int $roleId = null, ?string $kind = null, array $userIds = [], ?int $workshopId = null): Collection
     {
         return match ($audienceType) {
             NotificationSend::AUDIENCE_TYPES[0] => $this->allUsers(),
             NotificationSend::AUDIENCE_TYPES[1] => $this->byRole((int) $roleId),
             NotificationSend::AUDIENCE_TYPES[2] => $this->speakersByKind((string) $kind),
             NotificationSend::AUDIENCE_TYPES[3] => $this->individual($userIds),
+            NotificationSend::AUDIENCE_TYPES[4] => $this->workshopEnrollment((int) $workshopId),
             default => collect(),
         };
     }
@@ -93,9 +95,29 @@ class NotificationAudienceService
     }
 
     /**
+     * Usuarios inscritos (status 'enrolled') en un taller no eliminado.
+     *
+     * @return Collection<int, User>
+     */
+    public function workshopEnrollment(int $workshopId): Collection
+    {
+        return User::query()
+            ->where('is_active', true)
+            ->whereHas('enrolledWorkshops', fn ($q) => $q
+                ->whereKey($workshopId)
+                ->where('workshop_enrollments.status', 'enrolled'))
+            ->get();
+    }
+
+    public function workshopName(int $workshopId): ?string
+    {
+        return Workshop::withTrashed()->whereKey($workshopId)->value('name');
+    }
+
+    /**
      * @return array<string, mixed>
      */
-    public function buildPayload(User $user, ?string $tipoConferencia = null): array
+    public function buildPayload(User $user, ?string $tipoConferencia = null, ?string $nombreTaller = null): array
     {
         return [
             'nombre_completo' => $user->name,
@@ -105,6 +127,7 @@ class NotificationAudienceService
             'dni' => $user->dni ?? '',
             'rol' => $user->roles->first()?->name ?? '',
             'tipo_conferencia' => $tipoConferencia ?? '',
+            'nombre_taller' => $nombreTaller ?? '',
         ];
     }
 
@@ -117,6 +140,7 @@ class NotificationAudienceService
             'role' => 'Rol: '.($this->roleName((int) ($value['role_id'] ?? 0)) ?? '?'),
             'speakers_by_kind' => 'Speakers por tipo: '.$this->kindLabel($value['kind'] ?? null, $value['kind'] ?? '?'),
             'individual' => 'Individual ('.(int) $send->recipient_count.')',
+            'workshop_enrollment' => 'Inscritos en taller: '.($this->workshopName((int) ($value['workshop_id'] ?? 0)) ?? '?'),
             default => $send->audience_type,
         };
     }

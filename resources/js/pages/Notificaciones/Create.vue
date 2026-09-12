@@ -36,7 +36,11 @@ const props = defineProps<{
     roles: { id: number; name: string }[];
     conferenceKinds: Record<string, string | null>;
     templates: { id: number; name: string; subject: string; body_html: string }[];
+    workshopId?: number | null;
+    workshopName?: string | null;
 }>();
+
+const isWorkshopContext = computed(() => props.workshopId != null);
 
 const audienceOptions = [
     {
@@ -62,10 +66,11 @@ const audienceOptions = [
 ];
 
 const form = useForm({
-    audience_type: 'all_users',
+    audience_type: isWorkshopContext.value ? 'workshop_enrollment' : 'all_users',
     role_id: null as number | null,
     kind: '',
     user_ids: [] as number[],
+    workshop_id: isWorkshopContext.value ? props.workshopId : null,
     template_id: null as number | null,
     subject: '',
     body_html: '',
@@ -84,15 +89,23 @@ const editor = useEditor({
     },
 });
 
-const variables: Record<string, string> = {
-    nombre_completo: 'Nombre completo',
-    nombre: 'Nombre',
-    apellidos: 'Apellidos',
-    correo: 'Correo',
-    dni: 'DNI / RFC',
-    rol: 'Rol asignado',
-    tipo_conferencia: 'Tipo de conferencia (speakers por tipo)',
-};
+const variables = computed<Record<string, string>>(() => {
+    const base: Record<string, string> = {
+        nombre_completo: 'Nombre completo',
+        nombre: 'Nombre',
+        apellidos: 'Apellidos',
+        correo: 'Correo',
+        dni: 'DNI / RFC',
+        rol: 'Rol asignado',
+        tipo_conferencia: 'Tipo de conferencia (speakers por tipo)',
+    };
+
+    if (isWorkshopContext.value) {
+        base.nombre_taller = 'Taller';
+    }
+
+    return base;
+});
 
 const insertVariable = (key: string) => {
     editor.value?.chain().focus().insertContent('{{ ' + key + ' }}').run();
@@ -147,6 +160,7 @@ const runPreview = () => {
         role_id: form.audience_type === 'role' ? form.role_id : null,
         kind: form.audience_type === 'speakers_by_kind' ? form.kind : null,
         user_ids: form.audience_type === 'individual' ? form.user_ids : [],
+        workshop_id: form.audience_type === 'workshop_enrollment' ? form.workshop_id : null,
     };
 
     previewLoading.value = true;
@@ -193,12 +207,13 @@ watch(
         form.kind,
         form.user_ids.length,
         form.user_ids,
+        form.workshop_id,
     ],
     () => {
         if (previewTimer) clearTimeout(previewTimer);
         previewTimer = setTimeout(runPreview, 300);
     },
-    { deep: true },
+    { deep: true, immediate: isWorkshopContext.value },
 );
 
 const audienceReady = computed(() => {
@@ -340,10 +355,25 @@ const removeUser = (userId: number) => {
                         <h2
                             class="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white"
                         >
-                            <Users class="h-5 w-5 text-indigo-500" /> 1 · Directores
+                            <Users class="h-5 w-5 text-indigo-500" /> 1 ·
+                            {{ isWorkshopContext ? 'Audiencia' : 'Directores' }}
                         </h2>
 
-                        <div class="space-y-2">
+                        <div
+                            v-if="isWorkshopContext"
+                            class="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950/40"
+                        >
+                            <p class="text-sm font-semibold text-indigo-900 dark:text-indigo-200">
+                                Inscritos del taller: {{ workshopName }}
+                            </p>
+                            <p class="mt-1 text-xs text-indigo-700 dark:text-indigo-300">
+                                El correo se enviará a todos los participantes
+                                inscritos en este taller. Variable disponible:
+                                <code class="font-semibold">{{ variableToken('nombre_taller') }}</code>
+                            </p>
+                        </div>
+
+                        <div v-if="!isWorkshopContext" class="space-y-2">
                             <label
                                 v-for="option in audienceOptions"
                                 :key="option.value"

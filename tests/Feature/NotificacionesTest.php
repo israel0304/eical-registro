@@ -11,6 +11,7 @@ use App\Models\ParticipationType;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Workshop;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -55,6 +56,21 @@ class NotificacionesTest extends TestCase
                 'is_active' => true,
             ],
         );
+    }
+
+    private function workshop(): Workshop
+    {
+        return Workshop::create([
+            'name' => 'Taller de prueba',
+            'description' => 'Descripción',
+            'capacity' => 10,
+            'location' => 'Aula 1',
+            'day' => now()->addDays(5)->format('Y-m-d'),
+            'start_time' => '09:00',
+            'end_time' => '11:00',
+            'qr_time_restricted' => false,
+            'created_by' => auth()->id() ?? User::factory()->create()->id,
+        ]);
     }
 
     public function test_only_users_with_permission_can_access_notifications(): void
@@ -391,5 +407,145 @@ class NotificacionesTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonFragment(['email' => $recipient->email]);
+    }
+
+    public function test_instructor_with_workshop_permission_can_open_composer_prefilled(): void
+    {
+        $instructor = $this->userWith('workshops.enrollments.email');
+        $workshop = $this->workshop();
+        $workshop->instructors()->attach($instructor->id);
+
+        $this->actingAs($instructor)
+            ->get(route('correos.notificaciones.create', ['workshop_id' => $workshop->id]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Notificaciones/Create')
+                ->where('workshopId', $workshop->id)
+                ->where('workshopName', $workshop->name));
+    }
+
+    public function test_workshop_preview_counts_only_enrolled_active_users(): void
+    {
+        $admin = $this->admin();
+        $workshop = $this->workshop();
+
+        $enrolled = User::factory()->create();
+        $cancelled = User::factory()->create();
+        $inactive = User::factory()->create(['is_active' => false]);
+
+        $workshop->enrollments()->create(['user_id' => $enrolled->id, 'enrolled_at' => now()]);
+        $workshop->enrollments()->create(['user_id' => $cancelled->id, 'enrolled_at' => now(), 'status' => 'cancelled']);
+        $workshop->enrollments()->create(['user_id' => $inactive->id, 'enrolled_at' => now()]);
+
+        $this->actingAs($admin)
+            ->postJson(route('correos.notificaciones.preview'), [
+                'audience_type' => 'workshop_enrollment',
+                'workshop_id' => $workshop->id,
+            ])
+            ->assertOk()
+            ->assertJson([
+                'count' => 1,
+                'sample' => [
+                    ['email' => $enrolled->email],
+                ],
+            ]);
+    }
+
+    public function test_workshop_store_includes_taller_name_in_payload(): void
+    {
+        Mail::fake();
+
+        $admin = $this->admin();
+        $workshop = $this->workshop();
+        $enrolled = User::factory()->create();
+        $workshop->enrollments()->create(['user_id' => $enrolled->id, 'enrolled_at' => now()]);
+
+        $this->actingAs($admin)
+            ->post(route('correos.notificaciones.store'), [
+                'audience_type' => 'workshop_enrollment',
+                'workshop_id' => $workshop->id,
+                'subject' => 'Inscrito en {{ nombre_taller }}',
+                'body_html' => '<p>Hola {{ nombre_completo }}</p>',
+            ])
+            ->assertRedirect(route('correos.notificaciones.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('notification_sends', [
+            'audience_type' => 'workshop_enrollment',
+            'recipient_count' => 1,
+        ]);
+
+        $recipient = NotificationSend::firstOrFail()->recipients()->first();
+        $this->assertSame($workshop->name, $recipient->payload['nombre_taller']);
+        $this->assertSame($enrolled->email, $recipient->email);
+    }
+
+    public function test_instructor_can_send_with_permission_to_own_workshop_enrolled(): void
+    {
+        Mail::fake();
+
+        $instructor = $this->userWith('workshops.enrollments.email');
+        $workshop = $this->workshop();
+        $workshop->instructors()->attach($instructor->id);
+
+        $enrolled = User::factory()->create();
+        $workshop->enrollments()->create(['user_id' => $enrolled->id, 'enrolled_at' => now()]);
+
+        $this->actingAs($instructor)
+            ->post(route('correos.notificaciones.store'), [
+                'audience_type' => 'workshop_enrollment',
+                'workshop_id' => $workshop->id,
+                'subject' => 'Asunto del taller',
+                'body_html' => '<p>Cuerpo</p>',
+            ])
+            ->assertRedirect(route('correos.notificaciones.index'))
+            ->assertSessionHas('success');
+
+        Mail::assertSent(NotificationMailable::class, 1);
+        Mail::assertSent(NotificationMailable::class, fn (NotificationMailable $mail) => $mail->hasBcc($enrolled->email));
+    }
+
+    public function test_instructor_with_permission_cannot_email_workshop_it_does_not_teach(): void
+    {
+        $instructor = $this->userWith('workshops.enrollments.email');
+        $other = $this->workshop();
+
+        $this->actingAs($instructor)
+            ->postJson(route('correos.notificaciones.preview'), [
+                'audience_type' => 'workshop_enrollment',
+                'workshop_id' => $other->id,
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($instructor)
+            ->post(route('correos.notificaciones.store'), [
+                'audience_type' => 'workshop_enrollment',
+                'workshop_id' => $other->id,
+                'subject' => 'Asunto',
+                'body_html' => '<p>Cuerpo</p>',
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_instructor_with_workshop_permission_cannot_send_to_other_audiences(): void
+    {
+        $instructor = $this->userWith('workshops.enrollments.email');
+        $workshop = $this->workshop();
+        $workshop->instructors()->attach($instructor->id);
+
+        $this->actingAs($instructor)
+            ->postJson(route('correos.notificaciones.preview'), [
+                'audience_type' => 'all_users',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($instructor)
+            ->post(route('correos.notificaciones.store'), [
+                'audience_type' => 'role',
+                'role_id' => Role::firstOrCreate(['name' => 'Comité'])->id,
+                'subject' => 'Asunto',
+                'body_html' => '<p>Cuerpo</p>',
+            ])
+            ->assertForbidden();
     }
 }

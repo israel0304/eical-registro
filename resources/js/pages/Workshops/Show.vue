@@ -43,6 +43,11 @@ const canManage = computed(
         isAssignedModerator.value ||
         isInstructor.value,
 );
+const canEmailEnrolled = computed(
+    () =>
+        can('correos.notifications.manage') ||
+        can('workshops.enrollments.email'),
+);
 const canToggleAttendance = computed(
     () =>
         can('workshops.attendance') &&
@@ -591,17 +596,29 @@ watch(
                                 }})
                             </button>
                         </nav>
-                        <a
-                            v-if="can('reportes.view')"
-                            :href="
-                                '/admin/reportes/workshops/' +
-                                workshop.id +
-                                '/csv'
-                            "
-                            class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
-                        >
-                            <Download class="h-4 w-4" /> Descargar CSV
-                        </a>
+                        <div class="flex items-center gap-3">
+                            <a
+                                v-if="canEmailEnrolled"
+                                :href="
+                                    '/admin/notificaciones/enviar?workshop_id=' +
+                                    workshop.id
+                                "
+                                class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                            >
+                                <Send class="h-4 w-4" /> Enviar correo
+                            </a>
+                            <a
+                                v-if="can('reportes.view')"
+                                :href="
+                                    '/admin/reportes/workshops/' +
+                                    workshop.id +
+                                    '/csv'
+                                "
+                                class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                            >
+                                <Download class="h-4 w-4" /> Descargar CSV
+                            </a>
+                        </div>
                     </div>
                 </div>
                 <div class="overflow-x-auto">
