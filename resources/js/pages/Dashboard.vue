@@ -271,30 +271,6 @@ const adminModules = [
                         </div>
                     </div>
                 </div>
-
-                <div
-                    v-if="roleModules.length"
-                    class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-                >
-                    <Link
-                        v-for="module in roleModules"
-                        :key="module.title"
-                        :href="module.href"
-                        class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-indigo-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
-                    >
-                        <div class="flex items-center gap-3">
-                            <component
-                                :is="module.icon"
-                                class="h-5 w-5 text-gray-400"
-                            />
-                            <span
-                                class="text-sm font-medium text-gray-900 dark:text-white"
-                            >
-                                {{ module.title }}
-                            </span>
-                        </div>
-                    </Link>
-                </div>
             </template>
 
             <!-- Asistente Dashboard -->
@@ -311,11 +287,11 @@ const adminModules = [
                         Talleres Inscritos
                     </div>
                 </div>
+            </template>
 
-                <div
-                    v-if="roleModules.length"
-                    class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-                >
+            <!-- Módulos según permisos -->
+            <template v-if="!hasRole(superAdminRole) && roleModules.length">
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Link
                         v-for="module in roleModules"
                         :key="module.title"
