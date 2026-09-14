@@ -34,11 +34,24 @@ class ProgramTemplateRenderer
             'workshop' => '#b45309',
             'presentation' => '#0369a1',
             'conference' => '#9d174d',
+            'conference_magistral' => '#8b5cf6',
+            'conference_especial' => '#d946ef',
+            'conference_simposio' => '#14b8a6',
+            'conference_grupo_tematico' => '#f97316',
             'block' => '#475569',
         ],
     ];
 
-    private const TYPE_COLORS_KEYS = ['workshop', 'presentation', 'conference', 'block'];
+    private const TYPE_COLORS_KEYS = [
+        'workshop',
+        'presentation',
+        'conference',
+        'conference_magistral',
+        'conference_especial',
+        'conference_simposio',
+        'conference_grupo_tematico',
+        'block',
+    ];
 
     /**
      * @param  Collection<int, array>  $groups  grupos serializados del programa
@@ -309,10 +322,10 @@ HTML;
             }
 
             $item = $row['item'];
-            $badge = ($item['kind'] === 'activity' ? ($item['activity_label'] ?? 'Actividad') : ($item['block_label'] ?? 'Actividad'));
-            $badgeKind = in_array($item['activity_type'] ?? null, self::TYPE_COLORS_KEYS, true)
-                ? $item['activity_type']
-                : 'block';
+            $badge = $item['kind'] === 'activity'
+                ? ($item['kind_label'] ?? $item['activity_label'] ?? 'Actividad')
+                : ($item['block_label'] ?? 'Actividad');
+            $badgeKind = $this->badgeKindFor($item);
 
             $html .= '<div class="pi">';
 
@@ -343,6 +356,26 @@ HTML;
         }
 
         return $html;
+    }
+
+    /** Clave de color del badge para un item del programa. */
+    private function badgeKindFor(array $item): string
+    {
+        $activityType = $item['activity_type'] ?? null;
+
+        if ($activityType === 'conference' && ($item['conference_kind'] ?? null) !== null) {
+            $key = 'conference_'.$item['conference_kind'];
+
+            if (in_array($key, self::TYPE_COLORS_KEYS, true)) {
+                return $key;
+            }
+        }
+
+        if (in_array($activityType, self::TYPE_COLORS_KEYS, true)) {
+            return $activityType;
+        }
+
+        return 'block';
     }
 
     private function renderLetterhead(Collection $elements, array $meta, array $store, int $page, int $total): string
@@ -511,6 +544,10 @@ CSS;
 .pi-badge-workshop { background: {$typeColors['workshop']}; }
 .pi-badge-presentation { background: {$typeColors['presentation']}; }
 .pi-badge-conference { background: {$typeColors['conference']}; }
+.pi-badge-conference_magistral { background: {$typeColors['conference_magistral']}; }
+.pi-badge-conference_especial { background: {$typeColors['conference_especial']}; }
+.pi-badge-conference_simposio { background: {$typeColors['conference_simposio']}; }
+.pi-badge-conference_grupo_tematico { background: {$typeColors['conference_grupo_tematico']}; }
 .pi-badge-block { background: {$typeColors['block']}; }
 .pi-title { font-size: {$font}px; font-weight: 700; color: {$text}; line-height: 1.3; }
 .pi-meta { font-size: {$metaFont}px; font-weight: 600; color: {$text}; line-height: 1.3; margin-top: 1px; }

@@ -30,6 +30,8 @@ const props = defineProps<{
             block_type: string | null;
             block_label: string | null;
             activity_label: string | null;
+            conference_kind: string | null;
+            kind_label: string | null;
             activity_name: string | null;
             kind: 'activity' | 'block';
             details: Record<string, any>;
@@ -38,6 +40,19 @@ const props = defineProps<{
     eventName: string;
     days: string[];
 }>();
+
+const CONFERENCE_BADGE_CLASSES: Record<string, string> = {
+    magistral:
+        'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
+    especial:
+        'border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700 dark:border-fuchsia-800 dark:bg-fuchsia-900/30 dark:text-fuchsia-300',
+    simposio:
+        'border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
+    grupo_tematico:
+        'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+};
+const conferenceBadgeClasses = (kind?: string | null) =>
+    kind ? (CONFERENCE_BADGE_CLASSES[kind] ?? null) : null;
 
 const viewMode = ref<'list' | 'calendar'>('calendar');
 const showList = computed(() => viewMode.value === 'list');
@@ -65,6 +80,12 @@ const resumen = computed<string | null>(() => {
 
 const kindBadge = computed<string | null>(
     () => detailItem.value?.details?.kind_label ?? null,
+);
+
+const kindBadgeClass = computed<string>(
+    () =>
+        conferenceBadgeClasses(detailItem.value?.details?.kind) ??
+        'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
 );
 
 const extraFacts = computed<{ label: string; value: string }[]>(() => {
@@ -265,6 +286,22 @@ const closeDetail = () => {
                                     <td class="px-5 py-3">
                                         <span
                                             v-if="
+                                                item.conference_kind &&
+                                                conferenceBadgeClasses(
+                                                    item.conference_kind,
+                                                )
+                                            "
+                                            class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium"
+                                            :class="
+                                                conferenceBadgeClasses(
+                                                    item.conference_kind,
+                                                )
+                                            "
+                                        >
+                                            {{ item.kind_label }}
+                                        </span>
+                                        <span
+                                            v-else-if="
                                                 item.kind === 'activity' &&
                                                 item.activity_label
                                             "
@@ -339,7 +376,8 @@ const closeDetail = () => {
                             </span>
                             <span
                                 v-if="kindBadge"
-                                class="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700 dark:border-violet-800 dark:bg-violet-900/30 dark:text-violet-300"
+                                class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium"
+                                :class="kindBadgeClass"
                             >
                                 {{ kindBadge }}
                             </span>

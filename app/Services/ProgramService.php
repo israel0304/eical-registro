@@ -164,6 +164,7 @@ class ProgramService
     public static function serializeItem(ProgramItem $item): array
     {
         $activity = $item->activity;
+        $isConference = $item->activity_type === 'conference';
 
         return [
             'id' => $item->id,
@@ -178,6 +179,10 @@ class ProgramService
             'block_label' => $item->block_type ? (config('program.block_types')[$item->block_type] ?? $item->block_type) : null,
             'activity_type' => $item->activity_type,
             'activity_label' => $item->activity_type ? static::modelLabel($item->activity_type) : null,
+            'conference_kind' => $isConference ? ($activity->kind ?? null) : null,
+            'kind_label' => $isConference && $activity->kind
+                ? (config('participation.kinds.conference.'.$activity->kind, $activity->kind))
+                : null,
             'activity_name' => $activity?->name ?? $activity?->title ?? null,
             'kind' => $item->activity_type !== null ? 'activity' : 'block',
             'people' => static::peopleFor($item),

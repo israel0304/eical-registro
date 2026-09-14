@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CertificateTemplate;
+use App\Models\Conference;
 use App\Models\ProgramItem;
 use App\Models\Role;
 use App\Models\Setting;
@@ -431,6 +432,92 @@ class ProgramaTemplateTest extends TestCase
         $this->assertStringContainsString('pi-badge pi-badge-block', $html);
         $this->assertStringContainsString('background: #b45309', $html);
         $this->assertStringContainsString('background: #475569', $html);
+    }
+
+    public function test_print_badge_shows_conference_kind_label_and_color(): void
+    {
+        $admin = $this->admin();
+        $this->blocks($admin, 1);
+
+        Conference::create([
+            'title' => 'Conferencia magistral',
+            'kind' => 'magistral',
+            'description' => 'test',
+            'location' => 'Auditorio',
+            'day' => '2026-10-05',
+            'start_time' => '09:00',
+            'end_time' => '10:00',
+            'created_by' => $admin->id,
+        ]);
+
+        Conference::create([
+            'title' => 'Conferencia especial',
+            'kind' => 'especial',
+            'description' => 'test',
+            'location' => 'Sala A',
+            'day' => '2026-10-05',
+            'start_time' => '11:00',
+            'end_time' => '12:00',
+            'created_by' => $admin->id,
+        ]);
+
+        CertificateTemplate::create([
+            'name' => 'Programa badges',
+            'kind' => 'program',
+            'is_active' => true,
+            'width' => 816,
+            'height' => 1056,
+        ]);
+
+        $this->actingAs($admin);
+
+        $html = $this->get('/programa/imprimir')->getContent();
+
+        $this->assertStringContainsString('pi-badge pi-badge-conference_magistral', $html);
+        $this->assertStringContainsString('pi-badge pi-badge-conference_especial', $html);
+        $this->assertStringContainsString('>Magistral<', $html);
+        $this->assertStringContainsString('>Especial<', $html);
+        $this->assertStringNotContainsString('>Conferencia<', $html);
+        $this->assertStringContainsString('background: #8b5cf6', $html);
+        $this->assertStringContainsString('background: #d946ef', $html);
+    }
+
+    public function test_edit_page_exposes_conference_kind_and_label(): void
+    {
+        Setting::updateOrCreate(['key' => 'evento_nombre'], ['value' => 'EICAL Grupos']);
+        Setting::updateOrCreate(['key' => 'evento_lugar'], ['value' => 'Auditorio Central']);
+        Setting::updateOrCreate(['key' => 'evento_fecha_inicio'], ['value' => '2026-10-05']);
+        Setting::updateOrCreate(['key' => 'evento_fecha_fin'], ['value' => '2026-10-05']);
+
+        $admin = $this->admin();
+
+        Conference::create([
+            'title' => 'Magistral de apertura',
+            'kind' => 'magistral',
+            'description' => 'test',
+            'location' => 'Auditorio',
+            'day' => '2026-10-05',
+            'start_time' => '09:00',
+            'end_time' => '10:00',
+            'created_by' => $admin->id,
+        ]);
+
+        $template = CertificateTemplate::create([
+            'name' => 'Editor tipos',
+            'kind' => 'program',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get("/programa/plantillas/{$template->id}/edit")
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Programa/Plantillas/Edit')
+                ->has('groups', 1)
+                ->has('groups.0.items', 1)
+                ->where('groups.0.items.0.conference_kind', 'magistral')
+                ->where('groups.0.items.0.kind_label', 'Magistral')
+                ->where('groups.0.items.0.activity_label', 'Conferencia'));
     }
 
     public function test_public_print_renders_active_template_without_auth(): void

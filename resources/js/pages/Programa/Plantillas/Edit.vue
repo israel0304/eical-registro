@@ -66,6 +66,10 @@ const LIST_DEFAULTS: Record<string, any> = {
         workshop: '#b45309',
         presentation: '#0369a1',
         conference: '#9d174d',
+        conference_magistral: '#8b5cf6',
+        conference_especial: '#d946ef',
+        conference_simposio: '#14b8a6',
+        conference_grupo_tematico: '#f97316',
         block: '#475569',
     },
 };
@@ -542,10 +546,17 @@ const listPaginate = (
     return pages;
 };
 
-const badgeKindFor = (item: Record<string, any>) =>
-    ['workshop', 'presentation', 'conference'].includes(item?.activity_type)
+const badgeKindFor = (item: Record<string, any>) => {
+    if (item?.activity_type === 'conference' && item.conference_kind) {
+        const key = `conference_${item.conference_kind}`;
+        if (key in LIST_DEFAULTS.type_colors) return key;
+    }
+    return ['workshop', 'presentation', 'conference'].includes(
+        item?.activity_type,
+    )
         ? item.activity_type
         : 'block';
+};
 
 const listRenderList = (
     rows: ListRow[],
@@ -569,6 +580,14 @@ const listRenderList = (
         workshop: config.type_colors?.workshop ?? '#b45309',
         presentation: config.type_colors?.presentation ?? '#0369a1',
         conference: config.type_colors?.conference ?? '#9d174d',
+        conference_magistral:
+            config.type_colors?.conference_magistral ?? '#8b5cf6',
+        conference_especial:
+            config.type_colors?.conference_especial ?? '#d946ef',
+        conference_simposio:
+            config.type_colors?.conference_simposio ?? '#14b8a6',
+        conference_grupo_tematico:
+            config.type_colors?.conference_grupo_tematico ?? '#f97316',
         block: config.type_colors?.block ?? '#475569',
     };
 
@@ -581,6 +600,10 @@ const listRenderList = (
         `.${scope} .pi-badge-workshop{background:${colors.workshop};}`,
         `.${scope} .pi-badge-presentation{background:${colors.presentation};}`,
         `.${scope} .pi-badge-conference{background:${colors.conference};}`,
+        `.${scope} .pi-badge-conference_magistral{background:${colors.conference_magistral};}`,
+        `.${scope} .pi-badge-conference_especial{background:${colors.conference_especial};}`,
+        `.${scope} .pi-badge-conference_simposio{background:${colors.conference_simposio};}`,
+        `.${scope} .pi-badge-conference_grupo_tematico{background:${colors.conference_grupo_tematico};}`,
         `.${scope} .pi-badge-block{background:${colors.block};}`,
         `.${scope} .pi-title{font-size:${font}px;font-weight:700;color:${text};line-height:1.3;}`,
         `.${scope} .pi-meta{font-size:${metaFont}px;color:#6b7280;line-height:1.3;margin-top:1px;}`,
@@ -599,7 +622,7 @@ const listRenderList = (
         const item = row.item ?? {};
         const badge =
             item.kind === 'activity'
-                ? (item.activity_label ?? 'Actividad')
+                ? (item.kind_label ?? item.activity_label ?? 'Actividad')
                 : (item.block_label ?? 'Actividad');
         const badgeKind = badgeKindFor(item);
 
@@ -1708,6 +1731,22 @@ onMounted(() => {
                                                 ['workshop', 'Taller'],
                                                 ['presentation', 'Ponencia'],
                                                 ['conference', 'Conferencia'],
+                                                [
+                                                    'conference_magistral',
+                                                    'Magistral',
+                                                ],
+                                                [
+                                                    'conference_especial',
+                                                    'Especial',
+                                                ],
+                                                [
+                                                    'conference_simposio',
+                                                    'Simposio',
+                                                ],
+                                                [
+                                                    'conference_grupo_tematico',
+                                                    'Grupo temático',
+                                                ],
                                                 ['block', 'Bloques'],
                                             ]"
                                             :key="type[0]"

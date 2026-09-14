@@ -51,6 +51,10 @@
         }
         .badge.block { background: #fef3c7; color: #92400e; }
         .badge.activity { background: #e0f2fe; color: #075985; }
+        .badge.conference_magistral { background: #ede9fe; color: #6d28d9; }
+        .badge.conference_especial { background: #fae8ff; color: #a21caf; }
+        .badge.conference_simposio { background: #ccfbf1; color: #0f766e; }
+        .badge.conference_grupo_tematico { background: #ffedd5; color: #c2410c; }
         .title { font-weight: 600; }
         .meta { color: #075985; font-weight: 600; font-size: 12px; margin-top: 2px; }
         .meta.block { color: #92400e; }
@@ -150,8 +154,8 @@
                         <tr>
                             <td class="time">{{ $item['time_label'] ?: '—' }}</td>
                             <td>
-                                <span class="badge {{ $item['kind'] === 'activity' ? 'activity' : 'block' }}">
-                                    {{ $item['kind'] === 'activity' ? ($item['activity_label'] ?? 'Actividad') : ($item['block_label'] ?? 'Actividad') }}
+                                <span class="badge {{ $item['kind'] === 'activity' ? ($item['activity_type'] === 'conference' && ! empty($item['conference_kind']) ? 'activity conference_'.$item['conference_kind'] : 'activity') : 'block' }}">
+                                    {{ $item['kind'] === 'activity' ? ($item['kind_label'] ?? $item['activity_label'] ?? 'Actividad') : ($item['block_label'] ?? 'Actividad') }}
                                 </span>
                                 <div class="title">{{ $item['title'] }}</div>
                                 @if ($item['location'] || $item['activity_name'])
