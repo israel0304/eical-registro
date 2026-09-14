@@ -33,6 +33,7 @@ use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopEnrollment;
 use App\Services\EventAudit;
+use App\Support\EventSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -41,7 +42,7 @@ use Inertia\Inertia;
 Route::get('/', function () {
     return Inertia::render('auth/Login', [
         'canResetPassword' => true,
-        'canRegister' => true,
+        'canRegister' => EventSettings::registrationOpen(),
     ]);
 })->name('home');
 

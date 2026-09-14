@@ -24,6 +24,11 @@ class EventSettings
         return (bool) self::get('evento_checkin_enabled', false);
     }
 
+    public static function registrationOpen(): bool
+    {
+        return (bool) self::get('evento_registro_abierto', true);
+    }
+
     public static function checkinTimeRestricted(): bool
     {
         return (bool) self::get('evento_checkin_time_restricted', true);

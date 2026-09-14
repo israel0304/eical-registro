@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import { Lock } from 'lucide-vue-next';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
@@ -9,14 +10,24 @@ import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
+
+withDefaults(
+    defineProps<{
+        closed?: boolean;
+    }>(),
+    {
+        closed: false,
+    },
+);
 </script>
 
 <template>
-    <AuthBase
-        title="Crear cuenta de Asistente"
-        description="Regístrate para participar en el evento"
-    >
-        <Head title="Registro" />
+  <AuthBase
+    v-if="!closed"
+    title="Crear cuenta de Asistente"
+    description="Regístrate para participar en el evento"
+  >
+    <Head title="Registro" />
 
         <Form
             v-bind="store.form()"
@@ -159,5 +170,30 @@ import { store } from '@/routes/register';
                 >
             </div>
         </Form>
+    </AuthBase>
+
+    <AuthBase
+        v-else
+        title="Registro cerrado"
+        description="Las inscripciones al evento han concluido"
+    >
+        <Head title="Registro cerrado" />
+
+        <div class="flex flex-col items-center gap-4 py-6 text-center">
+            <div
+                class="flex h-12 w-12 items-center justify-center rounded-full bg-muted"
+            >
+                <Lock class="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p class="text-sm leading-relaxed text-muted-foreground">
+                El registro de cuentas para este evento está cerrado. Si ya
+                tienes una cuenta, inicia sesión para continuar.
+            </p>
+            <Button as-child class="w-full" tabindex="1">
+                <TextLink :href="login()" class="underline underline-offset-4">
+                    Iniciar sesión
+                </TextLink>
+            </Button>
+        </div>
     </AuthBase>
 </template>

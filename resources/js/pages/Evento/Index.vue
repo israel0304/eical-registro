@@ -15,6 +15,7 @@ import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 const props = defineProps<{
     settings: {
         evento_nombre: string;
+        evento_registro_abierto: boolean;
         evento_checkin_enabled: boolean;
         evento_checkin_time_restricted: boolean;
         evento_checkin_grace_hours: number;
@@ -33,6 +34,7 @@ const props = defineProps<{
 
 const form = useForm({
     evento_nombre: props.settings.evento_nombre,
+    evento_registro_abierto: props.settings.evento_registro_abierto,
     evento_checkin_enabled: props.settings.evento_checkin_enabled,
     evento_checkin_time_restricted:
         props.settings.evento_checkin_time_restricted,
@@ -264,6 +266,23 @@ const deleteAttendance = (attendance: any) => {
                                     emitir la constancia del evento.
                                 </p>
                             </div>
+                            <label
+                                class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+                            >
+                                <input
+                                    v-model="form.evento_registro_abierto"
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                Registro de cuentas abierto
+                            </label>
+                            <p
+                                class="text-xs text-gray-400 dark:text-gray-500"
+                            >
+                                Desactiva para impedir que se creen cuentas
+                                nuevas en el evento. Los usuarios existentes no
+                                se ven afectados.
+                            </p>
                             <label
                                 class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
                             >

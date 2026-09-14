@@ -883,6 +883,34 @@ class RegistroModuleTest extends TestCase
                 ->has('attendances', 2));
     }
 
+    public function test_evento_settings_can_toggle_registration_open()
+    {
+        $this->enableEventCheckin();
+        $this->actingAs($this->admin());
+
+        $this->get('/admin/evento')
+            ->assertInertia(fn ($page) => $page
+                ->component('Evento/Index')
+                ->where('settings.evento_registro_abierto', true));
+
+        $this->put('/admin/evento', [
+            'evento_nombre' => 'EICAL 2026',
+            'evento_registro_abierto' => 0,
+            'evento_checkin_enabled' => 1,
+            'evento_checkin_grace_hours' => 2,
+            'evento_min_dias' => 2,
+            'evento_fecha_inicio' => '',
+            'evento_fecha_fin' => '',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('settings', ['key' => 'evento_registro_abierto', 'value' => '0']);
+
+        $this->get('/admin/evento')
+            ->assertInertia(fn ($page) => $page
+                ->component('Evento/Index')
+                ->where('settings.evento_registro_abierto', false));
+    }
+
     public function test_admin_can_access_and_update_evento_settings()
     {
         $this->enableEventCheckin();

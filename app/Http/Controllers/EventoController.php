@@ -92,6 +92,7 @@ class EventoController extends Controller
         return Inertia::render('Evento/Index', [
             'settings' => [
                 'evento_nombre' => EventSettings::nombre(),
+                'evento_registro_abierto' => EventSettings::registrationOpen(),
                 'evento_checkin_enabled' => EventSettings::checkinEnabled(),
                 'evento_checkin_time_restricted' => EventSettings::checkinTimeRestricted(),
                 'evento_checkin_grace_hours' => EventSettings::checkinGraceHours(),
@@ -122,6 +123,7 @@ class EventoController extends Controller
 
         $validated = $request->validate([
             'evento_nombre' => ['required', 'string', 'max:255'],
+            'evento_registro_abierto' => ['nullable', 'boolean'],
             'evento_checkin_enabled' => ['nullable', 'boolean'],
             'evento_checkin_time_restricted' => ['nullable', 'boolean'],
             'evento_checkin_grace_hours' => ['required', 'integer', 'min:0', 'max:24'],
@@ -148,6 +150,7 @@ class EventoController extends Controller
         ]);
 
         Setting::updateOrCreate(['key' => 'evento_nombre'], ['value' => $validated['evento_nombre']]);
+        Setting::updateOrCreate(['key' => 'evento_registro_abierto'], ['value' => (bool) ($validated['evento_registro_abierto'] ?? true) ? '1' : '0']);
         Setting::updateOrCreate(['key' => 'evento_checkin_enabled'], ['value' => (bool) ($validated['evento_checkin_enabled'] ?? false) ? '1' : '0']);
         Setting::updateOrCreate(['key' => 'evento_checkin_time_restricted'], ['value' => (bool) ($validated['evento_checkin_time_restricted'] ?? true) ? '1' : '0']);
         Setting::updateOrCreate(['key' => 'evento_checkin_grace_hours'], ['value' => (string) $validated['evento_checkin_grace_hours']]);

@@ -75,6 +75,7 @@ class DatabaseSeeder extends Seeder
 
         $settings = [
             'evento_nombre' => 'EICAL 2026',
+            'evento_registro_abierto' => '1',
             'evento_checkin_enabled' => '1',
             'evento_checkin_time_restricted' => '1',
             'evento_checkin_grace_hours' => '2',
