@@ -127,8 +127,14 @@ class WorkshopController extends Controller
             })
         );
 
+        $myEnrolled = $user->enrolledWorkshops()
+            ->wherePivot('status', 'enrolled')
+            ->where('workshops.id', '!=', $workshop->id)
+            ->get(['workshops.id', 'name', 'day', 'start_time', 'end_time']);
+
         return Inertia::render('Workshops/Show', [
             'workshop' => $workshop,
+            'myEnrolled' => $myEnrolled,
         ]);
     }
 

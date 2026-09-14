@@ -32,6 +32,12 @@ class WorkshopEnrollmentController extends Controller
                     return back()->withErrors(['error' => 'No hay cupos disponibles.']);
                 }
 
+                $conflict = $this->conflictingWorkshop($user, $workshop);
+
+                if ($conflict) {
+                    return back()->withErrors(['error' => $this->conflictMessage($conflict)]);
+                }
+
                 $existingEnrollment->update([
                     'status' => 'enrolled',
                     'enrolled_at' => now(),
@@ -45,6 +51,12 @@ class WorkshopEnrollmentController extends Controller
 
         if (! $workshop->hasAvailableSpots()) {
             return back()->withErrors(['error' => 'No hay cupos disponibles en este taller.']);
+        }
+
+        $conflict = $this->conflictingWorkshop($user, $workshop);
+
+        if ($conflict) {
+            return back()->withErrors(['error' => $this->conflictMessage($conflict)]);
         }
 
         $enrollment = WorkshopEnrollment::create([
@@ -157,5 +169,24 @@ class WorkshopEnrollmentController extends Controller
         return Inertia::render('Workshops/MyWorkshops', [
             'workshops' => $workshops,
         ]);
+    }
+
+    private function conflictingWorkshop(User $user, Workshop $workshop): ?Workshop
+    {
+        return $user->enrolledWorkshops()
+            ->wherePivot('status', 'enrolled')
+            ->where('workshops.id', '!=', $workshop->id)
+            ->where('workshops.day', $workshop->day)
+            ->whereColumn('workshops.start_time', '<', $workshop->end_time)
+            ->whereColumn('workshops.end_time', '>', $workshop->start_time)
+            ->first();
+    }
+
+    private function conflictMessage(Workshop $conflict): string
+    {
+        $start = $conflict->start_time ? substr($conflict->start_time, 0, 5) : '';
+        $end = $conflict->end_time ? substr($conflict->end_time, 0, 5) : '';
+
+        return 'Ya estás inscrito en el taller "'.$conflict->name.'" de '.$start.' a '.$end.'. No puedes inscribirte a dos talleres al mismo horario.';
     }
 }

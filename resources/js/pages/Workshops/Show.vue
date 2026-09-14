@@ -19,6 +19,14 @@ import {
     ChevronUp,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted, nextTick, watch } from 'vue';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const page = usePage();
@@ -59,6 +67,13 @@ const showSelfEnrollment = computed(
 
 const props = defineProps<{
     workshop: any;
+    myEnrolled?: {
+        id: number;
+        name: string;
+        day: string;
+        start_time: string;
+        end_time: string;
+    }[];
 }>();
 
 const breadcrumbs = computed(() =>
@@ -159,11 +174,41 @@ const formatDate = (dateStr: string) => {
     });
 };
 
+const shortTime = (time?: string | null) =>
+    time ? time.slice(0, 5) : '';
+
+const conflictOpen = ref(false);
+const conflictingWorkshop = computed(() => {
+    const curStart = shortTime(props.workshop.start_time);
+    const curEnd = shortTime(props.workshop.end_time);
+
+    return (
+        (props.myEnrolled ?? []).find((w) => {
+            if (w.day !== props.workshop.day) return false;
+            const s = shortTime(w.start_time);
+            const e = shortTime(w.end_time);
+
+            return s < curEnd && curStart < e;
+        }) ?? null
+    );
+});
+
+const openConflictWorkshop = () => {
+    if (!conflictingWorkshop.value) return;
+    router.get('/workshops/' + conflictingWorkshop.value.id);
+};
+
 const goBack = () => {
     router.get('/workshops');
 };
 
 const enroll = () => {
+    if (conflictingWorkshop.value) {
+        conflictOpen.value = true;
+
+        return;
+    }
+
     router.post(
         '/workshops/' + props.workshop.id + '/enroll',
         {},
@@ -881,4 +926,46 @@ watch(
             </div>
         </div>
     </AppLayout>
+
+    <Dialog v-model:open="conflictOpen">
+        <DialogContent class="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Conflicto de horario</DialogTitle>
+                <DialogDescription>
+                    <p class="mb-2">
+                        Ya estás inscrito en el taller
+                        <span class="font-bold text-gray-900 dark:text-white">
+                            {{ conflictingWorkshop?.name }}
+                        </span>
+                        el {{ formatDate(conflictingWorkshop?.day ?? '') }} de
+                        {{ shortTime(conflictingWorkshop?.start_time) }} a
+                        {{ shortTime(conflictingWorkshop?.end_time) }}.
+                    </p>
+                    <p>
+                        No es posible estar inscrito en dos talleres al mismo
+                        horario. Para inscribirte a este taller, primero cancela
+                        tu inscripción en
+                        <span class="font-bold text-gray-900 dark:text-white">
+                            {{ conflictingWorkshop?.name }}
+                        </span>
+                        .
+                    </p>
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+                <button
+                    @click="openConflictWorkshop"
+                    class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                >
+                    Ver mi inscripción
+                </button>
+                <button
+                    @click="conflictOpen = false"
+                    class="inline-flex items-center gap-2 rounded-md border border-transparent bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800"
+                >
+                    Entendido
+                </button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 </template>
