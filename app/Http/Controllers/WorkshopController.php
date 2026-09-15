@@ -105,8 +105,9 @@ class WorkshopController extends Controller
     {
         $user = request()->user();
         $isAssignedModerator = $workshop->moderators()->where('users.id', $user->id)->exists();
+        $isInstructor = $workshop->instructors()->where('users.id', $user->id)->exists();
 
-        abort_unless($user->canViewActivity('workshops.view', $isAssignedModerator), 403);
+        abort_unless($user->canViewActivity('workshops.view', $isAssignedModerator || $isInstructor), 403);
 
         $workshop->loadCount(['enrollments as enrolled_count' => function ($q) {
             $q->where('status', 'enrolled');

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import {
     ArrowLeft,
     UserPlus,
@@ -17,6 +18,7 @@ import {
     Users,
     ChevronDown,
     ChevronUp,
+    Search,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted, nextTick, watch } from 'vue';
 import {
@@ -91,6 +93,77 @@ const breadcrumbs = computed(() =>
 const activeTab = ref<'enrolled' | 'cancelled'>('enrolled');
 const qrCanvas = ref<HTMLCanvasElement | null>(null);
 const sendForm = useForm({ user_id: null as number | null });
+
+const canManualEnroll = computed(
+    () =>
+        can('workshops.enrollments') ||
+        isInstructor.value ||
+        isAssignedModerator.value,
+);
+
+const manualOpen = ref(false);
+const manualSearch = ref('');
+const manualResults = ref<any[]>([]);
+const manualSearching = ref(false);
+const manualForm = useForm({ user_id: null as number | null });
+const manualErrorOpen = ref(false);
+const manualErrorKind = ref<'conflict' | 'cap_full'>('conflict');
+const manualConflictingWorkshop = ref<any>(null);
+
+let manualSearchTimer: ReturnType<typeof setTimeout> | undefined;
+
+watch(manualSearch, (value) => {
+    clearTimeout(manualSearchTimer);
+    if (value.trim().length < 3) {
+        manualResults.value = [];
+        return;
+    }
+    manualSearching.value = true;
+    manualSearchTimer = setTimeout(async () => {
+        try {
+            const { data } = await axios.get(
+                '/api/workshops/' + props.workshop.id + '/users',
+                { params: { search: value.trim() } },
+            );
+            manualResults.value = data ?? [];
+        } catch {
+            manualResults.value = [];
+        } finally {
+            manualSearching.value = false;
+        }
+    }, 300);
+});
+
+const openManualDialog = () => {
+    manualSearch.value = '';
+    manualResults.value = [];
+    manualForm.reset();
+    manualErrorOpen.value = false;
+    manualOpen.value = true;
+};
+
+const submitManualEnrollment = () => {
+    if (!manualForm.user_id) return;
+    manualForm.post('/workshops/' + props.workshop.id + '/enrollments', {
+        preserveScroll: true,
+        onSuccess: () => {
+            manualOpen.value = false;
+            manualSearch.value = '';
+            manualResults.value = [];
+        },
+        onError: (errs: any) => {
+            if (errs.conflict) {
+                manualConflictingWorkshop.value =
+                    errs.conflicting_workshop ?? null;
+                manualErrorKind.value = 'conflict';
+                manualErrorOpen.value = true;
+            } else if (errs.cap_full) {
+                manualErrorKind.value = 'cap_full';
+                manualErrorOpen.value = true;
+            }
+        },
+    });
+};
 
 const isEnrolled = computed(() => {
     return props.workshop.enrollments?.some(
@@ -642,6 +715,14 @@ watch(
                             </button>
                         </nav>
                         <div class="flex items-center gap-3">
+                            <button
+                                v-if="canManualEnroll"
+                                @click="openManualDialog"
+                                class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-50 dark:border-indigo-800 dark:bg-zinc-800 dark:text-indigo-300 dark:hover:bg-zinc-700"
+                            >
+                                <UserPlus class="h-4 w-4" /> Registrar
+                                inscrito
+                            </button>
                             <a
                                 v-if="canEmailEnrolled"
                                 :href="
@@ -961,6 +1042,147 @@ watch(
                 </button>
                 <button
                     @click="conflictOpen = false"
+                    class="inline-flex items-center gap-2 rounded-md border border-transparent bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800"
+                >
+                    Entendido
+                </button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="manualOpen">
+        <DialogContent class="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Registrar inscrito manualmente</DialogTitle>
+                <DialogDescription>
+                    Busca al participante por nombre, apellido, correo o DNI
+                    para inscribirlo a {{ workshop.name }}.
+                </DialogDescription>
+            </DialogHeader>
+            <div class="space-y-4">
+                <div class="relative">
+                    <Search
+                        class="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+                    />
+                    <input
+                        v-model="manualSearch"
+                        type="text"
+                        placeholder="Buscar participante..."
+                        class="w-full rounded-lg border border-gray-300 bg-white py-2 pr-3 pl-9 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                    />
+                </div>
+
+                <div v-if="manualSearching" class="text-sm text-gray-500">
+                    Buscando...
+                </div>
+
+                <ul
+                    v-else-if="manualResults.length > 0"
+                    class="max-h-64 space-y-1 overflow-y-auto"
+                >
+                    <li v-for="user in manualResults" :key="user.id">
+                        <button
+                            @click="manualForm.user_id = user.id"
+                            class="w-full rounded-lg border px-3 py-2 text-left transition-colors"
+                            :class="
+                                manualForm.user_id === user.id
+                                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950'
+                                    : 'border-gray-200 hover:bg-gray-50 dark:border-zinc-700 dark:hover:bg-zinc-800'
+                            "
+                        >
+                            <span
+                                class="block text-sm font-medium text-gray-900 dark:text-white"
+                            >
+                                {{ user.first_name }} {{ user.last_name }}
+                            </span>
+                            <span
+                                class="block truncate text-xs text-gray-500 dark:text-gray-400"
+                            >
+                                {{ user.email }} · {{ user.dni }}
+                            </span>
+                        </button>
+                    </li>
+                </ul>
+                <p
+                    v-else-if="manualSearch.trim().length >= 3"
+                    class="text-sm text-gray-500"
+                >
+                    Sin resultados para "{{ manualSearch }}".
+                </p>
+
+                <div
+                    v-if="manualForm.errors.error"
+                    class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300"
+                >
+                    {{ manualForm.errors.error }}
+                </div>
+            </div>
+            <DialogFooter>
+                <button
+                    @click="manualOpen = false"
+                    class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                >
+                    Cancelar
+                </button>
+                <button
+                    @click="submitManualEnrollment"
+                    :disabled="!manualForm.user_id || manualForm.processing"
+                    class="inline-flex items-center gap-2 rounded-md border border-transparent bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800 disabled:opacity-50"
+                >
+                    <UserPlus class="h-4 w-4" /> Registrar
+                </button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="manualErrorOpen">
+        <DialogContent class="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>
+                    {{
+                        manualErrorKind === 'conflict'
+                            ? 'Conflicto de horario'
+                            : 'Cupo lleno'
+                    }}
+                </DialogTitle>
+                <DialogDescription>
+                    <template v-if="manualErrorKind === 'conflict'">
+                        <p class="mb-2">
+                            El participante ya está inscrito en
+                            <span
+                                class="font-bold text-gray-900 dark:text-white"
+                            >
+                                {{ manualConflictingWorkshop?.name }}
+                            </span>
+                            el
+                            {{
+                                formatDate(
+                                    manualConflictingWorkshop?.day ?? '',
+                                )
+                            }}
+                            de
+                            {{
+                                shortTime(
+                                    manualConflictingWorkshop?.start_time,
+                                )
+                            }}
+                            a
+                            {{ shortTime(manualConflictingWorkshop?.end_time) }}.
+                        </p>
+                        <p>
+                            No es posible inscribirlo a dos talleres al mismo
+                            horario. La inscripción no fue registrada.
+                        </p>
+                    </template>
+                    <p v-else>
+                        El taller ya alcanzó su capacidad ({{ workshop.enrolled_count || 0 }} / {{ workshop.capacity }} cupos). La
+                        inscripción no fue registrada.
+                    </p>
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+                <button
+                    @click="manualErrorOpen = false"
                     class="inline-flex items-center gap-2 rounded-md border border-transparent bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800"
                 >
                     Entendido

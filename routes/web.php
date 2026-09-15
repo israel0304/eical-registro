@@ -136,14 +136,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Workshop enrollment
     Route::post('workshops/{workshop}/enroll', [WorkshopEnrollmentController::class, 'store'])->name('workshops.enroll');
     Route::delete('workshops/{workshop}/unenroll', [WorkshopEnrollmentController::class, 'destroy'])->name('workshops.unenroll');
+    Route::post('workshops/{workshop}/enrollments', [WorkshopEnrollmentController::class, 'adminStore'])->name('workshops.enrollments.admin-store');
+    Route::delete('workshops/{workshop}/enrollments/{enrollment}', [WorkshopEnrollmentController::class, 'adminDestroy'])->name('workshops.enrollments.admin-destroy');
+    Route::get('api/workshops/{workshop}/users', [WorkshopEnrollmentController::class, 'searchUsers'])->name('api.workshops.users');
     Route::get('my-workshops', [WorkshopEnrollmentController::class, 'myWorkshops'])->middleware('can:workshops.my')->name('workshops.my');
 
     // Workshop attendance (QR scan)
     Route::get('workshops/{workshop}/scan', [AttendanceController::class, 'scan'])->name('workshops.scan');
 
     // Admin: workshop enrollment management
-    Route::delete('admin/workshops/{workshop}/enrollments/{enrollment}', [WorkshopEnrollmentController::class, 'adminDestroy'])->middleware('can:workshops.enrollments')->name('workshops.admin-enrollment-destroy');
-    Route::get('admin/workshops/{workshop}/enrollments', [AttendanceController::class, 'showEnrollments'])->middleware('can:workshops.enrollments')->name('workshops.admin-enrollments');
+    Route::delete('admin/workshops/{workshop}/enrollments/{enrollment}', [WorkshopEnrollmentController::class, 'adminDestroy'])->name('workshops.admin-enrollment-destroy');
 
     // Admin: attendance
     Route::post('admin/workshops/{workshop}/attendance/{userId}', [AttendanceController::class, 'toggleAttendance'])->name('workshops.admin-attendance-toggle');

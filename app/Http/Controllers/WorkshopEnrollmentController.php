@@ -97,6 +97,90 @@ class WorkshopEnrollmentController extends Controller
         ]);
     }
 
+    public function adminStore(Request $request, Workshop $workshop)
+    {
+        $this->authorizeManualEnrollment($request->user(), $workshop);
+
+        $validated = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $user = User::findOrFail($validated['user_id']);
+
+        $existingEnrollment = WorkshopEnrollment::where('user_id', $user->id)
+            ->where('workshop_id', $workshop->id)
+            ->first();
+
+        if ($existingEnrollment && $existingEnrollment->status === 'enrolled') {
+            return back()->withErrors(['error' => 'El usuario ya está inscrito en este taller.']);
+        }
+
+        $conflict = $this->conflictingWorkshop($user, $workshop);
+
+        if ($conflict) {
+            return back()->withErrors([
+                'conflict' => true,
+                'conflicting_workshop' => [
+                    'id' => $conflict->id,
+                    'name' => $conflict->name,
+                    'day' => $conflict->day,
+                    'start_time' => $conflict->start_time,
+                    'end_time' => $conflict->end_time,
+                ],
+                'error' => $this->conflictMessage($conflict),
+            ]);
+        }
+
+        if (! $workshop->hasAvailableSpots()) {
+            return back()->withErrors([
+                'cap_full' => true,
+                'error' => "El taller está lleno ({$workshop->enrolledCount()} / {$workshop->capacity} cupos).",
+            ]);
+        }
+
+        if ($existingEnrollment && $existingEnrollment->status === 'cancelled') {
+            $existingEnrollment->update([
+                'status' => 'enrolled',
+                'enrolled_at' => now(),
+            ]);
+
+            $this->notifyEnrollment($existingEnrollment, $workshop, $user);
+
+            return back()->with('success', 'Inscripción registrada correctamente.');
+        }
+
+        $enrollment = WorkshopEnrollment::create([
+            'user_id' => $user->id,
+            'workshop_id' => $workshop->id,
+            'enrolled_at' => now(),
+            'status' => 'enrolled',
+        ]);
+
+        $this->notifyEnrollment($enrollment, $workshop, $user);
+
+        return back()->with('success', 'Inscripción registrada correctamente.');
+    }
+
+    public function searchUsers(Request $request, Workshop $workshop)
+    {
+        $this->authorizeManualEnrollment($request->user(), $workshop);
+
+        $search = trim((string) $request->input('search', ''));
+
+        if ($search === '') {
+            return response()->json([]);
+        }
+
+        return User::where(function ($q) use ($search) {
+            $q->where('first_name', 'like', "%{$search}%")
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")
+                ->orWhere('dni', 'like', "%{$search}%");
+        })
+            ->limit(20)
+            ->get(['id', 'first_name', 'last_name', 'email', 'dni']);
+    }
+
     public function destroy(Request $request, Workshop $workshop)
     {
         $enrollment = WorkshopEnrollment::where('user_id', $request->user()->id)
@@ -132,7 +216,7 @@ class WorkshopEnrollmentController extends Controller
 
     public function adminDestroy(Request $request, Workshop $workshop, WorkshopEnrollment $enrollment)
     {
-        abort_unless($request->user()->can('workshops.enrollments'), 403);
+        $this->authorizeManualEnrollment($request->user(), $workshop);
 
         if ($enrollment->workshop_id !== $workshop->id) {
             abort(404);
@@ -169,6 +253,14 @@ class WorkshopEnrollmentController extends Controller
         return Inertia::render('Workshops/MyWorkshops', [
             'workshops' => $workshops,
         ]);
+    }
+
+    private function authorizeManualEnrollment(User $user, Workshop $workshop): void
+    {
+        $isInstructor = $workshop->instructors()->whereKey($user->id)->exists();
+        $isModerator = $workshop->moderators()->whereKey($user->id)->exists();
+
+        abort_unless($user->can('workshops.enrollments') || $isInstructor || $isModerator, 403);
     }
 
     private function conflictingWorkshop(User $user, Workshop $workshop): ?Workshop
