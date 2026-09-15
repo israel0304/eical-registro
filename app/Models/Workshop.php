@@ -27,11 +27,22 @@ class Workshop extends Model
         'end_time',
         'created_by',
         'qr_time_restricted',
+        'parent_workshop_id',
     ];
 
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function parentWorkshop(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_workshop_id');
+    }
+
+    public function childWorkshops(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_workshop_id');
     }
 
     public function instructors(): BelongsToMany

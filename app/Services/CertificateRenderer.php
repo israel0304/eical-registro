@@ -13,6 +13,7 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Support\EventSettings;
+use App\Support\WorkshopGroups;
 use BaconQrCode\Renderer\Image\ImagickImageBackEnd;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
@@ -110,6 +111,12 @@ class CertificateRenderer
 
         $template = $this->defaultTemplateFor($type, 'certificate');
 
+        if ($eventKind === 'workshop' && $event instanceof Workshop) {
+            return $this->issueWorkshop($user, $type, $template, $event);
+        }
+
+        $metadata = $this->buildMetadata($user, $type, $event);
+
         $certificate = Certificate::query()->firstOrCreate(
             [
                 'user_id' => $user->id,
@@ -119,11 +126,59 @@ class CertificateRenderer
             ],
             [
                 'template_id' => $template?->id,
-                'metadata' => $this->buildMetadata($user, $type, $event),
+                'metadata' => $metadata,
             ],
         );
 
-        return $this->finalize($certificate, $template, $this->buildMetadata($user, $type, $event));
+        return $this->finalize($certificate, $template, $metadata);
+    }
+
+    /**
+     * Issue a workshop certificate. When the workshop belongs to a divided
+     * course (sessions linked to a parent workshop) and the user qualifies for
+     * every session, a single consolidated certificate is issued for the
+     * whole course; otherwise the per-session behaviour applies.
+     */
+    private function issueWorkshop(User $user, ParticipationType $type, ?CertificateTemplate $template, Workshop $workshop): ?Certificate
+    {
+        $group = WorkshopGroups::for($workshop);
+
+        if ($group !== null && $group->isDivided() && $group->qualifiedFor($user)) {
+            $representative = $group->representative();
+            $metadata = $this->buildMetadata($user, $type, $representative, $group);
+
+            $certificate = Certificate::query()->firstOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'participation_type_id' => $type->id,
+                    'event_type' => 'workshop',
+                    'event_id' => $group->groupId(),
+                ],
+                [
+                    'template_id' => $template?->id,
+                    'metadata' => $metadata,
+                ],
+            );
+
+            return $this->finalize($certificate, $template, $metadata, overwriteMetadata: true);
+        }
+
+        $metadata = $this->buildMetadata($user, $type, $workshop, null);
+
+        $certificate = Certificate::query()->firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'participation_type_id' => $type->id,
+                'event_type' => 'workshop',
+                'event_id' => $workshop->id,
+            ],
+            [
+                'template_id' => $template?->id,
+                'metadata' => $metadata,
+            ],
+        );
+
+        return $this->finalize($certificate, $template, $metadata);
     }
 
     /**
@@ -413,14 +468,14 @@ class CertificateRenderer
         return self::ROLE_LABELS[$role->name] ?? $role->name;
     }
 
-    private function finalize(Certificate $certificate, ?CertificateTemplate $template, array $metadata): Certificate
+    private function finalize(Certificate $certificate, ?CertificateTemplate $template, array $metadata, bool $overwriteMetadata = false): Certificate
     {
         if ($certificate->template_id === null && $template !== null) {
             $certificate->update(['template_id' => $template->id]);
         }
 
-        if ($certificate->metadata === null) {
-            $certificate->update(['metadata' => $metadata]);
+        if ($overwriteMetadata || $certificate->metadata === null) {
+            $certificate->update(['metadata' => array_merge($certificate->metadata ?? [], $metadata)]);
         } else {
             $missing = array_diff_key($metadata, $certificate->metadata);
 
@@ -1208,6 +1263,7 @@ HTML;
             '{autores}' => $metadata['autores'] ?? '',
             '{speakers}' => $metadata['speakers'] ?? $metadata['autores'] ?? '',
             '{horario}' => $metadata['horario'] ?? '',
+            '{horas_totales}' => $metadata['horas_totales'] ?? '',
         ];
 
         foreach ($replacements as $key => $value) {
@@ -1226,20 +1282,25 @@ HTML;
         return $content;
     }
 
-    private function buildMetadata(User $user, ParticipationType $type, Workshop|Presentation|Conference $event): array
+    private function buildMetadata(User $user, ParticipationType $type, Workshop|Presentation|Conference $event, ?WorkshopGroups $group = null): array
     {
         $eventName = match (true) {
             $event instanceof Presentation => $event->title,
             $event instanceof Conference => $event->title,
-            default => $event->name,
+            default => $group?->baseTitle() ?? $event->name,
         };
 
         return [
             'nombre' => trim($user->first_name.' '.$user->last_name),
             'tipo_participacion' => $type->label,
             'evento' => (string) $eventName,
-            'fecha_evento' => $event->day ? $this->formatSpanishDate($event->day) : '',
+            'fecha_evento' => $group !== null
+                ? $group->dateRange()
+                : ($event->day ? $this->formatSpanishDate($event->day) : ''),
             'location' => $event->location,
+            'horas_totales' => $group !== null
+                ? $group->totalHours()
+                : ($event instanceof Workshop ? WorkshopGroups::formatHours(WorkshopGroups::duration($event)) : ''),
             'folio' => '',
         ];
     }

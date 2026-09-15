@@ -159,6 +159,7 @@ const SAMPLE: Record<string, string> = {
     '{dni}': 'CNV-ABC1234',
     '{afiliacion}': 'Centro de Investigación y de Estudios Avanzados del IPN',
     '{rol}': 'Asistente',
+    '{horas_totales}': '4',
     '{iniciales}': 'ML',
     '{foto}': '',
 };
@@ -171,7 +172,7 @@ const SAMPLE_PHOTO =
 
 const previewText = (content: string | null) =>
     (content ?? '').replace(
-        /\{nombre\}|\{tipo_participacion\}|\{evento\}|\{fecha_evento\}|\{folio\}|\{dni\}|\{afiliacion\}|\{rol\}|\{iniciales\}/g,
+        /\{nombre\}|\{tipo_participacion\}|\{evento\}|\{fecha_evento\}|\{folio\}|\{dni\}|\{afiliacion\}|\{rol\}|\{horas_totales\}|\{iniciales\}/g,
         (m) => SAMPLE[m] ?? m,
     );
 

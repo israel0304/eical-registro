@@ -13,7 +13,9 @@ use App\Models\User;
 use App\Models\Workshop;
 use App\Services\CertificateRenderer;
 use App\Support\EventSettings;
+use App\Support\WorkshopGroups;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 
 class ConstanciaController extends Controller
@@ -169,14 +171,19 @@ class ConstanciaController extends Controller
             'fecha_fin' => EventSettings::endDate(),
         ];
 
-        foreach ($completedWorkshops as $workshop) {
-            $workshop->folio = $certificates->get('workshop-'.$workshop->id)?->folio;
-        }
+        $completedWorkshops = $this->groupWorkshopEntries(
+            $completedWorkshops,
+            $certificates,
+            fn (WorkshopGroups $group) => $group->hasFullAttendance($user),
+            $user,
+        );
 
-        foreach ($instructorWorkshops as $workshop) {
-            $workshop->folio = $certificates->get('workshop-'.$workshop->id)?->folio;
-            $workshop->activated = (bool) $workshop->instructors->first()?->pivot->activated;
-        }
+        $instructorWorkshops = $this->groupWorkshopEntries(
+            $instructorWorkshops,
+            $certificates,
+            fn (WorkshopGroups $group) => $group->hasFullInstructor($user),
+            $user,
+        );
 
         foreach ($presentationCertificates as $presentation) {
             $presentation->folio = $certificates->get('presentation-'.$presentation->id)?->folio;
@@ -383,6 +390,12 @@ class ConstanciaController extends Controller
         $user = $request->user();
         $workshop = Workshop::findOrFail($id);
 
+        $group = WorkshopGroups::for($workshop);
+
+        if ($group !== null && $group->isDivided() && $group->qualifiedFor($user)) {
+            $workshop = $group->representative();
+        }
+
         $isInstructor = $workshop->instructors()
             ->where('users.id', $user->id)
             ->wherePivot('activated', true)
@@ -431,6 +444,12 @@ class ConstanciaController extends Controller
         $isAssignedModerator = $workshop->moderators()->where('users.id', $currentUser->id)->exists();
 
         abort_unless($currentUser->canScoped('constancias.download', 'constancias.view', $isAssignedModerator), 403);
+
+        $group = WorkshopGroups::for($workshop);
+
+        if ($group !== null && $group->isDivided() && $group->hasFullAttendance($user)) {
+            $workshop = $group->representative();
+        }
 
         $hasAttendance = $workshop->attendances()->where('user_id', $user->id)->exists();
 
@@ -611,5 +630,65 @@ class ConstanciaController extends Controller
             'Content-Type' => 'text/html',
             'Content-Disposition' => 'inline; filename=constancia_'.$certificate->folio.'.html',
         ]);
+    }
+
+    /**
+     * Group the workshop entries shown in "Mis constancias": sessions that
+     * belong to a divided course and are fully qualified are collapsed into a
+     * single entry (grouped by their parent). Workshops that do not meet the
+     * full qualifier keep their per-session entry.
+     */
+    private function groupWorkshopEntries(iterable $workshops, Collection $certificates, callable $fullQualifier, User $user): array
+    {
+        $entries = [];
+        $consumed = [];
+
+        foreach ($workshops as $workshop) {
+            if (in_array($workshop->id, $consumed, true)) {
+                continue;
+            }
+
+            $group = WorkshopGroups::for($workshop);
+
+            if ($group !== null && $group->isDivided() && $fullQualifier($group)) {
+                $sessions = $group->sessions();
+
+                foreach ($sessions as $session) {
+                    $consumed[] = $session->id;
+                }
+
+                $representative = $group->representative();
+
+                $entries[] = [
+                    'id' => $group->groupId(),
+                    'name' => $group->baseTitle(),
+                    'instructors' => $representative->instructors,
+                    'day' => $group->dateRange(),
+                    'location' => $representative->location,
+                    'sessions' => $sessions->map(fn (Workshop $session) => [
+                        'id' => $session->id,
+                        'day' => $session->day,
+                        'start_time' => $session->start_time,
+                        'end_time' => $session->end_time,
+                        'location' => $session->location,
+                    ])->values()->all(),
+                    'session_count' => $sessions->count(),
+                    'horas_totales' => $group->totalHours(),
+                    'folio' => $certificates->get('workshop-'.$group->groupId())?->folio,
+                    'activated' => true,
+                ];
+
+                continue;
+            }
+
+            $consumed[] = $workshop->id;
+
+            $workshop->folio = $certificates->get('workshop-'.$workshop->id)?->folio;
+            $workshop->activated = (bool) $workshop->instructors->first()?->pivot->activated;
+
+            $entries[] = $workshop;
+        }
+
+        return $entries;
     }
 }

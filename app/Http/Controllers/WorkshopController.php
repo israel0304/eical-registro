@@ -38,9 +38,16 @@ class WorkshopController extends Controller
 
         $workshops = $query->orderBy('day')->orderBy('start_time')->paginate(15)->withQueryString();
 
+        $parentCandidates = Workshop::query()
+            ->whereNull('deleted_at')
+            ->whereNull('parent_workshop_id')
+            ->orderBy('name')
+            ->get(['id', 'name', 'day', 'start_time', 'end_time']);
+
         return Inertia::render('Workshops/Index', [
             'workshops' => $workshops,
             'filters' => array_merge(['status' => $status], $request->only(['search'])),
+            'parentCandidates' => $parentCandidates,
         ]);
     }
 
@@ -159,7 +166,24 @@ class WorkshopController extends Controller
             'instructors.*.email' => 'required|email|max:255',
             'moderator_ids' => 'nullable|array',
             'moderator_ids.*' => 'exists:users,id',
+            'parent_workshop_id' => 'nullable|integer|exists:workshops,id',
         ]);
+
+        if (($validated['parent_workshop_id'] ?? null) !== null) {
+            $parentId = (int) $validated['parent_workshop_id'];
+
+            if ($parentId === $workshop->id) {
+                return back()->withErrors([
+                    'parent_workshop_id' => 'Un taller no puede ser su propio taller padre.',
+                ]);
+            }
+
+            if (Workshop::where('id', $parentId)->whereNotNull('parent_workshop_id')->exists()) {
+                return back()->withErrors([
+                    'parent_workshop_id' => 'Solo un taller sin taller padre puede ser taller padre.',
+                ]);
+            }
+        }
 
         $instructorsData = $validated['instructors'] ?? [];
         unset($validated['instructors']);

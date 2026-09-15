@@ -59,6 +59,18 @@ const downloadCertificate = (workshopId: number) => {
     window.open('/constancias/' + workshopId + '/download', '_blank');
 };
 
+const formatDay = (day: string) => {
+    const date = new Date(day + 'T00:00:00');
+
+    return Number.isNaN(date.getTime())
+        ? day
+        : date.toLocaleDateString('es-MX', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+          });
+};
+
 const downloadPonencia = (presentationId: number) => {
     window.open(
         '/constancias/ponencia/' + presentationId + '/download',
@@ -355,6 +367,27 @@ const missingDays = computed(() => {
                                 >
                                     {{ workshop.day }} | {{ workshop.location }}
                                 </p>
+                                <div
+                                    v-if="workshop.sessions?.length"
+                                    class="mt-2 flex flex-wrap gap-1"
+                                >
+                                    <span
+                                        v-for="session in workshop.sessions"
+                                        :key="session.id"
+                                        class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-zinc-800 dark:text-gray-400"
+                                    >
+                                        {{ formatDay(session.day) }}
+                                        {{ session.start_time }} -
+                                        {{ session.end_time }}
+                                    </span>
+                                </div>
+                                <p
+                                    v-if="workshop.horas_totales"
+                                    class="mt-1 text-[11px] text-gray-500 dark:text-gray-400"
+                                >
+                                    Duración total:
+                                    {{ workshop.horas_totales }} horas
+                                </p>
                                 <p
                                     v-if="workshop.folio"
                                     class="mt-1 font-mono text-[11px] text-indigo-600 dark:text-indigo-400"
@@ -407,6 +440,27 @@ const missingDays = computed(() => {
                                     class="text-xs text-gray-500 dark:text-gray-400"
                                 >
                                     {{ workshop.day }} | {{ workshop.location }}
+                                </p>
+                                <div
+                                    v-if="workshop.sessions?.length"
+                                    class="mt-2 flex flex-wrap gap-1"
+                                >
+                                    <span
+                                        v-for="session in workshop.sessions"
+                                        :key="session.id"
+                                        class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-zinc-800 dark:text-gray-400"
+                                    >
+                                        {{ formatDay(session.day) }}
+                                        {{ session.start_time }} -
+                                        {{ session.end_time }}
+                                    </span>
+                                </div>
+                                <p
+                                    v-if="workshop.horas_totales"
+                                    class="mt-1 text-[11px] text-gray-500 dark:text-gray-400"
+                                >
+                                    Duración total:
+                                    {{ workshop.horas_totales }} horas
                                 </p>
                                 <p
                                     v-if="workshop.folio"

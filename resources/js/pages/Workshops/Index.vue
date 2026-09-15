@@ -11,7 +11,7 @@ import {
     RotateCcw,
     AlertTriangle,
 } from 'lucide-vue-next';
-import { ref, watch, reactive } from 'vue';
+import { ref, watch, reactive, computed } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const page = usePage();
@@ -29,7 +29,14 @@ const props = defineProps<{
     };
     filters: any;
     enrollments?: number[];
+    parentCandidates: any[];
 }>();
+
+const selectableParents = computed(() =>
+    (props.parentCandidates || []).filter(
+        (candidate: any) => candidate.id !== form.id,
+    ),
+);
 
 const formFilters = useForm({
     search: props.filters?.search || '',
@@ -71,6 +78,7 @@ const form = useForm({
     start_time: '',
     end_time: '',
     qr_time_restricted: true,
+    parent_workshop_id: null as number | null,
     instructors: [] as InstructorForm[],
     moderator_ids: [] as number[],
 });
@@ -179,6 +187,7 @@ const createModerator = async () => {
 const openCreateModal = () => {
     isEditing.value = false;
     form.reset();
+    form.parent_workshop_id = null;
     form.instructors = [];
     form.moderator_ids = [];
     selectedModerators.value = [];
@@ -199,6 +208,7 @@ const openEditModal = (workshop: any) => {
         : '';
     form.end_time = workshop.end_time ? workshop.end_time.slice(0, 5) : '';
     form.qr_time_restricted = workshop.qr_time_restricted ?? true;
+    form.parent_workshop_id = workshop.parent_workshop_id || null;
     form.instructors = workshop.instructors?.length
         ? workshop.instructors.map((i: any) => ({
               first_name: i.first_name || '',
@@ -876,6 +886,37 @@ const formatDate = (dateStr: string) => {
                                         class="mt-1 text-xs text-red-500"
                                     >
                                         {{ form.errors.end_time }}
+                                    </p>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label
+                                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                        >Taller Padre</label
+                                    >
+                                    <select
+                                        v-model="form.parent_workshop_id"
+                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                                    >
+                                        <option :value="null">
+                                            — Sin taller padre —
+                                        </option>
+                                        <option
+                                            v-for="candidate in selectableParents"
+                                            :key="candidate.id"
+                                            :value="candidate.id"
+                                        >
+                                            {{ candidate.name }} ({{
+                                                candidate.day
+                                            }}
+                                            {{ candidate.start_time }} -
+                                            {{ candidate.end_time }})
+                                        </option>
+                                    </select>
+                                    <p
+                                        v-if="form.errors.parent_workshop_id"
+                                        class="mt-1 text-xs text-red-500"
+                                    >
+                                        {{ form.errors.parent_workshop_id }}
                                     </p>
                                 </div>
 
