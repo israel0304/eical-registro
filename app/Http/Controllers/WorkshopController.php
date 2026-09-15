@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Workshop;
+use App\Support\EventSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -143,6 +144,7 @@ class WorkshopController extends Controller
         return Inertia::render('Workshops/Show', [
             'workshop' => $workshop,
             'myEnrolled' => $myEnrolled,
+            'checkin_grace_hours' => EventSettings::checkinGraceHours(),
         ]);
     }
 

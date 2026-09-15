@@ -103,8 +103,9 @@ const canCancelSelf = computed(() => {
     const now = new Date();
     const diffMs = start.getTime() - now.getTime();
     if (diffMs <= 0) return false;
+    const graceHours = workshop.value?.checkin_grace_hours ?? 0;
     const diffMin = diffMs / 60000;
-    return diffMin > 10;
+    return diffMin > graceHours * 60;
 });
 const actionError = ref('');
 const enrollSelf = () => {

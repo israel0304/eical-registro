@@ -76,6 +76,7 @@ const props = defineProps<{
         start_time: string;
         end_time: string;
     }[];
+    checkin_grace_hours?: number;
 }>();
 
 const breadcrumbs = computed(() =>
@@ -217,8 +218,9 @@ const canCancel = computed(() => {
     const now = new Date();
     const diffMs = start.getTime() - now.getTime();
     if (diffMs <= 0) return false;
+    const graceHours = props.checkin_grace_hours ?? 0;
     const diffMin = diffMs / 60000;
-    return diffMin > 10;
+    return diffMin > graceHours * 60;
 });
 
 const filteredEnrollments = computed(() => {
@@ -663,7 +665,19 @@ watch(
                         <UserMinus class="h-4 w-4" /> Cancelar inscripción
                     </button>
                     <button
-                        v-else-if="!isEnrolled && !isFull"
+                        v-else-if="isEnrolled"
+                        disabled
+                        class="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300"
+                    >
+                        <Check class="h-4 w-4" />
+                        {{
+                            myEnrollment?.has_attendance
+                                ? 'Inscrito · Asistencia confirmada'
+                                : 'Ya inscrito'
+                        }}
+                    </button>
+                    <button
+                        v-else-if="!isFull"
                         @click="enroll"
                         class="inline-flex items-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
                     >

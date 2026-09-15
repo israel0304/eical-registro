@@ -224,6 +224,8 @@ class AssignmentController extends Controller
             })
         );
 
+        $workshop->checkin_grace_hours = EventSettings::checkinGraceHours();
+
         return response()->json($workshop);
     }
 
