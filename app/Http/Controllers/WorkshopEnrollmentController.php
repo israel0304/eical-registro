@@ -177,8 +177,8 @@ class WorkshopEnrollmentController extends Controller
             ->wherePivot('status', 'enrolled')
             ->where('workshops.id', '!=', $workshop->id)
             ->where('workshops.day', $workshop->day)
-            ->whereColumn('workshops.start_time', '<', $workshop->end_time)
-            ->whereColumn('workshops.end_time', '>', $workshop->start_time)
+            ->where('workshops.start_time', '<', $workshop->end_time)
+            ->where('workshops.end_time', '>', $workshop->start_time)
             ->first();
     }
 
