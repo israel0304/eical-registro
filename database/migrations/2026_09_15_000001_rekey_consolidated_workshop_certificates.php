@@ -9,15 +9,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $this->rekey(fn (int $parentId) => -$parentId);
+        $this->rekey(WorkshopGroups::GROUPED_EVENT_TYPE);
     }
 
     public function down(): void
     {
-        $this->rekey(fn (int $parentId) => $parentId);
+        $this->rekey('workshop');
     }
 
-    private function rekey(callable $target): void
+    private function rekey(string $eventType): void
     {
         $parents = Workshop::query()
             ->whereHas('childWorkshops')
@@ -30,7 +30,7 @@ return new class extends Migration
                 ->where('event_type', 'workshop')
                 ->where('event_id', $parent->id)
                 ->cursor()
-                ->each(function (Certificate $certificate) use ($group, $target) {
+                ->each(function (Certificate $certificate) use ($group, $eventType) {
                     $metadata = $certificate->metadata;
 
                     $isConsolidated = ($metadata['horas_totales'] ?? null) === $group->totalHours()
@@ -38,7 +38,7 @@ return new class extends Migration
                         && ($metadata['fecha_evento'] ?? null) === $group->dateRange();
 
                     if ($isConsolidated) {
-                        $certificate->forceFill(['event_id' => $target($group->groupId())])->save();
+                        $certificate->forceFill(['event_type' => $eventType])->save();
                     }
                 });
         }

@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Collection;
 
 class WorkshopGroups
 {
+    /** event_type of the consolidated course certificate, distinct from the per-session 'workshop' certificates. */
+    public const GROUPED_EVENT_TYPE = 'workshop-group';
+
     private const MONTHS = [
         '',
         'enero',
@@ -57,12 +60,6 @@ class WorkshopGroups
     public function groupId(): int
     {
         return $this->representative->id;
-    }
-
-    /** Negative event_id that guarantees the consolidated certificate key never collides with per-session keys. */
-    public function signedGroupId(): int
-    {
-        return -$this->representative->id;
     }
 
     public function isDivided(): bool

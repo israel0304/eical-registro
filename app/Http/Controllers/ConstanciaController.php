@@ -674,7 +674,7 @@ class ConstanciaController extends Controller
                     ])->values()->all(),
                     'session_count' => $sessions->count(),
                     'horas_totales' => $group->totalHours(),
-                    'folio' => $certificates->get('workshop-'.$group->signedGroupId())?->folio,
+                    'folio' => $certificates->get(WorkshopGroups::GROUPED_EVENT_TYPE.'-'.$group->groupId())?->folio,
                     'activated' => true,
                 ];
 

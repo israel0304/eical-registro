@@ -151,8 +151,8 @@ class CertificateRenderer
                 [
                     'user_id' => $user->id,
                     'participation_type_id' => $type->id,
-                    'event_type' => 'workshop',
-                    'event_id' => $group->signedGroupId(),
+                    'event_type' => WorkshopGroups::GROUPED_EVENT_TYPE,
+                    'event_id' => $group->groupId(),
                 ],
                 [
                     'template_id' => $template?->id,

@@ -31,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Relation::morphMap([
             'workshop' => Workshop::class,
+            'workshop-group' => Workshop::class,
             'presentation' => Presentation::class,
             'conference' => Conference::class,
             // Tipos sentinela sin modelo asociado: se guardan con event_id = 0,
