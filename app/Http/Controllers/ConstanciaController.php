@@ -102,9 +102,16 @@ class ConstanciaController extends Controller
                 ->where('is_active', true)
                 ->first()]);
 
+        $hasActivityCartas = $user->can('constancias.download')
+            && ($cartaPresentations->isNotEmpty() || $conferenceCertificates->isNotEmpty());
+
         $invitationLetters = [];
         foreach ($user->roles()->orderBy('roles.id')->get() as $role) {
             if ($role->name === 'Ponente') {
+                continue;
+            }
+
+            if ($role->name === 'Speaker' && $hasActivityCartas) {
                 continue;
             }
 

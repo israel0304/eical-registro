@@ -680,4 +680,46 @@ class CartaInvitacionTest extends TestCase
                 ->has('cartaPresentations', 1)
                 ->where('cartaPresentations.0.title', 'NLP en Español'));
     }
+
+    public function test_my_certificates_hides_speaker_letter_when_has_conference_carta(): void
+    {
+        $role = $this->role('Speaker', 5);
+        $this->roleWithPermissions($role);
+        $this->invitationTemplate($role);
+
+        $user = $this->userWithRole();
+        $user->roles()->sync([$role->id]);
+
+        $conference = Conference::create([
+            'title' => 'La conferencia magistral inaugural',
+            'day' => '2026-08-05',
+            'location' => 'Auditorio',
+            'created_by' => $user->id,
+        ]);
+        $conference->speakers()->attach($user->id);
+
+        $this->actingAs($user)
+            ->get('/constancias')
+            ->assertInertia(fn ($page) => $page
+                ->component('Constancias/Index')
+                ->has('cartaConferences', 1)
+                ->has('invitationLetters', 0));
+    }
+
+    public function test_my_certificates_keeps_speaker_letter_without_activity_carta(): void
+    {
+        $role = $this->role('Speaker', 5);
+        $this->roleWithPermissions($role);
+        $this->invitationTemplate($role);
+
+        $user = $this->userWithRole();
+        $user->roles()->sync([$role->id]);
+
+        $this->actingAs($user)
+            ->get('/constancias')
+            ->assertInertia(fn ($page) => $page
+                ->component('Constancias/Index')
+                ->has('invitationLetters', 1)
+                ->where('invitationLetters.0.label', 'Carta de Invitación - Speaker'));
+    }
 }
