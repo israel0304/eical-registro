@@ -734,8 +734,8 @@ watch(
                                 @click="openManualDialog"
                                 class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-50 dark:border-indigo-800 dark:bg-zinc-800 dark:text-indigo-300 dark:hover:bg-zinc-700"
                             >
-                                <UserPlus class="h-4 w-4" /> Registrar
-                                inscrito
+                                <UserPlus class="h-4 w-4" /> Agregar
+                                registro
                             </button>
                             <a
                                 v-if="canEmailEnrolled"
