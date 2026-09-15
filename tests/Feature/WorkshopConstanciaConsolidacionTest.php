@@ -156,7 +156,7 @@ class WorkshopConstanciaConsolidacionTest extends TestCase
         $certificate = Certificate::where('user_id', $user->id)->first();
 
         $this->assertSame('workshop', $certificate->event_type);
-        $this->assertSame($session1->id, $certificate->event_id);
+        $this->assertSame(-$session1->id, $certificate->event_id);
         $this->assertSame('Taller de IA', $certificate->metadata['evento']);
         $this->assertSame('4', $certificate->metadata['horas_totales']);
         $this->assertSame('23 y 24 de septiembre de 2026', $certificate->metadata['fecha_evento']);
@@ -212,7 +212,7 @@ class WorkshopConstanciaConsolidacionTest extends TestCase
 
         $certificate = Certificate::where('user_id', $user->id)->first();
 
-        $this->assertSame($session1->id, $certificate->event_id);
+        $this->assertSame(-$session1->id, $certificate->event_id);
         $this->assertSame($type->id, $certificate->participation_type_id);
         $this->assertSame('Taller de IA', $certificate->metadata['evento']);
         $this->assertSame('4', $certificate->metadata['horas_totales']);
@@ -258,9 +258,46 @@ class WorkshopConstanciaConsolidacionTest extends TestCase
 
         $certificate = Certificate::where('user_id', $user->id)->first();
 
-        $this->assertSame($session1->id, $certificate->event_id);
+        $this->assertSame(-$session1->id, $certificate->event_id);
         $this->assertSame('Taller de IA', $certificate->metadata['evento']);
         $this->assertSame('4', $certificate->metadata['horas_totales']);
+    }
+
+    public function test_parent_session_download_never_reuses_consolidated_certificate(): void
+    {
+        $this->templateFor($this->tallerType());
+        $user = $this->participant();
+
+        [$session1, $session2] = $this->dividedWorkshop();
+        $this->enrollAndAttend($session1, $user, '2026-09-23');
+        $this->enrollAndAttend($session2, $user, '2026-09-24');
+
+        $this->actingAs($user)
+            ->get('/constancias/'.$session2->id.'/download')
+            ->assertOk();
+
+        $consolidated = Certificate::where('user_id', $user->id)->first();
+
+        $this->assertSame(-$session1->id, $consolidated->event_id);
+        $this->assertSame('4', $consolidated->metadata['horas_totales']);
+
+        WorkshopEnrollment::where('workshop_id', $session2->id)->delete();
+        Attendance::where('workshop_id', $session2->id)->delete();
+
+        $this->actingAs($user)
+            ->get('/constancias/'.$session1->id.'/download')
+            ->assertOk();
+
+        $this->assertDatabaseCount('certificates', 2);
+
+        $perSession = Certificate::where('user_id', $user->id)
+            ->where('event_id', $session1->id)
+            ->first();
+
+        $this->assertNotNull($perSession);
+        $this->assertNotSame($consolidated, $perSession);
+        $this->assertSame('Sesión 1: Taller de IA', $perSession->metadata['evento']);
+        $this->assertSame('2', $perSession->metadata['horas_totales']);
     }
 
     public function test_my_certificates_groups_divided_workshop_into_one_entry(): void

@@ -59,6 +59,12 @@ class WorkshopGroups
         return $this->representative->id;
     }
 
+    /** Negative event_id that guarantees the consolidated certificate key never collides with per-session keys. */
+    public function signedGroupId(): int
+    {
+        return -$this->representative->id;
+    }
+
     public function isDivided(): bool
     {
         return $this->sessions()->count() > 1;
