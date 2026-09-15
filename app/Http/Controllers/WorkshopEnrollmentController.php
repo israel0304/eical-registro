@@ -250,8 +250,21 @@ class WorkshopEnrollmentController extends Controller
             return $workshop;
         });
 
+        $isInstructor = $user->hasRole('Instructor');
+
+        $instructorWorkshops = $isInstructor
+            ? Workshop::with('instructors')
+                ->whereHas('instructors', function ($q) use ($user) {
+                    $q->whereKey($user->id);
+                })
+                ->orderBy('day')
+                ->orderBy('start_time')
+                ->get()
+            : collect();
+
         return Inertia::render('Workshops/MyWorkshops', [
             'workshops' => $workshops,
+            'instructorWorkshops' => $instructorWorkshops,
         ]);
     }
 
