@@ -366,6 +366,16 @@ const formatDate = (dateStr: string) => {
         year: 'numeric',
     });
 };
+
+const speakersOf = (conference: any) =>
+    (conference.members ?? []).filter(
+        (m: any) => m.pivot?.role === 'speaker',
+    );
+
+const moderatorsOf = (conference: any) =>
+    (conference.members ?? []).filter(
+        (m: any) => m.pivot?.role === 'moderator',
+    );
 </script>
 
 <template>
@@ -455,7 +465,13 @@ const formatDate = (dateStr: string) => {
                                     scope="col"
                                     class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
                                 >
-                                    Miembros
+                                    Speakers
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="px-6 py-4 text-left text-xs font-bold tracking-wider text-gray-900 dark:text-gray-200"
+                                >
+                                    Moderadores
                                 </th>
                                 <th scope="col" class="relative px-6 py-4">
                                     <span class="sr-only">Acciones</span>
@@ -506,14 +522,13 @@ const formatDate = (dateStr: string) => {
                                     class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
                                 >
                                     <div
-                                        v-if="conference.members?.length"
+                                        v-if="speakersOf(conference).length"
                                         class="flex items-center -space-x-2"
                                     >
                                         <span
-                                            v-for="member in conference.members.slice(
-                                                0,
-                                                5,
-                                            )"
+                                            v-for="member in speakersOf(
+                                                conference,
+                                            ).slice(0, 5)"
                                             :key="member.id"
                                             :title="
                                                 member.name +
@@ -527,15 +542,59 @@ const formatDate = (dateStr: string) => {
                                             }}{{ member.last_name?.[0] }}
                                         </span>
                                         <span
-                                            v-if="conference.members.length > 5"
+                                            v-if="
+                                                speakersOf(conference).length > 5
+                                            "
                                             :title="
-                                                conference.members
+                                                speakersOf(conference)
                                                     .map((m: any) => m.name)
                                                     .join(', ')
                                             "
                                             class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600 ring-2 ring-white dark:bg-zinc-700 dark:text-gray-300 dark:ring-zinc-900"
                                         >
-                                            +{{ conference.members.length - 5 }}
+                                            +{{ speakersOf(conference).length - 5 }}
+                                        </span>
+                                    </div>
+                                    <span v-else class="text-gray-400">—</span>
+                                </td>
+                                <td
+                                    class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400"
+                                >
+                                    <div
+                                        v-if="moderatorsOf(conference).length"
+                                        class="flex items-center -space-x-2"
+                                    >
+                                        <span
+                                            v-for="member in moderatorsOf(
+                                                conference,
+                                            ).slice(0, 5)"
+                                            :key="member.id"
+                                            :title="
+                                                member.name +
+                                                (member.affiliation
+                                                    ? ' — ' + member.affiliation
+                                                    : '')
+                                            "
+                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-700 ring-2 ring-white dark:bg-zinc-700 dark:text-gray-200 dark:ring-zinc-900"
+                                        >
+                                            {{ member.first_name?.[0]
+                                            }}{{ member.last_name?.[0] }}
+                                        </span>
+                                        <span
+                                            v-if="
+                                                moderatorsOf(conference).length >
+                                                5
+                                            "
+                                            :title="
+                                                moderatorsOf(conference)
+                                                    .map((m: any) => m.name)
+                                                    .join(', ')
+                                            "
+                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600 ring-2 ring-white dark:bg-zinc-700 dark:text-gray-300 dark:ring-zinc-900"
+                                        >
+                                            +{{
+                                                moderatorsOf(conference).length - 5
+                                            }}
                                         </span>
                                     </div>
                                     <span v-else class="text-gray-400">—</span>
@@ -580,7 +639,7 @@ const formatDate = (dateStr: string) => {
                                 "
                             >
                                 <td
-                                    colspan="6"
+                                    colspan="7"
                                     class="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
                                 >
                                     No se encontraron conferencias.
