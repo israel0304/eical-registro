@@ -169,7 +169,7 @@ const closeDetail = () => {
 
     <div class="min-h-screen bg-white dark:bg-zinc-950">
         <header
-            class="border-b border-gray-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900"
+            class="sticky top-0 z-40 border-b border-gray-200 bg-white px-6 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
         >
             <div
                 class="mx-auto flex max-w-5xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
