@@ -397,7 +397,7 @@ const formatDate = (dateStr: string) => {
                                 v-model="formFilters.search"
                                 type="text"
                                 class="w-full rounded-md border border-gray-300 py-2 pr-4 pl-9 shadow-sm focus:border-black focus:ring-1 focus:ring-black sm:text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-white dark:focus:ring-white"
-                                placeholder="Título de la conferencia"
+                                placeholder="Título o conferencista"
                             />
                         </div>
                     </div>

@@ -17,7 +17,12 @@ class ConferenceController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where('title', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhereHas('members', function ($m) use ($search) {
+                        $m->whereRaw("concat(first_name, ' ', last_name) like ?", ["%{$search}%"]);
+                    });
+            });
         }
 
         $conferences = $query->orderBy('day')->orderBy('start_time')->paginate(15)->withQueryString();
