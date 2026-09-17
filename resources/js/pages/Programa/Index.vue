@@ -49,6 +49,7 @@ const props = defineProps<{
             activity_name: string | null;
             kind: 'activity' | 'block';
             details: Record<string, any>;
+            people?: { label: string; names: string[] }[];
         }[];
     }[];
     eventName: string;
@@ -570,17 +571,23 @@ const remove = (item: any) => {
                                             >
                                                 {{ item.block_label }}
                                             </span>
-                                            <div
-                                                class="text-sm font-medium text-gray-900 dark:text-white"
+<div
+                                            class="text-sm font-medium text-gray-900 dark:text-white"
+                                        >
+                                            {{ item.title }}
+                                        </div>
+                                        <div
+                                            v-for="group in item.people ?? []"
+                                            :key="group.label"
+                                            class="text-xs text-gray-600 dark:text-gray-400"
+                                        >
+                                            <span
+                                                class="font-medium text-gray-700 dark:text-gray-300"
                                             >
-                                                {{ item.title }}
-                                            </div>
-                                            <div
-                                                v-if="item.activity_name"
-                                                class="text-xs text-gray-400"
-                                            >
-                                                {{ item.activity_name }}
-                                            </div>
+                                                {{ group.label }}:
+                                            </span>
+                                            {{ group.names.join(', ') }}
+                                        </div>
                                         </td>
                                         <td
                                             class="px-5 py-3 text-sm text-gray-600 dark:text-gray-400"
