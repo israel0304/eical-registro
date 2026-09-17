@@ -116,6 +116,34 @@ class WorkshopTest extends TestCase
             );
     }
 
+    public function test_index_group_divided_workshops_into_one_record(): void
+    {
+        $admin = $this->admin();
+        $parent = $this->workshopFor($admin, ['name' => 'Sesión 1: Taller de retrato']);
+        $child = $this->workshopFor($admin, [
+            'name' => 'Sesión 2: Taller de retrato',
+            'day' => '2026-10-06',
+            'start_time' => '09:00',
+            'end_time' => '13:00',
+            'parent_workshop_id' => $parent->id,
+        ]);
+        $standalone = $this->workshopFor($admin, ['name' => 'Otro taller', 'day' => '2026-10-07']);
+
+        $this->actingAs($admin)
+            ->get('/workshops')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Workshops/Index')
+                ->has('workshops.data', 2)
+                ->where('workshops.data.0.id', $parent->id)
+                ->has('workshops.data.0.sessions', 2)
+                ->where('workshops.data.0.sessions.0.id', $parent->id)
+                ->where('workshops.data.0.sessions.1.id', $child->id)
+                ->where('workshops.data.1.id', $standalone->id)
+                ->has('workshops.data.1.sessions', 1)
+            );
+    }
+
     public function test_soft_delete_sets_deleted_at(): void
     {
         $admin = $this->admin();

@@ -18,26 +18,72 @@ class WorkshopController extends Controller
     {
         $status = $request->input('status', 'active');
 
-        $query = Workshop::withCount(['enrollments as enrolled_count' => function ($q) {
-            $q->where('status', 'enrolled');
-        }])->with(['instructors', 'moderators']);
+        $applyStatus = function ($query) use ($status) {
+            if ($status === 'active') {
+                $query->whereNull('deleted_at');
+            } elseif ($status === 'deleted') {
+                $query->onlyTrashed();
+            } elseif ($status === 'all') {
+                $query->withTrashed();
+            }
+        };
 
-        if ($status === 'active') {
-            $query->whereNull('deleted_at');
-        } elseif ($status === 'deleted') {
-            $query->onlyTrashed();
-        } elseif ($status === 'all') {
-            $query->withTrashed();
-        }
+        $childScope = function ($query) use ($applyStatus) {
+            $query
+                ->withCount(['enrollments as enrolled_count' => function ($q) {
+                    $q->where('status', 'enrolled');
+                }])
+                ->with(['instructors', 'moderators'])
+                ->orderBy('day')
+                ->orderBy('start_time')
+                ->orderBy('id');
+
+            $applyStatus($query);
+        };
+
+        $query = Workshop::query()
+            ->whereNull('parent_workshop_id')
+            ->withCount(['enrollments as enrolled_count' => function ($q) {
+                $q->where('status', 'enrolled');
+            }])
+            ->with(['instructors', 'moderators', 'childWorkshops' => $childScope]);
+
+        $applyStatus($query);
 
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
+            $matchingChildren = Workshop::query()
+                ->whereNotNull('parent_workshop_id')
+                ->where('name', 'like', "%{$search}%")
+                ->pluck('parent_workshop_id');
+
+            $query->where(function ($q) use ($search, $matchingChildren) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhereIn('id', $matchingChildren);
             });
         }
 
         $workshops = $query->orderBy('day')->orderBy('start_time')->paginate(15)->withQueryString();
+
+        $workshops->getCollection()->transform(function (Workshop $workshop) {
+            $sessions = $workshop->childWorkshops
+                ->push($workshop)
+                ->sortBy([
+                    ['day', 'asc'],
+                    ['start_time', 'asc'],
+                ])
+                ->values()
+                ->map(function (Workshop $session) {
+                    $session->unsetRelation('childWorkshops');
+
+                    return $session;
+                });
+
+            return [
+                'id' => $workshop->id,
+                'sessions' => $sessions,
+            ];
+        });
 
         $parentCandidates = Workshop::query()
             ->whereNull('deleted_at')

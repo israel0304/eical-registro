@@ -502,16 +502,20 @@ const formatDate = (dateStr: string) => {
                         <tbody
                             class="divide-y divide-gray-100 bg-white dark:divide-zinc-800 dark:bg-zinc-900"
                         >
-                            <tr
-                                v-for="workshop in workshops.data"
-                                :key="workshop.id"
-                                :class="[
-                                    'transition-colors duration-150',
-                                    workshop.deleted_at
-                                        ? 'opacity-50 hover:bg-gray-50 dark:hover:bg-zinc-800'
-                                        : 'hover:bg-gray-50 dark:hover:bg-zinc-800',
-                                ]"
+                            <template
+                                v-for="group in workshops.data"
+                                :key="group.id"
                             >
+                                <tr
+                                    v-for="workshop in group.sessions"
+                                    :key="workshop.id"
+                                    :class="[
+                                        'transition-colors duration-150',
+                                        workshop.deleted_at
+                                            ? 'opacity-50 hover:bg-gray-50 dark:hover:bg-zinc-800'
+                                            : 'hover:bg-gray-50 dark:hover:bg-zinc-800',
+                                    ]"
+                                >
                                 <td class="px-6 py-4">
                                     <div
                                         :class="[
@@ -671,6 +675,7 @@ const formatDate = (dateStr: string) => {
                                     </div>
                                 </td>
                             </tr>
+                            </template>
                             <tr
                                 v-if="
                                     !workshops?.data ||
