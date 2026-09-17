@@ -62,6 +62,23 @@ const kindLabel = (kind: string) =>
 const roleLabel = (role: string) =>
     ({ speaker: 'Speaker', moderator: 'Moderador' })[role] ?? role;
 
+const speakerMembers = computed(() =>
+    (props.conference.members ?? []).filter(
+        (m: any) => m.pivot?.role !== 'moderator',
+    ),
+);
+const moderatorMembers = computed(() =>
+    (props.conference.members ?? []).filter(
+        (m: any) => m.pivot?.role === 'moderator',
+    ),
+);
+const participantSections = computed(() =>
+    [
+        { label: 'Speakers', members: speakerMembers.value },
+        { label: 'Moderadores', members: moderatorMembers.value },
+    ].filter((section) => section.members.length > 0),
+);
+
 const expandedMembers = ref<Set<number>>(new Set());
 const toggleMemberSemblanza = (userId: number) => {
     const expanded = expandedMembers.value;
@@ -173,10 +190,20 @@ const toggleActivation = (userId: number) => {
                     Participantes
                 </span>
 
-                <ul class="mt-3 space-y-3">
-                    <li
-                        v-for="member in conference.members"
-                        :key="member.id"
+                <div
+                    v-for="section in participantSections"
+                    :key="section.label"
+                    class="mt-3"
+                >
+                    <span
+                        class="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                    >
+                        {{ section.label }}
+                    </span>
+                    <ul class="mt-2 space-y-3">
+                        <li
+                            v-for="member in section.members"
+                            :key="member.id"
                         class="flex flex-wrap items-start gap-2 rounded-lg border p-2.5 text-sm text-gray-700 dark:text-gray-300"
                         :class="
                             expandedMembers.has(member.id)
@@ -277,7 +304,8 @@ const toggleActivation = (userId: number) => {
                             Constancia activada
                         </span>
                     </li>
-                </ul>
+                    </ul>
+                </div>
 
                 <div
                     v-if="canManage && conference.members.length"

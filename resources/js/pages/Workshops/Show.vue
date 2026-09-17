@@ -646,11 +646,52 @@ watch(
                                         Constancia activada
                                     </span>
                                 </div>
-                            </template>
-                            <span v-else class="text-gray-400">—</span>
+</template>
+                                    <span v-else class="text-gray-400">—</span>
+                                </div>
+                            </div>
+
+                            <div
+                                class="mt-5 border-t border-gray-200 pt-3 dark:border-zinc-700"
+                            >
+                                <span
+                                    class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+                                    >Moderadores</span
+                                >
+                                <div class="mt-2 space-y-2">
+                                    <template v-if="workshop.moderators?.length">
+                                        <div
+                                            v-for="moderator in workshop.moderators"
+                                            :key="moderator.id"
+                                            class="flex flex-wrap items-center gap-2 rounded-lg border p-2.5 text-sm text-gray-700 dark:text-gray-300"
+                                        >
+                                            <UserCheck
+                                                class="h-4 w-4 shrink-0 text-gray-400"
+                                            />
+                                            <div class="min-w-0 flex-1">
+                                                <span
+                                                    class="text-gray-900 dark:text-white"
+                                                >
+                                                    {{ moderator.first_name }}
+                                                    {{ moderator.last_name }}
+                                                </span>
+                                                <span
+                                                    v-if="
+                                                        moderator.affiliation
+                                                    "
+                                                    class="text-xs text-gray-500"
+                                                >
+                                                    ({{
+                                                        moderator.affiliation
+                                                    }})
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <span v-else class="text-gray-400">—</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
 
                 <!-- Enrollment buttons (non-admin/non-moderator, and assigned moderators) -->
                 <div
