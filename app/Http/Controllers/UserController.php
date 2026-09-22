@@ -8,12 +8,14 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Services\EventAudit;
+use App\Support\EventSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\CreatesNewUsers;
 
 class UserController extends Controller
 {
@@ -263,5 +265,19 @@ class UserController extends Controller
         }
 
         return back()->with('success', "Se procesaron $imported usuarios exitosamente.");
+    }
+
+    public function registro()
+    {
+        return Inertia::render('Users/Registro', [
+            'closed' => ! EventSettings::registrationOpen(),
+        ]);
+    }
+
+    public function registroStore(Request $request)
+    {
+        app(CreatesNewUsers::class)->create($request->all());
+
+        return back()->with('success', 'Usuario registrado correctamente.');
     }
 }

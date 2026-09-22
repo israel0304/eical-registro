@@ -16,6 +16,7 @@ import {
     ScanLine,
     ShieldCheck,
     Tags,
+    UserPlus,
     Users,
     type LucideIcon,
 } from 'lucide-vue-next';
@@ -39,6 +40,12 @@ export const mainModules: AppModule[] = [
         href: '/users',
         icon: Users,
         permissions: ['users.view'],
+    },
+    {
+        title: 'Registro',
+        href: '/users/registro',
+        icon: UserPlus,
+        permissions: ['users.create'],
     },
     {
         title: 'Talleres',
