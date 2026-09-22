@@ -543,6 +543,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('admin/constancias/moderadores', [ModeradoresController::class, 'index'])->name('constancias.moderators.index');
         Route::post('admin/constancias/moderadores/{user}/activar', [ModeradoresController::class, 'toggle'])->name('constancias.moderators.toggle');
         Route::get('admin/constancias/moderadores/{user}/constancia', [ModeradoresController::class, 'download'])->name('constancias.moderators.download');
+        Route::get('admin/constancias/moderadores/{user}/asignaciones', [ModeradoresController::class, 'assignments'])->name('constancias.moderators.assignments');
+        Route::get('admin/constancias/moderadores/{user}/asignaciones/pdf', [ModeradoresController::class, 'assignmentsPdf'])->name('constancias.moderators.assignments-pdf');
     });
 
     // Admin: roles & permissions

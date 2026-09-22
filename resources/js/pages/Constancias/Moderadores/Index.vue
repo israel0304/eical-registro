@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { Download, Mic, Users } from 'lucide-vue-next';
+import { ClipboardList, Download, Mic, Users } from 'lucide-vue-next';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 interface Moderator {
@@ -12,8 +12,8 @@ interface Moderator {
     affiliation: string | null;
     activated: boolean;
     activated_at: string | null;
-    conference_count: number;
-    conference_titles: string[];
+    assignment_count: number;
+    assignment_titles: string[];
     folio: string | null;
 }
 
@@ -34,6 +34,13 @@ const toggle = (moderator: Moderator) => {
 const download = (moderator: Moderator) => {
     window.open(
         '/admin/constancias/moderadores/' + moderator.id + '/constancia',
+        '_blank',
+    );
+};
+
+const assignments = (moderator: Moderator) => {
+    window.open(
+        '/admin/constancias/moderadores/' + moderator.id + '/asignaciones',
         '_blank',
     );
 };
@@ -77,7 +84,7 @@ const download = (moderator: Moderator) => {
                                 <th
                                     class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300"
                                 >
-                                    Conferencias
+                                    Asignaciones
                                 </th>
                                 <th
                                     class="px-5 py-3 text-left text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-300"
@@ -138,16 +145,16 @@ const download = (moderator: Moderator) => {
                                     <span
                                         class="text-sm text-gray-700 dark:text-gray-300"
                                     >
-                                        {{ moderator.conference_count }}
+                                        {{ moderator.assignment_count }}
                                     </span>
                                     <div
                                         v-if="
-                                            moderator.conference_titles.length
+                                            moderator.assignment_titles.length
                                         "
                                         class="mt-1 max-w-xs text-xs text-gray-400"
                                     >
                                         {{
-                                            moderator.conference_titles.join(
+                                            moderator.assignment_titles.join(
                                                 ' · ',
                                             )
                                         }}
@@ -191,6 +198,13 @@ const download = (moderator: Moderator) => {
                                 <td
                                     class="px-5 py-3 text-right whitespace-nowrap"
                                 >
+                                    <button
+                                        @click="assignments(moderator)"
+                                        class="mr-2 rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-amber-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-amber-400"
+                                        title="Ver todas las asignaciones"
+                                    >
+                                        <ClipboardList class="h-4 w-4" />
+                                    </button>
                                     <button
                                         @click="download(moderator)"
                                         class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-amber-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-amber-400"

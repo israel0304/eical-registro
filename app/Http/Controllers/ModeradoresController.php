@@ -8,7 +8,11 @@ use App\Models\ModeradorConstancia;
 use App\Models\ParticipationType;
 use App\Models\User;
 use App\Services\CertificateRenderer;
+use App\Services\ModeratorAssignments;
+use App\Services\ProgramTemplateRenderer;
+use App\Support\EventSettings;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class ModeradoresController extends Controller
@@ -26,12 +30,12 @@ class ModeradoresController extends Controller
             ->values();
 
         $users = User::whereIn('id', $moderatorIds)
-            ->with(['constanciaModerador', 'moderatedConferences' => function ($q) {
-                $q->orderBy('day')->select(['conferences.id', 'conferences.title', 'conferences.day']);
-            }])
+            ->with(['constanciaModerador'])
             ->orderBy('last_name')
             ->get()
             ->map(function (User $user) {
+                $assignments = app(ModeratorAssignments::class)->assignmentsFor($user);
+
                 return [
                     'id' => $user->id,
                     'first_name' => $user->first_name,
@@ -41,8 +45,8 @@ class ModeradoresController extends Controller
                     'affiliation' => $user->affiliation,
                     'activated' => (bool) $user->constanciaModerador?->activated,
                     'activated_at' => $user->constanciaModerador?->activated_at,
-                    'conference_count' => $user->moderatedConferences->count(),
-                    'conference_titles' => $user->moderatedConferences->pluck('title')->map(fn ($t) => (string) $t)->all(),
+                    'assignment_count' => $assignments->count(),
+                    'assignment_titles' => $assignments->pluck('title')->map(fn ($t) => (string) $t)->all(),
                     'folio' => $this->moderatorFolio($user),
                 ];
             })
@@ -91,6 +95,40 @@ class ModeradoresController extends Controller
         return response($html, 200, [
             'Content-Type' => 'text/html',
             'Content-Disposition' => 'inline; filename=constancia_'.$certificate->folio.'.html',
+        ]);
+    }
+
+    public function assignments(Request $request, User $user)
+    {
+        abort_unless($request->user()->can('constancias.moderators.manage'), 403);
+
+        return response($this->assignmentsView($user, route('constancias.moderators.assignments-pdf', $user), false), 200, [
+            'Content-Type' => 'text/html',
+        ]);
+    }
+
+    public function assignmentsPdf(Request $request, User $user)
+    {
+        abort_unless($request->user()->can('constancias.moderators.manage'), 403);
+
+        $html = $this->assignmentsView($user, null, true);
+
+        $pdf = (new ProgramTemplateRenderer)->renderBladePdf($html);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename=asignaciones_moderador_'.Str::slug($user->name).'_'.date('Y-m-d').'.pdf',
+        ]);
+    }
+
+    private function assignmentsView(User $user, ?string $pdfUrl, bool $forPdf): string
+    {
+        return (string) view('asignaciones.print', [
+            'assignments' => app(ModeratorAssignments::class)->assignmentsFor($user),
+            'eventName' => EventSettings::nombre(),
+            'moderator' => $user,
+            'pdfUrl' => $pdfUrl,
+            'forPdf' => $forPdf,
         ]);
     }
 

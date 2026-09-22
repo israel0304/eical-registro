@@ -197,9 +197,9 @@ class ModeradorConstanciaTest extends TestCase
                 ->component('Constancias/Moderadores/Index')
                 ->has('moderators', 1)
                 ->where('moderators.0.full_name', 'Moderador Unico')
-                ->where('moderators.0.conference_count', 1)
+                ->where('moderators.0.assignment_count', 1)
                 ->where('moderators.0.activated', true)
-                ->where('moderators.0.conference_titles', ['Conferencia de prueba']));
+                ->where('moderators.0.assignment_titles', ['Conferencia de prueba']));
     }
 
     public function test_admin_toggle_activates_and_deactivates_moderator_constancia(): void
