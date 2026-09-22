@@ -20,9 +20,9 @@ class NotificacionesTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function admin(): User
+    private function admin(array $attributes = []): User
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create($attributes);
         $role = Role::firstOrCreate(['name' => 'Administrator']);
         $user->roles()->sync([$role->id]);
 
@@ -279,7 +279,11 @@ class NotificacionesTest extends TestCase
 
     public function test_users_search_returns_active_matches_only(): void
     {
-        $admin = $this->admin();
+        $admin = $this->admin([
+            'first_name' => 'Zoe',
+            'last_name' => 'Ramírez',
+            'email' => 'zoe.ramirez@eical.org',
+        ]);
 
         $match = User::factory()->create([
             'first_name' => 'Ana',
