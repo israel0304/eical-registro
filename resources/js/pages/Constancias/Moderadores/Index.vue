@@ -12,9 +12,10 @@ interface Moderator {
     affiliation: string | null;
     activated: boolean;
     activated_at: string | null;
-    assignment_count: number;
-    assignment_titles: string[];
-    folio: string | null;
+assignment_count: number;
+                    assignment_titles: string[];
+                    has_conference: boolean;
+                    folio: string | null;
 }
 
 defineProps<{
@@ -22,6 +23,10 @@ defineProps<{
 }>();
 
 const toggle = (moderator: Moderator) => {
+    if (!moderator.has_conference) {
+        return;
+    }
+
     router.post(
         '/admin/constancias/moderadores/' + moderator.id + '/activar',
         {},
@@ -63,9 +68,10 @@ const assignments = (moderator: Moderator) => {
                     Moderadores
                 </h1>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Activa la constancia única de moderador. Cada moderador
-                    recibe una sola constancia que lista todas las conferencias
-                    que modera, sin importar cuántas sean.
+                    Lista a todos los moderadores (conferencias, talleres y
+                    ponencias). La constancia única de moderador solo aplica a
+                    quienes moderan conferencias: cada uno recibe una sola
+                    constancia que lista todas las conferencias que modera.
                 </p>
             </div>
 
@@ -173,6 +179,7 @@ const assignments = (moderator: Moderator) => {
                                 </td>
                                 <td class="px-5 py-3">
                                     <label
+                                        v-if="moderator.has_conference"
                                         class="inline-flex cursor-pointer items-center"
                                     >
                                         <input
@@ -194,6 +201,13 @@ const assignments = (moderator: Moderator) => {
                                             Pendiente
                                         </span>
                                     </label>
+                                    <span
+                                        v-else
+                                        class="text-xs text-gray-400"
+                                        title="La constancia única solo aplica a moderadores de conferencias"
+                                    >
+                                        Solo talleres/ponencias
+                                    </span>
                                 </td>
                                 <td
                                     class="px-5 py-3 text-right whitespace-nowrap"
@@ -206,6 +220,7 @@ const assignments = (moderator: Moderator) => {
                                         <ClipboardList class="h-4 w-4" />
                                     </button>
                                     <button
+                                        v-if="moderator.has_conference"
                                         @click="download(moderator)"
                                         class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-amber-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-amber-400"
                                         title="Descargar constancia"

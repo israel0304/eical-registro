@@ -6,7 +6,9 @@ use App\Models\Certificate;
 use App\Models\Conference;
 use App\Models\ModeradorConstancia;
 use App\Models\ParticipationType;
+use App\Models\Presentation;
 use App\Models\User;
+use App\Models\Workshop;
 use App\Services\CertificateRenderer;
 use App\Services\ModeratorAssignments;
 use App\Services\ProgramTemplateRenderer;
@@ -21,7 +23,7 @@ class ModeradoresController extends Controller
 
     public function index()
     {
-        $moderatorIds = Conference::query()
+        $conferenceModeratorIds = Conference::query()
             ->whereHas('moderators')
             ->with('moderators:id')
             ->get()
@@ -29,11 +31,17 @@ class ModeradoresController extends Controller
             ->unique()
             ->values();
 
+        $moderatorIds = $conferenceModeratorIds
+            ->concat(Workshop::query()->with('moderators:id')->get()->flatMap(fn ($workshop) => $workshop->moderators->pluck('id')))
+            ->concat(Presentation::query()->with('moderators:id')->get()->flatMap(fn ($presentation) => $presentation->moderators->pluck('id')))
+            ->unique()
+            ->values();
+
         $users = User::whereIn('id', $moderatorIds)
             ->with(['constanciaModerador'])
             ->orderBy('last_name')
             ->get()
-            ->map(function (User $user) {
+            ->map(function (User $user) use ($conferenceModeratorIds) {
                 $assignments = app(ModeratorAssignments::class)->assignmentsFor($user);
 
                 return [
@@ -45,6 +53,7 @@ class ModeradoresController extends Controller
                     'affiliation' => $user->affiliation,
                     'activated' => (bool) $user->constanciaModerador?->activated,
                     'activated_at' => $user->constanciaModerador?->activated_at,
+                    'has_conference' => $conferenceModeratorIds->contains($user->id),
                     'assignment_count' => $assignments->count(),
                     'assignment_titles' => $assignments->pluck('title')->map(fn ($t) => (string) $t)->all(),
                     'folio' => $this->moderatorFolio($user),

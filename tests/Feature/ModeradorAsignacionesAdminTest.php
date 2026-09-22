@@ -167,7 +167,43 @@ class ModeradorAsignacionesAdminTest extends TestCase
                 ->component('Constancias/Moderadores/Index')
                 ->where('moderators.0.full_name', 'Moderador Principal')
                 ->where('moderators.0.assignment_count', 3)
+                ->where('moderators.0.has_conference', true)
                 ->where('moderators.0.assignment_titles', ['Ponencia de asignaciones', 'Taller de asignaciones', 'Conferencia de asignaciones']));
+    }
+
+    public function test_admin_index_includes_workshop_and_presentation_only_moderators(): void
+    {
+        $admin = $this->admin();
+        $moderator = $this->moderator();
+        $workshop = $this->workshopFor($admin);
+        $workshop->moderators()->attach($moderator->id);
+        $presentation = $this->presentationFor();
+        $presentation->moderators()->attach($moderator->id);
+
+        $this->actingAs($admin)
+            ->get('/admin/constancias/moderadores')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Constancias/Moderadores/Index')
+                ->where('moderators.0.full_name', 'Moderador Principal')
+                ->where('moderators.0.assignment_count', 2)
+                ->where('moderators.0.has_conference', false)
+                ->where('moderators.0.folio', null));
+    }
+
+    public function test_workshop_only_moderator_cannot_toggle_constancia(): void
+    {
+        $admin = $this->admin();
+        $moderator = $this->moderator();
+        $workshop = $this->workshopFor($admin);
+        $workshop->moderators()->attach($moderator->id);
+
+        $this->actingAs($admin)
+            ->post('/admin/constancias/moderadores/'.$moderator->id.'/activar')
+            ->assertRedirect()
+            ->assertSessionHasErrors('error');
+
+        $this->assertDatabaseMissing('moderador_constancias', ['user_id' => $moderator->id]);
     }
 
     public function test_without_admin_permission_is_forbidden(): void
