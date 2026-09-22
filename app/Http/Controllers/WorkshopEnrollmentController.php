@@ -131,13 +131,6 @@ class WorkshopEnrollmentController extends Controller
             ]);
         }
 
-        if (! $workshop->hasAvailableSpots()) {
-            return back()->withErrors([
-                'cap_full' => true,
-                'error' => "El taller está lleno ({$workshop->enrolledCount()} / {$workshop->capacity} cupos).",
-            ]);
-        }
-
         if ($existingEnrollment && $existingEnrollment->status === 'cancelled') {
             $existingEnrollment->update([
                 'status' => 'enrolled',

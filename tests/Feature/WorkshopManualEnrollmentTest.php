@@ -232,7 +232,7 @@ class WorkshopManualEnrollmentTest extends TestCase
         ]);
     }
 
-    public function test_manual_registration_blocked_when_workshop_is_full(): void
+    public function test_manual_registration_allowed_when_workshop_is_full(): void
     {
         $admin = $this->admin();
         $workshop = $this->workshop($admin);
@@ -245,10 +245,75 @@ class WorkshopManualEnrollmentTest extends TestCase
                 'user_id' => $target->id,
             ]);
 
-        $response->assertSessionHasErrors(['error', 'cap_full']);
-        $this->assertDatabaseMissing('workshop_enrollments', [
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('workshop_enrollments', [
             'workshop_id' => $workshop->id,
             'user_id' => $target->id,
+            'status' => 'enrolled',
+        ]);
+    }
+
+    public function test_assigned_instructor_can_register_manually_when_workshop_is_full(): void
+    {
+        $admin = $this->admin();
+        $workshop = $this->workshop($admin);
+        $this->enroll($this->plainUser(), $workshop);
+        $this->enroll($this->plainUser(), $workshop);
+        $instructor = $this->plainUser();
+        $workshop->instructors()->attach($instructor->id);
+        $target = $this->plainUser();
+
+        $this->actingAs($instructor)
+            ->post(route('workshops.enrollments.admin-store', $workshop), [
+                'user_id' => $target->id,
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('workshop_enrollments', [
+            'workshop_id' => $workshop->id,
+            'user_id' => $target->id,
+            'status' => 'enrolled',
+        ]);
+    }
+
+    public function test_assigned_moderator_can_register_manually_when_workshop_is_full(): void
+    {
+        $admin = $this->admin();
+        $workshop = $this->workshop($admin);
+        $this->enroll($this->plainUser(), $workshop);
+        $this->enroll($this->plainUser(), $workshop);
+        $moderator = $this->plainUser();
+        $workshop->moderators()->attach($moderator->id);
+        $target = $this->plainUser();
+
+        $this->actingAs($moderator)
+            ->post(route('workshops.enrollments.admin-store', $workshop), [
+                'user_id' => $target->id,
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('workshop_enrollments', [
+            'workshop_id' => $workshop->id,
+            'user_id' => $target->id,
+            'status' => 'enrolled',
+        ]);
+    }
+
+    public function test_self_enrollment_blocked_when_workshop_is_full(): void
+    {
+        $admin = $this->admin();
+        $workshop = $this->workshop($admin);
+        $this->enroll($this->plainUser(), $workshop);
+        $this->enroll($this->plainUser(), $workshop);
+        $user = $this->plainUser();
+
+        $this->actingAs($user)
+            ->post(route('workshops.enroll', $workshop), [])
+            ->assertSessionHasErrors('error');
+
+        $this->assertDatabaseMissing('workshop_enrollments', [
+            'workshop_id' => $workshop->id,
+            'user_id' => $user->id,
         ]);
     }
 
