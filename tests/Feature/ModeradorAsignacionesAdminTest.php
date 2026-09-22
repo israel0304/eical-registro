@@ -126,6 +126,23 @@ class ModeradorAsignacionesAdminTest extends TestCase
             ->assertSee('Moderador Principal');
     }
 
+    public function test_admin_view_hides_own_semblanza_but_keeps_others(): void
+    {
+        $moderator = $this->moderator();
+        $moderator->update(['semblanza' => 'Semblanza propia del moderador.']);
+
+        $instructor = $this->participant(['first_name' => 'Ana', 'last_name' => 'Instructora']);
+        $workshop = $this->workshopFor($moderator);
+        $workshop->instructors()->attach($instructor->id);
+        $workshop->moderators()->attach($moderator->id);
+
+        $this->actingAs($this->admin())
+            ->get('/admin/constancias/moderadores/'.$moderator->id.'/asignaciones')
+            ->assertOk()
+            ->assertDontSee('Semblanza propia del moderador.')
+            ->assertSee('Semblanza de prueba del participante.');
+    }
+
     public function test_admin_can_download_moderator_assignments_pdf(): void
     {
         $moderator = $this->moderatorWithAllAssignments();

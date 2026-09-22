@@ -107,6 +107,7 @@ class ModeratorAssignments
 
         foreach ($users as $user) {
             $items[] = [
+                'id' => $user->id,
                 'role' => $role,
                 'name' => $user->name,
                 'affiliation' => trim((string) $user->affiliation),

@@ -215,9 +215,11 @@
                                         <span class="badge-role">{{ $p['role'] }}</span>
                                         {{ $p['name'] }}@if ($p['affiliation']) <span class="affiliation">– {{ $p['affiliation'] }}</span>@endif
                                     </div>
-                                    <div class="semblanza">
-                                        {{ $p['semblanza'] !== '' ? $p['semblanza'] : 'Sin semblanza registrada.' }}
-                                    </div>
+                                    @if ($p['id'] !== $moderator->id)
+                                        <div class="semblanza">
+                                            {{ $p['semblanza'] !== '' ? $p['semblanza'] : 'Sin semblanza registrada.' }}
+                                        </div>
+                                    @endif
                                 </div>
                             @endforeach
                         </div>
