@@ -96,8 +96,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('users', [UserController::class, 'index'])->middleware('can:users.view')->name('users.index');
     Route::post('users', [UserController::class, 'store'])->middleware('can:users.create')->name('users.store');
-    Route::get('users/registro', [UserController::class, 'registro'])->middleware('can:users.create')->name('users.registro');
-    Route::post('users/registro', [UserController::class, 'registroStore'])->middleware('can:users.create')->name('users.registro.store');
+    Route::get('users/registro', [UserController::class, 'registro'])->middleware('can:users.register')->name('users.registro');
+    Route::post('users/registro', [UserController::class, 'registroStore'])->middleware('can:users.register')->name('users.registro.store');
     Route::put('users/{user}', [UserController::class, 'update'])->middleware('can:users.edit')->name('users.update');
     Route::delete('users/{user}', [UserController::class, 'destroy'])->middleware('can:users.delete')->name('users.destroy');
     Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])->middleware('can:users.edit')->name('users.reset-password');

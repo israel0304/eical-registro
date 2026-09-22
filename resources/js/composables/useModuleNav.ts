@@ -45,7 +45,7 @@ export const mainModules: AppModule[] = [
         title: 'Registro',
         href: '/users/registro',
         icon: UserPlus,
-        permissions: ['users.create'],
+        permissions: ['users.register'],
     },
     {
         title: 'Talleres',

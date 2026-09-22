@@ -82,7 +82,7 @@ class PanelRegistrationTest extends TestCase
 
     public function test_user_with_create_permission_can_view_panel_registration(): void
     {
-        $this->actingAs($this->userWithPermission('users.create'))
+        $this->actingAs($this->userWithPermission('users.register'))
             ->get(route('users.registro'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -94,7 +94,7 @@ class PanelRegistrationTest extends TestCase
     {
         $this->closeRegistrations();
 
-        $this->actingAs($this->userWithPermission('users.create'))
+        $this->actingAs($this->userWithPermission('users.register'))
             ->get(route('users.registro'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -118,7 +118,7 @@ class PanelRegistrationTest extends TestCase
 
     public function test_user_with_create_permission_can_register_user(): void
     {
-        $operator = $this->userWithPermission('users.create');
+        $operator = $this->userWithPermission('users.register');
 
         $response = $this->actingAs($operator)
             ->post(route('users.registro.store'), $this->registrationPayload());
@@ -140,7 +140,7 @@ class PanelRegistrationTest extends TestCase
 
     public function test_panel_registration_does_not_log_in_as_new_user(): void
     {
-        $operator = $this->userWithPermission('users.create');
+        $operator = $this->userWithPermission('users.register');
 
         $this->actingAs($operator)
             ->post(route('users.registro.store'), $this->registrationPayload())
@@ -153,7 +153,7 @@ class PanelRegistrationTest extends TestCase
     {
         $this->closeRegistrations();
 
-        $this->actingAs($this->userWithPermission('users.create'))
+        $this->actingAs($this->userWithPermission('users.register'))
             ->post(route('users.registro.store'), $this->registrationPayload())
             ->assertSessionHasErrors('email');
 
@@ -164,7 +164,7 @@ class PanelRegistrationTest extends TestCase
     {
         User::factory()->create(['email' => 'test@example.com']);
 
-        $this->actingAs($this->userWithPermission('users.create'))
+        $this->actingAs($this->userWithPermission('users.register'))
             ->post(route('users.registro.store'), $this->registrationPayload())
             ->assertSessionHasErrors('email');
     }

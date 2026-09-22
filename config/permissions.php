@@ -7,6 +7,7 @@ return [
     'Usuarios' => [
         'users.view' => 'Ver listado de usuarios',
         'users.create' => 'Crear usuarios',
+        'users.register' => 'Registrar asistentes',
         'users.edit' => 'Editar usuarios',
         'users.delete' => 'Eliminar usuarios',
         'users.import' => 'Importar usuarios desde CSV',
