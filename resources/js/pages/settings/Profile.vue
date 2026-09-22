@@ -51,17 +51,30 @@ const user = page.props.auth.user;
                     v-slot="{ errors, processing, recentlySuccessful }"
                 >
                     <div class="grid gap-2">
-                        <Label for="name">Nombre</Label>
+                        <Label for="first_name">Nombre(s)</Label>
                         <Input
-                            id="name"
+                            id="first_name"
                             class="mt-1 block w-full"
-                            name="name"
-                            :default-value="user.name"
+                            name="first_name"
+                            :default-value="user.first_name"
                             required
-                            autocomplete="name"
-                            placeholder="Nombre completo"
+                            autocomplete="given-name"
+                            placeholder="Tus nombres"
                         />
-                        <InputError class="mt-2" :message="errors.name" />
+                        <InputError class="mt-2" :message="errors.first_name" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="last_name">Apellido(s)</Label>
+                        <Input
+                            id="last_name"
+                            class="mt-1 block w-full"
+                            name="last_name"
+                            :default-value="user.last_name"
+                            autocomplete="family-name"
+                            placeholder="Tus apellidos"
+                        />
+                        <InputError class="mt-2" :message="errors.last_name" />
                     </div>
 
                     <div class="grid gap-2">
@@ -77,6 +90,46 @@ const user = page.props.auth.user;
                             placeholder="Correo electrónico"
                         />
                         <InputError class="mt-2" :message="errors.email" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="affiliation">Institución / Afiliación</Label>
+                        <Input
+                            id="affiliation"
+                            class="mt-1 block w-full"
+                            name="affiliation"
+                            :default-value="user.affiliation"
+                            required
+                            placeholder="Universidad, institución o empresa"
+                        />
+                        <InputError class="mt-2" :message="errors.affiliation" />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="grid gap-2">
+                            <Label for="country">País</Label>
+                            <Input
+                                id="country"
+                                class="mt-1 block w-full"
+                                name="country"
+                                :default-value="user.country"
+                                required
+                                placeholder="México"
+                            />
+                            <InputError class="mt-2" :message="errors.country" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="state">Estado</Label>
+                            <Input
+                                id="state"
+                                class="mt-1 block w-full"
+                                name="state"
+                                :default-value="user.state"
+                                required
+                                placeholder="Jalisco"
+                            />
+                            <InputError class="mt-2" :message="errors.state" />
+                        </div>
                     </div>
 
                     <div class="grid gap-2">
