@@ -206,6 +206,25 @@ class ModeradorAsignacionesAdminTest extends TestCase
         $this->assertDatabaseMissing('moderador_constancias', ['user_id' => $moderator->id]);
     }
 
+    public function test_admin_can_download_speaker_conference_certificate(): void
+    {
+        $admin = $this->admin();
+        $speaker = $this->participant(['first_name' => 'Carla', 'last_name' => 'Conferencista']);
+        $conference = $this->conferenceFor($admin);
+        $conference->members()->attach($speaker->id, ['role' => 'speaker']);
+
+        $this->actingAs($admin)
+            ->get('/admin/constancias/conferencia/'.$conference->id.'/'.$speaker->id.'/download')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'text/html; charset=UTF-8');
+
+        $this->assertDatabaseHas('certificates', [
+            'user_id' => $speaker->id,
+            'event_type' => 'conference',
+            'event_id' => $conference->id,
+        ]);
+    }
+
     public function test_without_admin_permission_is_forbidden(): void
     {
         $moderator = $this->moderator();

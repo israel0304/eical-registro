@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, Calendar, Clock, MapPin, ChevronDown, ChevronUp } from 'lucide-vue-next';
+import { ArrowLeft, Calendar, Clock, Download, MapPin, ChevronDown, ChevronUp } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
@@ -101,6 +101,17 @@ const toggleActivation = (userId: number) => {
         {
             preserveScroll: true,
         },
+    );
+};
+
+const downloadConstancia = (userId: number) => {
+    window.open(
+        '/admin/constancias/conferencia/' +
+            props.conference.id +
+            '/' +
+            userId +
+            '/download',
+        '_blank',
     );
 };
 
@@ -258,6 +269,22 @@ const toggleActivation = (userId: number) => {
                                 {{ member.semblanza }}
                             </p>
                         </div>
+
+                        <button
+                            v-if="
+                                member.pivot?.role !== 'moderator' &&
+                                can('constancias.download') &&
+                                (can('constancias.view') ||
+                                    isAssignedModerator)
+                            "
+                            type="button"
+                            @click="downloadConstancia(member.id)"
+                            class="inline-flex items-center gap-1 rounded-full border border-gray-300 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 transition-colors hover:border-indigo-300 hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:border-indigo-600 dark:hover:text-indigo-400"
+                            title="Descargar constancia"
+                        >
+                            <Download class="h-3.5 w-3.5" />
+                            Constancia
+                        </button>
 
                         <template
                             v-if="
