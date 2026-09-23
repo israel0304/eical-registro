@@ -236,7 +236,9 @@ const register = async (token: string) => {
             message: 'Respuesta inesperada del servidor.',
         };
 
-        resultCloseTimer = window.setTimeout(closeResultModal, 4000);
+        if (!data?.already) {
+            resultCloseTimer = window.setTimeout(closeResultModal, 4000);
+        }
 
         if (data?.success) {
             searchResults.value = [];
@@ -493,6 +495,13 @@ const clearResult = () => {
         resultCloseTimer = undefined;
     }
     result.value = null;
+};
+
+const printFromResult = () => {
+    const id = result.value?.user?.id;
+    if (!id) return;
+    closeResultModal();
+    openBadgePrint(id);
 };
 
 const printModal = ref<{ open: boolean; url: string; title: string }>({
@@ -981,6 +990,17 @@ onBeforeUnmount(() => {
                 </DialogHeader>
 
                 <DialogFooter class="sm:justify-center">
+                    <button
+                        v-if="
+                            resultType === 'already' && result?.user?.id
+                        "
+                        type="button"
+                        @click="printFromResult"
+                        class="inline-flex justify-center items-center gap-2 rounded-md bg-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                    >
+                        <Printer class="h-4 w-4" />
+                        Imprimir gafete
+                    </button>
                     <DialogClose
                         as-child
                         class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-6 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
