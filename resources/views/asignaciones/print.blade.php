@@ -14,6 +14,8 @@
             color: #111827;
             font-size: 13.5px;
             line-height: 1.55;
+            orphans: 3;
+            widows: 3;
         }
         .header {
             text-align: center;
@@ -33,6 +35,8 @@
             border-bottom: 1px solid #f3f4f6;
             padding-bottom: 6px;
             margin: 0 0 8px;
+            break-after: avoid;
+            page-break-after: avoid;
         }
         .activity {
             border: 1px solid #f3f4f6;
@@ -55,7 +59,13 @@
         .badge.taller { background: #4f46e5; }
         .badge.ponencia { background: #059669; }
         .badge.conferencia { background: #d97706; }
-        .activity-title { font-size: 16px; font-weight: 700; margin: 2px 0 6px; }
+        .activity-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 2px 0 6px;
+            break-after: avoid;
+            page-break-after: avoid;
+        }
         .meta { color: #374151; font-size: 13.5px; }
         .meta strong { color: #111827; }
         .description { color: #111827; margin-top: 8px; line-height: 1.6; }
@@ -67,7 +77,12 @@
             break-inside: avoid;
             page-break-inside: avoid;
         }
-        .participant-head { font-weight: 700; font-size: 13.5px; }
+        .participant-head {
+            font-weight: 700;
+            font-size: 13.5px;
+            break-after: avoid;
+            page-break-after: avoid;
+        }
         .badge-role {
             display: inline-block;
             font-size: 10.5px;
