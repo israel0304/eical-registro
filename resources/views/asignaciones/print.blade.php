@@ -12,7 +12,8 @@
             padding: 0;
             font-family: Helvetica, Arial, sans-serif;
             color: #111827;
-            font-size: 12px;
+            font-size: 13.5px;
+            line-height: 1.55;
         }
         .header {
             text-align: center;
@@ -20,11 +21,11 @@
             padding-bottom: 14px;
             margin-bottom: 22px;
         }
-        .header h1 { margin: 0; font-size: 22px; }
-        .header p { margin: 4px 0 0; color: #6b7280; font-size: 13px; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .header p { margin: 4px 0 0; color: #4b5563; font-size: 14px; }
         .day { margin-bottom: 24px; }
         .day-title {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.04em;
@@ -36,14 +37,14 @@
         .activity {
             border: 1px solid #f3f4f6;
             border-left: 3px solid #e5e7eb;
-            padding: 10px 12px;
+            padding: 12px 14px;
             margin-bottom: 12px;
             break-inside: avoid;
             page-break-inside: avoid;
         }
         .badge {
             display: inline-block;
-            font-size: 10px;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             padding: 2px 8px;
@@ -54,35 +55,35 @@
         .badge.taller { background: #4f46e5; }
         .badge.ponencia { background: #059669; }
         .badge.conferencia { background: #d97706; }
-        .activity-title { font-size: 14px; font-weight: 700; margin: 2px 0 6px; }
-        .meta { color: #4b5563; font-size: 12px; }
+        .activity-title { font-size: 16px; font-weight: 700; margin: 2px 0 6px; }
+        .meta { color: #374151; font-size: 13.5px; }
         .meta strong { color: #111827; }
-        .description { color: #374151; margin-top: 8px; line-height: 1.5; }
+        .description { color: #111827; margin-top: 8px; line-height: 1.6; }
         .participants { margin-top: 10px; }
         .participant {
-            padding: 8px 0 0;
+            padding: 10px 0 0;
             border-top: 1px dotted #e5e7eb;
             margin-top: 8px;
             break-inside: avoid;
             page-break-inside: avoid;
         }
-        .participant-head { font-weight: 700; font-size: 12px; }
+        .participant-head { font-weight: 700; font-size: 13.5px; }
         .badge-role {
             display: inline-block;
-            font-size: 9px;
+            font-size: 10.5px;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             padding: 1px 6px;
             border-radius: 999px;
             background: #f3f4f6;
-            color: #374151;
+            color: #1f2937;
             margin-right: 6px;
             font-weight: 700;
         }
-        .affiliation { color: #6b7280; font-weight: 400; }
-        .semblanza { color: #374151; font-size: 11px; line-height: 1.5; margin-top: 4px; }
+        .affiliation { color: #4b5563; font-weight: 400; }
+        .semblanza { color: #374151; font-size: 12.5px; line-height: 1.6; margin-top: 4px; }
         .empty { color: #9ca3af; font-style: italic; }
-        .footer { text-align: center; color: #9ca3af; font-size: 10px; margin-top: 20px; }
+        .footer { text-align: center; color: #6b7280; font-size: 11px; margin-top: 20px; }
         .print-actions {
             position: fixed;
             top: 16px;

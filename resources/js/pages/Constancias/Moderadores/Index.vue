@@ -149,22 +149,23 @@ const assignments = (moderator: Moderator) => {
                                 </td>
                                 <td class="px-5 py-3">
                                     <span
-                                        class="text-sm text-gray-700 dark:text-gray-300"
+                                        class="text-sm font-semibold text-gray-900 dark:text-white"
                                     >
                                         {{ moderator.assignment_count }}
                                     </span>
-                                    <div
+                                    <ul
                                         v-if="
                                             moderator.assignment_titles.length
                                         "
-                                        class="mt-1 max-w-xs text-xs text-gray-400"
+                                        class="mt-1.5 ml-4 max-w-md list-disc space-y-1 text-sm leading-relaxed text-gray-600 dark:text-gray-300"
                                     >
-                                        {{
-                                            moderator.assignment_titles.join(
-                                                ' · ',
-                                            )
-                                        }}
-                                    </div>
+                                        <li
+                                            v-for="title in moderator.assignment_titles"
+                                            :key="title"
+                                        >
+                                            {{ title }}
+                                        </li>
+                                    </ul>
                                 </td>
                                 <td class="px-5 py-3">
                                     <span

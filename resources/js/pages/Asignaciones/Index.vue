@@ -123,7 +123,7 @@ const groupedAssignments = computed(() => {
                     <div class="mb-4 flex items-center gap-3">
                         <span
                             :class="[
-                                'rounded-full px-3 py-1 text-xs font-bold',
+                                'rounded-full px-3 py-1 text-sm font-bold',
                                 group.badgeColor,
                             ]"
                         >
@@ -132,7 +132,7 @@ const groupedAssignments = computed(() => {
                         <div
                             class="h-px flex-1 bg-gray-200 dark:bg-zinc-800"
                         ></div>
-                        <span class="text-xs text-gray-400 dark:text-gray-500">
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
                             {{ group.items.length }}
                             {{
                                 group.items.length === 1
@@ -150,52 +150,52 @@ const groupedAssignments = computed(() => {
                             class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-900"
                         >
                             <div class="space-y-2">
-                                <div class="flex items-center gap-2">
-                                    <span
-                                        class="text-xs text-gray-400 dark:text-gray-500"
-                                    >
-                                        ID: {{ item.id }}
-                                    </span>
-                                </div>
-                                <h2
-                                    class="text-base font-semibold text-gray-900 dark:text-white"
-                                >
-                                    {{ item.title }}
-                                </h2>
-                                <div
-                                    class="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-gray-500 dark:text-gray-400"
-                                >
-                                    <div class="flex items-center gap-1.5">
-                                        <Calendar
-                                            class="h-3.5 w-3.5 text-gray-400"
-                                        />
-                                        {{ formatDate(item.day) }}
+                                    <div class="flex items-center gap-2">
+                                        <span
+                                            class="text-sm text-gray-500 dark:text-gray-400"
+                                        >
+                                            ID: {{ item.id }}
+                                        </span>
                                     </div>
+                                    <h2
+                                        class="text-base font-semibold text-gray-900 dark:text-white"
+                                    >
+                                        {{ item.title }}
+                                    </h2>
                                     <div
-                                        v-if="item.start_time"
-                                        class="flex items-center gap-1.5"
+                                        class="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm leading-relaxed text-gray-600 dark:text-gray-300"
                                     >
-                                        <Clock
-                                            class="h-3.5 w-3.5 text-gray-400"
-                                        />
-                                        {{ item.start_time
-                                        }}{{
-                                            item.end_time
-                                                ? ' - ' + item.end_time
-                                                : ''
-                                        }}
-                                    </div>
-                                    <div
-                                        v-if="item.location"
-                                        class="flex items-center gap-1.5"
-                                    >
-                                        <MapPin
-                                            class="h-3.5 w-3.5 text-gray-400"
-                                        />
-                                        {{ item.location }}
+                                        <div class="flex items-center gap-1.5">
+                                            <Calendar
+                                                class="h-4 w-4 text-gray-500"
+                                            />
+                                            {{ formatDate(item.day) }}
+                                        </div>
+                                        <div
+                                            v-if="item.start_time"
+                                            class="flex items-center gap-1.5"
+                                        >
+                                            <Clock
+                                                class="h-4 w-4 text-gray-500"
+                                            />
+                                            {{ item.start_time
+                                            }}{{
+                                                item.end_time
+                                                    ? ' - ' + item.end_time
+                                                    : ''
+                                            }}
+                                        </div>
+                                        <div
+                                            v-if="item.location"
+                                            class="flex items-center gap-1.5"
+                                        >
+                                            <MapPin
+                                                class="h-4 w-4 text-gray-500"
+                                            />
+                                            {{ item.location }}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
                             <div class="flex shrink-0 items-center gap-2">
                                 <button
