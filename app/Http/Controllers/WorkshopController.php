@@ -235,7 +235,7 @@ class WorkshopController extends Controller
 
         $instructorsData = $validated['instructors'] ?? [];
         unset($validated['instructors']);
-        $moderatorIds = $validated['moderator_ids'] ?? [];
+        $moderatorIds = $validated['moderator_ids'] ?? null;
         unset($validated['moderator_ids']);
 
         $workshop->update($validated);
@@ -274,8 +274,10 @@ class WorkshopController extends Controller
             ]);
         }
 
-        $workshop->moderators()->sync($moderatorIds);
-        $this->syncModeratorRoles($moderatorIds);
+        if ($moderatorIds !== null) {
+            $workshop->moderators()->sync($moderatorIds);
+            $this->syncModeratorRoles($moderatorIds);
+        }
 
         return back()->with('success', 'Taller actualizado correctamente.');
     }

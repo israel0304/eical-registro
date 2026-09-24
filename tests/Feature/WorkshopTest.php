@@ -293,4 +293,74 @@ class WorkshopTest extends TestCase
 
         $this->assertDatabaseHas('workshops', ['id' => $workshop->id, 'name' => 'Taller Actualizado']);
     }
+
+    public function test_updating_workshop_without_moderator_ids_preserves_moderators(): void
+    {
+        $admin = $this->admin();
+        $moderator = $this->admin();
+        $workshop = $this->workshopFor($admin);
+        $workshop->moderators()->attach($moderator->id);
+
+        $this->actingAs($admin)
+            ->put("/workshops/{$workshop->id}", [
+                'name' => $workshop->name,
+                'description' => $workshop->description,
+                'capacity' => $workshop->capacity,
+                'location' => $workshop->location,
+                'day' => '2026-10-05',
+                'start_time' => '09:00',
+                'end_time' => '13:00',
+                'qr_time_restricted' => false,
+                'instructors' => [[
+                    'first_name' => 'Juan',
+                    'last_name' => 'Pérez',
+                    'affiliation' => 'Univ',
+                    'email' => 'juan@example.com',
+                ]],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('workshop_moderator_user', [
+            'workshop_id' => $workshop->id,
+            'user_id' => $moderator->id,
+        ]);
+    }
+
+    public function test_updating_workshop_with_moderator_ids_syncs(): void
+    {
+        $admin = $this->admin();
+        $firstModerator = $this->admin();
+        $secondModerator = $this->admin();
+        $workshop = $this->workshopFor($admin);
+        $workshop->moderators()->attach($firstModerator->id);
+
+        $this->actingAs($admin)
+            ->put("/workshops/{$workshop->id}", [
+                'name' => $workshop->name,
+                'description' => $workshop->description,
+                'capacity' => $workshop->capacity,
+                'location' => $workshop->location,
+                'day' => '2026-10-05',
+                'start_time' => '09:00',
+                'end_time' => '13:00',
+                'qr_time_restricted' => true,
+                'instructors' => [[
+                    'first_name' => 'Juan',
+                    'last_name' => 'Pérez',
+                    'affiliation' => 'Univ',
+                    'email' => 'juan@example.com',
+                ]],
+                'moderator_ids' => [$secondModerator->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('workshop_moderator_user', [
+            'workshop_id' => $workshop->id,
+            'user_id' => $firstModerator->id,
+        ]);
+        $this->assertDatabaseHas('workshop_moderator_user', [
+            'workshop_id' => $workshop->id,
+            'user_id' => $secondModerator->id,
+        ]);
+    }
 }
