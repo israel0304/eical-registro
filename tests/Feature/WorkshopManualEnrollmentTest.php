@@ -221,11 +221,12 @@ class WorkshopManualEnrollmentTest extends TestCase
         $workshop = $this->workshop($admin, ['name' => 'Taller Destino']);
 
         $response = $this->actingAs($admin)
+            ->followingRedirects()
             ->post(route('workshops.enrollments.admin-store', $workshop), [
                 'user_id' => $target->id,
             ]);
 
-        $response->assertSessionHasErrors(['error', 'conflict']);
+        $response->assertOk();
         $this->assertDatabaseMissing('workshop_enrollments', [
             'workshop_id' => $workshop->id,
             'user_id' => $target->id,

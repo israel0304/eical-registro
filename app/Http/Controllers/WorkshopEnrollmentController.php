@@ -120,13 +120,13 @@ class WorkshopEnrollmentController extends Controller
         if ($conflict) {
             return back()->withErrors([
                 'conflict' => true,
-                'conflicting_workshop' => [
+                'conflicting_workshop' => json_encode([
                     'id' => $conflict->id,
                     'name' => $conflict->name,
                     'day' => $conflict->day,
                     'start_time' => $conflict->start_time,
                     'end_time' => $conflict->end_time,
-                ],
+                ]),
                 'error' => $this->conflictMessage($conflict),
             ]);
         }

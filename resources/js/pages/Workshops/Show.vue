@@ -154,8 +154,14 @@ const submitManualEnrollment = () => {
         },
         onError: (errs: any) => {
             if (errs.conflict) {
-                manualConflictingWorkshop.value =
-                    errs.conflicting_workshop ?? null;
+                try {
+                    manualConflictingWorkshop.value =
+                        errs.conflicting_workshop
+                            ? JSON.parse(errs.conflicting_workshop)
+                            : null;
+                } catch {
+                    manualConflictingWorkshop.value = null;
+                }
                 manualErrorKind.value = 'conflict';
                 manualErrorOpen.value = true;
             } else if (errs.cap_full) {
