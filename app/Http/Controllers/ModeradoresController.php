@@ -23,17 +23,9 @@ class ModeradoresController extends Controller
 
     public function index()
     {
-        $conferenceModeratorIds = Conference::query()
-            ->whereHas('moderators')
-            ->with('moderators:id')
-            ->get()
-            ->flatMap(fn ($conference) => $conference->moderators->pluck('id'))
-            ->unique()
-            ->values();
-
-        $moderatorIds = $conferenceModeratorIds
-            ->concat(Workshop::query()->with('moderators:id')->get()->flatMap(fn ($workshop) => $workshop->moderators->pluck('id')))
+        $moderatorIds = Workshop::query()->with('moderators:id')->get()->flatMap(fn ($workshop) => $workshop->moderators->pluck('id'))
             ->concat(Presentation::query()->with('moderators:id')->get()->flatMap(fn ($presentation) => $presentation->moderators->pluck('id')))
+            ->concat(Conference::query()->with('moderators:id')->get()->flatMap(fn ($conference) => $conference->moderators->pluck('id')))
             ->unique()
             ->values();
 
@@ -41,7 +33,7 @@ class ModeradoresController extends Controller
             ->with(['constanciaModerador'])
             ->orderBy('last_name')
             ->get()
-            ->map(function (User $user) use ($conferenceModeratorIds) {
+            ->map(function (User $user) {
                 $assignments = app(ModeratorAssignments::class)->assignmentsFor($user);
 
                 return [
@@ -53,7 +45,7 @@ class ModeradoresController extends Controller
                     'affiliation' => $user->affiliation,
                     'activated' => (bool) $user->constanciaModerador?->activated,
                     'activated_at' => $user->constanciaModerador?->activated_at,
-                    'has_conference' => $conferenceModeratorIds->contains($user->id),
+                    'has_assignments' => $assignments->isNotEmpty(),
                     'assignment_count' => $assignments->count(),
                     'assignment_titles' => $assignments->pluck('title')->map(fn ($t) => (string) $t)->all(),
                     'folio' => $this->moderatorFolio($user),
@@ -70,10 +62,10 @@ class ModeradoresController extends Controller
     {
         abort_unless($request->user()->can('constancias.moderators.manage'), 403);
 
-        $isModerator = $user->moderatedConferences()->exists();
+        $isModerator = $user->moderatedAnyActivity();
 
         if (! $isModerator) {
-            return back()->withErrors(['error' => 'Este usuario no es moderador de ninguna conferencia.']);
+            return back()->withErrors(['error' => 'Este usuario no modera ninguna actividad.']);
         }
 
         $activation = ModeradorConstancia::firstOrCreate(['user_id' => $user->id]);

@@ -167,7 +167,7 @@ class ModeradorAsignacionesAdminTest extends TestCase
                 ->component('Constancias/Moderadores/Index')
                 ->where('moderators.0.full_name', 'Moderador Principal')
                 ->where('moderators.0.assignment_count', 3)
-                ->where('moderators.0.has_conference', true)
+                ->where('moderators.0.has_assignments', true)
                 ->where('moderators.0.assignment_titles', ['Ponencia de asignaciones', 'Taller de asignaciones', 'Conferencia de asignaciones']));
     }
 
@@ -187,11 +187,11 @@ class ModeradorAsignacionesAdminTest extends TestCase
                 ->component('Constancias/Moderadores/Index')
                 ->where('moderators.0.full_name', 'Moderador Principal')
                 ->where('moderators.0.assignment_count', 2)
-                ->where('moderators.0.has_conference', false)
+                ->where('moderators.0.has_assignments', true)
                 ->where('moderators.0.folio', null));
     }
 
-    public function test_workshop_only_moderator_cannot_toggle_constancia(): void
+    public function test_workshop_only_moderator_can_toggle_constancia(): void
     {
         $admin = $this->admin();
         $moderator = $this->moderator();
@@ -201,9 +201,12 @@ class ModeradorAsignacionesAdminTest extends TestCase
         $this->actingAs($admin)
             ->post('/admin/constancias/moderadores/'.$moderator->id.'/activar')
             ->assertRedirect()
-            ->assertSessionHasErrors('error');
+            ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseMissing('moderador_constancias', ['user_id' => $moderator->id]);
+        $this->assertDatabaseHas('moderador_constancias', [
+            'user_id' => $moderator->id,
+            'activated' => true,
+        ]);
     }
 
     public function test_admin_can_download_speaker_conference_certificate(): void

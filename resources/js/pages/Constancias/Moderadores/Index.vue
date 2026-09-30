@@ -12,10 +12,10 @@ interface Moderator {
     affiliation: string | null;
     activated: boolean;
     activated_at: string | null;
-assignment_count: number;
-                    assignment_titles: string[];
-                    has_conference: boolean;
-                    folio: string | null;
+    assignment_count: number;
+    assignment_titles: string[];
+    has_assignments: boolean;
+    folio: string | null;
 }
 
 defineProps<{
@@ -23,7 +23,7 @@ defineProps<{
 }>();
 
 const toggle = (moderator: Moderator) => {
-    if (!moderator.has_conference) {
+    if (!moderator.has_assignments) {
         return;
     }
 
@@ -180,7 +180,7 @@ const assignments = (moderator: Moderator) => {
                                 </td>
                                 <td class="px-5 py-3">
                                     <label
-                                        v-if="moderator.has_conference"
+                                        v-if="moderator.has_assignments"
                                         class="inline-flex cursor-pointer items-center"
                                     >
                                         <input
@@ -221,7 +221,7 @@ const assignments = (moderator: Moderator) => {
                                         <ClipboardList class="h-4 w-4" />
                                     </button>
                                     <button
-                                        v-if="moderator.has_conference"
+                                        v-if="moderator.has_assignments"
                                         @click="download(moderator)"
                                         class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-amber-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-amber-400"
                                         title="Descargar constancia"

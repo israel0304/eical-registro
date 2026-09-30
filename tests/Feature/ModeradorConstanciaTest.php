@@ -8,8 +8,10 @@ use App\Models\Conference;
 use App\Models\ModeradorConstancia;
 use App\Models\ParticipationType;
 use App\Models\Permission;
+use App\Models\Presentation;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Workshop;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -107,9 +109,9 @@ class ModeradorConstanciaTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Constancias/Index')
                 ->has('moderatorConstancia')
-                ->where('moderatorConstancia.conference_count', 2)
+                ->where('moderatorConstancia.activity_count', 2)
                 ->where('moderatorConstancia.activated', false)
-                ->where('moderatorConstancia.conference_titles', ['Modera Una', 'Modera Dos'])
+                ->where('moderatorConstancia.activity_titles', ['Modera Una', 'Modera Dos'])
                 ->has('conferenceCertificates', 0));
     }
 
@@ -268,5 +270,109 @@ class ModeradorConstanciaTest extends TestCase
             'event_type' => 'conference',
             'event_id' => 0,
         ]);
+    }
+
+    public function test_workshop_moderator_gets_a_single_certificate(): void
+    {
+        $type = $this->moderadorType();
+        $this->moderadorTemplate($type);
+        $moderador = $this->moderator();
+        $creator = $this->admin();
+
+        $workshop = Workshop::create([
+            'name' => 'Taller moderado',
+            'description' => 'Taller de prueba',
+            'location' => 'Aula 1',
+            'day' => '2026-10-07',
+            'start_time' => '09:00',
+            'end_time' => '11:00',
+            'capacity' => 20,
+            'created_by' => $creator->id,
+        ]);
+        $workshop->moderators()->attach($moderador->id);
+
+        ModeradorConstancia::create(['user_id' => $moderador->id, 'activated' => true]);
+
+        $this->actingAs($moderador)
+            ->get('/constancias')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Constancias/Index')
+                ->where('moderatorConstancia.activity_count', 1)
+                ->where('moderatorConstancia.activity_titles', ['Taller moderado']));
+
+        $this->actingAs($moderador)
+            ->get('/constancias/moderador/constancia')
+            ->assertOk();
+
+        $this->assertDatabaseHas('certificates', [
+            'user_id' => $moderador->id,
+            'participation_type_id' => $type->id,
+            'event_type' => 'conference',
+            'event_id' => 0,
+        ]);
+
+        $this->assertSame(1, Certificate::query()->where('user_id', $moderador->id)->count());
+    }
+
+    public function test_presentation_moderator_gets_a_single_certificate_with_all_activities(): void
+    {
+        $type = $this->moderadorType();
+        $this->moderadorTemplate($type);
+        $moderador = $this->moderator();
+        $creator = $this->admin();
+
+        $presentation = Presentation::create([
+            'title' => 'Ponencia moderada',
+            'abstract' => 'Resumen de prueba',
+            'discipline' => 'Software',
+            'keywords' => 'Laravel',
+            'location' => 'Aula 2',
+            'day' => '2026-10-07',
+            'start_time' => '12:00',
+            'end_time' => '13:00',
+            'created_by' => $creator->id,
+        ]);
+        $presentation->moderators()->attach($moderador->id);
+
+        $conference = $this->conferenceFor($creator, ['title' => 'Conferencia moderada']);
+        $conference->members()->attach($moderador->id, ['role' => 'moderator']);
+
+        ModeradorConstancia::create(['user_id' => $moderador->id, 'activated' => true]);
+
+        $this->actingAs($moderador)
+            ->get('/constancias')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Constancias/Index')
+                ->where('moderatorConstancia.activity_count', 2)
+                ->where('moderatorConstancia.activity_titles', ['Conferencia moderada', 'Ponencia moderada']));
+
+        $this->actingAs($moderador)
+            ->get('/constancias/moderador/constancia')
+            ->assertOk();
+
+        $certificate = Certificate::query()->where('user_id', $moderador->id)->sole();
+
+        $this->assertSame($type->id, (int) $certificate->participation_type_id);
+        $this->assertSame(
+            ['Conferencia moderada', 'Ponencia moderada'],
+            $certificate->metadata['trabajos'] ?? null
+        );
+    }
+
+    public function test_user_without_any_moderated_activity_cannot_download(): void
+    {
+        $this->moderadorType();
+        $moderador = $this->moderator();
+
+        ModeradorConstancia::create(['user_id' => $moderador->id, 'activated' => true]);
+
+        $this->actingAs($moderador)
+            ->get('/constancias/moderador/constancia')
+            ->assertRedirect()
+            ->assertSessionHasErrors('error');
+
+        $this->assertDatabaseCount('certificates', 0);
     }
 }
