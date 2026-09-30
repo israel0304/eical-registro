@@ -6,6 +6,7 @@ use App\Models\CertificateTemplate;
 use App\Models\Conference;
 use App\Models\ParticipationType;
 use App\Models\Role;
+use App\Services\TemplateDuplicator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -139,6 +140,16 @@ class InvitationTemplateController extends Controller
         $template->elements()->insert($created);
 
         return back()->with('success', 'Plantilla de carta guardada.');
+    }
+
+    public function duplicate(Request $request, CertificateTemplate $template)
+    {
+        abort_unless($request->user()->can('constancias.templates.manage'), 403);
+        abort_if($template->kind !== 'invitation', 404);
+
+        $copy = app(TemplateDuplicator::class)->duplicate($template);
+
+        return back()->with('success', 'Plantilla de carta duplicada como «'.$copy->name.'».');
     }
 
     public function toggleActive(Request $request, CertificateTemplate $template)

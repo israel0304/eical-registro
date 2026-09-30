@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CertificateTemplate;
 use App\Services\ProgramService;
+use App\Services\TemplateDuplicator;
 use App\Support\EventSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -214,6 +215,18 @@ class ProgramTemplateController extends Controller
         }
 
         $template->elements()->insert($created);
+    }
+
+    public function duplicate(Request $request, CertificateTemplate $template)
+    {
+        abort_unless($request->user()->can('programa.templates.manage'), 403);
+        abort_if($template->kind !== 'program', 404);
+
+        $copy = app(TemplateDuplicator::class)->duplicate($template, [
+            'is_active' => false,
+        ]);
+
+        return back()->with('success', 'Plantilla de programa duplicada como «'.$copy->name.'».');
     }
 
     public function toggleActive(Request $request, CertificateTemplate $template)

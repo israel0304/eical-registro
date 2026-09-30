@@ -419,6 +419,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('constancias/conferencia/{conference}/download', [ConstanciaController::class, 'downloadConferencia'])->middleware('can:constancias.download')->name('constancias.conferencia.download');
     Route::get('admin/constancias/conferencia/{conference}/{user}/download', [ConstanciaController::class, 'adminDownloadConferencia'])->name('constancias.conferencia.admin-download');
 
+    // Constancia de miembro del comité (autoservicio)
+    Route::get('constancias/comite/constancia', [ConstanciaController::class, 'downloadComite'])->middleware('can:constancias.download')->name('constancias.comite.download');
+
     // Constancia única de moderador
     Route::get('constancias/moderador/constancia', [ConstanciaController::class, 'downloadModerador'])->middleware('can:constancias.download')->name('constancias.moderador.download');
 
@@ -479,6 +482,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('admin/gafetes/plantillas/{template}/edit', [CertificateTemplateController::class, 'badgeEdit'])->name('gafete.templates.edit');
         Route::put('admin/gafetes/plantillas/{template}', [CertificateTemplateController::class, 'badgeUpdate'])->name('gafete.templates.update');
         Route::delete('admin/gafetes/plantillas/{template}', [CertificateTemplateController::class, 'badgeDestroy'])->name('gafete.templates.destroy');
+        Route::post('admin/gafetes/plantillas/{template}/duplicar', [CertificateTemplateController::class, 'badgeDuplicate'])->name('gafete.templates.duplicate');
     });
 
     // Admin: evento (check-in + constancias)
@@ -509,6 +513,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('programa/plantillas/{template}/activar', [ProgramTemplateController::class, 'toggleActive'])->name('programa.templates.activate');
             Route::delete('programa/plantillas/{template}', [ProgramTemplateController::class, 'destroy'])->name('programa.templates.destroy');
             Route::post('programa/plantillas/upload-image', [ProgramTemplateController::class, 'uploadImage'])->name('programa.templates.upload-image');
+            Route::post('programa/plantillas/{template}/duplicar', [ProgramTemplateController::class, 'duplicate'])->name('programa.templates.duplicate');
         });
     });
 
@@ -519,6 +524,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('admin/constancias/plantillas/{template}/edit', [CertificateTemplateController::class, 'edit'])->name('constancias.templates.edit');
         Route::put('admin/constancias/plantillas/{template}', [CertificateTemplateController::class, 'update'])->name('constancias.templates.update');
         Route::delete('admin/constancias/plantillas/{template}', [CertificateTemplateController::class, 'destroy'])->name('constancias.templates.destroy');
+        Route::post('admin/constancias/plantillas/{template}/duplicar', [CertificateTemplateController::class, 'duplicate'])->name('constancias.templates.duplicate');
 
         // Admin: invitation letter templates
         Route::get('admin/constancias/invitaciones/plantillas', [InvitationTemplateController::class, 'index'])->name('constancias.invitaciones.templates.index');
@@ -528,6 +534,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('admin/constancias/invitaciones/plantillas/{template}/activar', [InvitationTemplateController::class, 'toggleActive'])->name('constancias.invitaciones.templates.activate');
         Route::delete('admin/constancias/invitaciones/plantillas/{template}', [InvitationTemplateController::class, 'destroy'])->name('constancias.invitaciones.templates.destroy');
         Route::post('admin/constancias/invitaciones/plantillas/upload-image', [InvitationTemplateController::class, 'uploadImage'])->name('constancias.invitaciones.templates.upload-image');
+        Route::post('admin/constancias/invitaciones/plantillas/{template}/duplicar', [InvitationTemplateController::class, 'duplicate'])->name('constancias.invitaciones.templates.duplicate');
     });
 
     // Admin: participation types

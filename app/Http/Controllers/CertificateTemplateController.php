@@ -8,6 +8,7 @@ use App\Models\EmailTrigger;
 use App\Models\EventLog;
 use App\Models\ParticipationType;
 use App\Models\Role;
+use App\Services\TemplateDuplicator;
 use App\Support\EventCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -266,6 +267,27 @@ class CertificateTemplateController extends Controller
         $template->elements()->insert($created);
 
         return back()->with('success', 'Plantilla guardada.');
+    }
+
+    public function duplicate(Request $request, CertificateTemplate $template)
+    {
+        return $this->duplicateFor($request, $template, 'certificate');
+    }
+
+    public function badgeDuplicate(Request $request, CertificateTemplate $template)
+    {
+        return $this->duplicateFor($request, $template, 'badge');
+    }
+
+    private function duplicateFor(Request $request, CertificateTemplate $template, string $kind)
+    {
+        abort_if(($template->kind ?? 'certificate') !== $kind, 404);
+
+        abort_unless($request->user()->can($this->templatePermission($kind)), 403);
+
+        $copy = app(TemplateDuplicator::class)->duplicate($template);
+
+        return back()->with('success', 'Plantilla duplicada como «'.$copy->name.'».');
     }
 
     public function destroy(Request $request, CertificateTemplate $template)

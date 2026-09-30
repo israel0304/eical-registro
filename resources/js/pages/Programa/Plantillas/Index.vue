@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { Plus, Pencil, Trash2, ListTree } from 'lucide-vue-next';
+import {
+    Plus,
+    Pencil,
+    Trash2,
+    ListTree,
+    Copy,
+} from 'lucide-vue-next';
 import { ref } from 'vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
@@ -51,6 +57,12 @@ const deleteTemplate = (id: number) => {
 };
 
 const templateEditUrl = (id: number) => basePath + '/' + id + '/edit';
+
+const duplicateTemplate = (id: number) => {
+    router.post(basePath + '/' + id + '/duplicar', {}, {
+        preserveScroll: true,
+    });
+};
 
 const toggleActive = (template: any) => {
     router.patch(basePath + '/' + template.id + '/activar', {
@@ -195,6 +207,14 @@ const toggleActive = (template: any) => {
                                     >
                                         <Pencil class="h-4 w-4" />
                                     </Link>
+                                    <button
+                                        @click="duplicateTemplate(template.id)"
+                                        type="button"
+                                        class="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-600 shadow-sm transition-colors hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-indigo-400"
+                                        title="Duplicar plantilla"
+                                    >
+                                        <Copy class="h-4 w-4" />
+                                    </button>
                                     <button
                                         @click="deleteTemplate(template.id)"
                                         type="button"

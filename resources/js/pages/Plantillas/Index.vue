@@ -8,6 +8,7 @@ import {
     Image,
     LayoutTemplate,
     Layers,
+    Copy,
 } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 import CorreosSection from '@/components/CorreosSection.vue';
@@ -231,6 +232,12 @@ const deleteTemplate = (id: number) => {
     }
 };
 
+const duplicateTemplate = (id: number) => {
+    router.post(activeKind.value.basePath + '/' + id + '/duplicar', {}, {
+        preserveScroll: true,
+    });
+};
+
 const templateEditUrl = (id: number) =>
     activeKind.value.basePath + '/' + id + '/edit';
 
@@ -390,6 +397,13 @@ const activeTypes = computed(() =>
                             >
                                 <Pencil class="h-4 w-4" />
                             </Link>
+                            <button
+                                @click="duplicateTemplate(template.id)"
+                                class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-indigo-400"
+                                title="Duplicar plantilla"
+                            >
+                                <Copy class="h-4 w-4" />
+                            </button>
                             <button
                                 @click="deleteTemplate(template.id)"
                                 class="rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-red-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-red-400"
