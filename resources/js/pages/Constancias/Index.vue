@@ -24,9 +24,10 @@ const props = defineProps<{
     moderatorConstancia?: {
         activated: boolean;
         folio: string | null;
-        conference_count: number;
-        conference_titles: string[];
+        activity_count: number;
+        activity_titles: string[];
     } | null;
+    isComite?: boolean;
     eventCertificate?: any;
     eventAttendance?: {
         has: boolean;
@@ -87,6 +88,10 @@ const downloadConferencia = (conferenceId: number) => {
 
 const downloadModerador = () => {
     window.open('/constancias/moderador/constancia', '_blank');
+};
+
+const downloadComite = () => {
+    window.open('/constancias/comite/constancia', '_blank');
 };
 
 const downloadEvento = () => {
@@ -793,23 +798,22 @@ const missingDays = computed(() => {
                             >
                                 Por tu participación como moderador de
                                 {{
-                                    moderatorConstancia.conference_count
+                                    moderatorConstancia.activity_count
                                 }}
                                 {{
-                                    moderatorConstancia.conference_count === 1
-                                        ? 'conferencia'
-                                        : 'conferencias'
+                                    moderatorConstancia.activity_count === 1
+                                        ? 'actividad'
+                                        : 'actividades'
                                 }}.
                             </p>
                             <p
                                 v-if="
-                                    moderatorConstancia.conference_titles
-                                        ?.length
+                                    moderatorConstancia.activity_titles?.length
                                 "
                                 class="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400"
                             >
                                 {{
-                                    moderatorConstancia.conference_titles.join(
+                                    moderatorConstancia.activity_titles.join(
                                         ' · ',
                                     )
                                 }}
@@ -835,6 +839,57 @@ const missingDays = computed(() => {
                             class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400 sm:w-auto dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-500"
                         >
                             <Clock class="h-4 w-4" /> Pendiente de activación
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Constancia de Miembro del Comité -->
+            <div v-if="isComite">
+                <h2
+                    class="mb-4 text-xl font-normal tracking-tight text-gray-800 dark:text-gray-200"
+                >
+                    Constancia de Comité
+                </h2>
+                <div
+                    class="max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                    <div class="flex items-start gap-4">
+                        <div
+                            class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30"
+                        >
+                            <Users
+                                class="h-6 w-6 text-indigo-600 dark:text-indigo-400"
+                            />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3
+                                class="text-sm font-semibold text-gray-900 dark:text-white"
+                            >
+                                Constancia de Miembro del Comité
+                            </h3>
+                            <p
+                                class="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400"
+                            >
+                                Se otorga por tu participación como miembro del
+                                comité del EICAL.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button
+                            v-if="can('constancias.download')"
+                            @click="downloadComite"
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 sm:w-auto dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
+                        >
+                            <Download class="h-4 w-4" /> Descargar Constancia
+                        </button>
+                        <div
+                            v-else
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400 sm:w-auto dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-500"
+                        >
+                            <Clock class="h-4 w-4" /> No tienes acceso
+                            autorizado
                         </div>
                     </div>
                 </div>

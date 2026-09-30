@@ -7,6 +7,7 @@ return [
         'conference' => 'Conferencia',
         'event' => 'Evento',
         'staff' => 'Staff',
+        'comite' => 'Comité',
     ],
 
     'roles' => [
@@ -35,5 +36,6 @@ return [
         'conference' => ['speaker', 'moderator'],
         'event' => [],
         'staff' => [],
+        'comite' => [],
     ],
 ];

@@ -12,6 +12,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Services\CertificateRenderer;
+use App\Services\ModeratorAssignments;
 use App\Support\EventSettings;
 use App\Support\WorkshopGroups;
 use Illuminate\Http\Request;
@@ -210,6 +211,7 @@ class ConstanciaController extends Controller
             'cartaConferences' => $conferenceCertificates,
             'conferenceCertificates' => $conferenceCertificates,
             'moderatorConstancia' => $moderatorConstancia,
+            'isComite' => $user->isComite(),
             'eventCertificate' => $eventCertificate,
             'eventAttendance' => $eventAttendance,
             'invitationLetters' => $invitationLetters,
@@ -219,11 +221,9 @@ class ConstanciaController extends Controller
 
     private function moderatorConstanciaFor(User $user): ?array
     {
-        $moderated = $user->moderatedConferences()
-            ->orderBy('day')
-            ->get(['conferences.id', 'conferences.title', 'conferences.day']);
+        $assignments = app(ModeratorAssignments::class)->assignmentsFor($user);
 
-        if ($moderated->isEmpty()) {
+        if ($assignments->isEmpty()) {
             return null;
         }
 
@@ -249,8 +249,8 @@ class ConstanciaController extends Controller
         return [
             'activated' => (bool) $activation?->activated,
             'folio' => $certificate?->folio,
-            'conference_count' => $moderated->count(),
-            'conference_titles' => $moderated->pluck('title')->map(fn ($t) => (string) $t)->all(),
+            'activity_count' => $assignments->count(),
+            'activity_titles' => $assignments->pluck('title')->map(fn ($t) => (string) $t)->all(),
         ];
     }
 
@@ -534,14 +534,37 @@ class ConstanciaController extends Controller
         return $this->respondWithHtml($certificate);
     }
 
+    public function downloadComite(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user->isComite()) {
+            return back()->withErrors(['error' => 'No eres miembro del comité.']);
+        }
+
+        $type = ParticipationType::where('key', 'comite')->first();
+
+        if ($type === null) {
+            return back()->withErrors(['error' => 'El tipo de participación de comité no está disponible.']);
+        }
+
+        $certificate = $this->renderer->issueComite($user, $type);
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible generar la constancia de comité.']);
+        }
+
+        $certificate->update(['downloaded_at' => now()]);
+
+        return $this->respondWithHtml($certificate);
+    }
+
     public function downloadModerador(Request $request)
     {
         $user = $request->user();
 
-        $isModerator = $user->moderatedConferences()->exists();
-
-        if (! $isModerator) {
-            return back()->withErrors(['error' => 'No eres moderador de ninguna conferencia.']);
+        if (! $user->moderatedAnyActivity()) {
+            return back()->withErrors(['error' => 'No moderas ninguna actividad del EICAL.']);
         }
 
         $activated = ModeradorConstancia::where('user_id', $user->id)->value('activated');

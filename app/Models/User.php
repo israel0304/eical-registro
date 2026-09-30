@@ -240,6 +240,25 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasRole('Moderator');
     }
 
+    public function isComite(): bool
+    {
+        $expected = Str::ascii(mb_strtolower((string) config('roles.comite')));
+
+        return $this->roles->contains(
+            fn ($role) => Str::ascii(mb_strtolower((string) $role->name)) === $expected
+        );
+    }
+
+    /**
+     * El usuario modera al menos una actividad: taller, ponencia o conferencia.
+     */
+    public function moderatedAnyActivity(): bool
+    {
+        return $this->moderatedWorkshops()->exists()
+            || $this->moderatedPresentations()->exists()
+            || $this->moderatedConferences()->exists();
+    }
+
     public function hasPermission(string $key): bool
     {
         return in_array($key, $this->permissionKeys(), true);

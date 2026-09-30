@@ -3,4 +3,5 @@
 return [
     'super_admin' => 'Administrator',
     'default' => 'Asistente',
+    'comite' => 'Comité',
 ];

@@ -267,6 +267,35 @@ class CertificateRenderer
     }
 
     /**
+     * Find or create the committee member certificate for a user. The certificate
+     * is self-service: no event record is required, only the participation type.
+     */
+    public function issueComite(User $user, ParticipationType $type): ?Certificate
+    {
+        if (! $type->is_active) {
+            return null;
+        }
+
+        $template = $this->defaultTemplateFor($type, 'certificate');
+        $metadata = $this->buildComiteMetadata($user, $type);
+
+        $certificate = Certificate::query()->firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'participation_type_id' => $type->id,
+                'event_type' => 'comite',
+                'event_id' => 0,
+            ],
+            [
+                'template_id' => $template?->id,
+                'metadata' => $metadata,
+            ],
+        );
+
+        return $this->finalize($certificate, $template, $metadata, true);
+    }
+
+    /**
      * Find or create an invitation letter certificate for the user's role.
      * A letter is only issued when the role has an active invitation template.
      */
@@ -1317,12 +1346,31 @@ HTML;
         ];
     }
 
+    private function buildComiteMetadata(User $user, ParticipationType $type): array
+    {
+        $nombre = trim($user->first_name.' '.$user->last_name);
+
+        return [
+            'nombre' => $nombre,
+            'nombre_completo' => $nombre,
+            'rol' => 'Miembro del comité',
+            'tipo_participacion' => $type->label,
+            'evento' => $this->eventName(),
+            'nombre_evento' => $this->eventName(),
+            'fecha_evento' => $this->eventDateRange(),
+            'fecha' => $this->formatSpanishDate($user->created_at->toDateString()),
+            'institucion' => (string) ($user->affiliation ?? ''),
+            'pais' => (string) ($user->country ?? ''),
+            'location' => null,
+            'folio' => '',
+        ];
+    }
+
     private function buildModeradorMetadata(User $user, ParticipationType $type): array
     {
         $nombre = trim($user->first_name.' '.$user->last_name);
-        $role = Role::where('name', 'Moderator')->first();
-        $trabajos = $role !== null ? $this->workTitlesForRole($user, $role) : [];
-        $autores = $role !== null ? $this->authorNamesForRole($user, $role) : [];
+        $assignments = app(ModeratorAssignments::class)->assignmentsFor($user);
+        $trabajos = $assignments->pluck('title')->map(fn ($t) => (string) $t)->all();
 
         return [
             'nombre' => $nombre,
@@ -1338,10 +1386,37 @@ HTML;
             'ponencia' => $trabajos[0] ?? '',
             'actividad' => $trabajos[0] ?? '',
             'trabajos' => $trabajos,
-            'autores' => implode(', ', array_unique($autores)),
+            'autores' => implode(', ', array_unique($this->moderatedAuthorNames($user))),
             'location' => null,
             'folio' => '',
         ];
+    }
+
+    /**
+     * Nombres de autores y ponentes de todas las actividades que modera el
+     * usuario. Usado por la variable {autores}.
+     */
+    private function moderatedAuthorNames(User $user): array
+    {
+        $names = $user->moderatedPresentations()
+            ->with('authors:id,first_name,last_name')
+            ->get()
+            ->flatMap(fn (Presentation $presentation) => $presentation->authors)
+            ->concat($user->moderatedConferences()
+                ->with('speakers:id,first_name,last_name')
+                ->get()
+                ->flatMap(fn (Conference $conference) => $conference->speakers))
+            ->concat($user->moderatedWorkshops()
+                ->with('instructors:id,first_name,last_name')
+                ->get()
+                ->flatMap(fn (Workshop $workshop) => $workshop->instructors));
+
+        return $names
+            ->map(fn (User $person) => trim($person->first_name.' '.$person->last_name))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function buildCartaMetadata(User $user, Role $role, ?Presentation $event = null): array
@@ -1441,9 +1516,7 @@ HTML;
                 ->pluck('title')
                 ->map(fn ($t) => (string) $t)
                 ->all(),
-            'Moderator' => Conference::query()
-                ->whereHas('moderators', fn ($q) => $q->where('users.id', $user->id))
-                ->orderBy('day')
+            'Moderator' => app(ModeratorAssignments::class)->assignmentsFor($user)
                 ->pluck('title')
                 ->map(fn ($t) => (string) $t)
                 ->all(),

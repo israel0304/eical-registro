@@ -178,8 +178,9 @@ class ParticipationTypeControllerTest extends TestCase
         $this->get('/admin/constancias/tipos')
             ->assertInertia(fn ($page) => $page
                 ->component('Constancias/Tipos/Index')
-                ->has('catalog.event_kinds', 5)
-                ->where('catalog.event_kinds.event', 'Evento'));
+                ->has('catalog.event_kinds', 6)
+                ->where('catalog.event_kinds.event', 'Evento')
+                ->where('catalog.event_kinds.comite', 'Comité'));
     }
 
     public function test_store_persists_manual_generable(): void
