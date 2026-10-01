@@ -332,6 +332,26 @@ class NotificationAudienceServiceTest extends TestCase
         ]);
     }
 
+    /**
+     * Curso dividido: el representante es "Sesión 1" y la hijo "Sesión 2",
+     * igual que en producción.
+     */
+    private function dividedCourse(): array
+    {
+        $parent = $this->workshop('Sesión 1: Geometría con eloquentía');
+        $parent->update(['day' => '2026-10-05']);
+
+        $child = $this->workshop('Sesión 2: Geometría con eloquentía');
+        $child->update([
+            'day' => '2026-10-06',
+            'start_time' => '09:00',
+            'end_time' => '13:00',
+            'parent_workshop_id' => $parent->id,
+        ]);
+
+        return [$parent, $child];
+    }
+
     public function test_normalize_segments_casts_and_drops_empty_ones(): void
     {
         $segments = $this->service->normalizeSegments([
@@ -567,5 +587,180 @@ class NotificationAudienceServiceTest extends TestCase
             $this->service->labelFor($combined)
         );
         $this->assertSame('Sin audiencia', $this->service->labelFor($empty));
+    }
+
+    public function test_workshop_courses_returns_one_item_per_course(): void
+    {
+        [$parent, $child] = $this->dividedCourse();
+        $standalone = $this->workshop('Taller suelto');
+
+        $courses = $this->service->workshopCourses();
+
+        $this->assertCount(2, $courses, 'Un curso dividido debe ser un solo item.');
+
+        $course = collect($courses)->firstWhere('id', $parent->id);
+        $this->assertNotNull($course);
+        $this->assertSame('Geometría con eloquentía', $course['name']);
+        $this->assertTrue($course['is_divided']);
+        $this->assertSame(2, $course['total_sessions']);
+        $this->assertSame(
+            [$parent->id, $child->id],
+            collect($course['workshop_ids'])->sort()->values()->all()
+        );
+        $this->assertSame(['2026-10-05', '2026-10-06'], $course['days']);
+
+        $plain = collect($courses)->firstWhere('id', $standalone->id);
+        $this->assertSame('Taller suelto', $plain['name']);
+        $this->assertFalse($plain['is_divided']);
+        $this->assertSame(1, $plain['total_sessions']);
+    }
+
+    public function test_workshop_courses_filters_by_instructor_through_any_session(): void
+    {
+        [$parent, $child] = $this->dividedCourse();
+        $other = $this->workshop('Curso ajeno');
+
+        $onlySecondSession = User::factory()->create();
+        $child->instructors()->attach($onlySecondSession->id);
+
+        $stranger = User::factory()->create();
+        $other->instructors()->attach($stranger->id);
+
+        $courses = $this->service->workshopCourses($onlySecondSession);
+
+        $this->assertCount(1, $courses);
+        $this->assertSame($parent->id, $courses[0]['id']);
+    }
+
+    public function test_expand_to_sessions_accepts_the_course_or_any_session(): void
+    {
+        [$parent, $child] = $this->dividedCourse();
+        $expected = collect([$child->id, $parent->id])->sort()->values()->all();
+
+        $this->assertSame(
+            $expected,
+            collect($this->service->expandToSessions([$parent->id]))->sort()->values()->all()
+        );
+
+        $this->assertSame(
+            $expected,
+            collect($this->service->expandToSessions([$child->id]))->sort()->values()->all()
+        );
+
+        $this->assertSame(
+            $expected,
+            collect($this->service->expandToSessions([$parent->id, $child->id, $parent->id]))->sort()->values()->all()
+        );
+
+        // Un id que ya no existe se conserva para que el filtro de deleted_at
+        // lo descarte al resolver, en lugar de ampliar la audiencia.
+        $this->assertSame([99999], $this->service->expandToSessions([99999]));
+        $this->assertTrue(
+            $this->service->workshopInstructors([99999])->isEmpty()
+        );
+    }
+
+    public function test_workshop_instructors_of_a_course_include_a_session_only_teacher(): void
+    {
+        [$parent, $child] = $this->dividedCourse();
+
+        $onlySecond = User::factory()->create();
+        $child->instructors()->attach($onlySecond->id);
+
+        $onlyFirst = User::factory()->create();
+        $parent->instructors()->attach($onlyFirst->id);
+
+        $outsider = User::factory()->create();
+        $this->workshop('Curso sin relación')->instructors()->attach($outsider->id);
+
+        $byCourse = $this->service->workshopInstructors([$parent->id]);
+        $this->assertSame(
+            [$onlySecond->id, $onlyFirst->id],
+            $byCourse->pluck('id')->sort()->values()->all()
+        );
+
+        // También alcanzable partiendo de la sesión hija.
+        $this->assertSame(
+            $byCourse->pluck('id')->sort()->values()->all(),
+            $this->service->workshopInstructors([$child->id])->pluck('id')->sort()->values()->all()
+        );
+    }
+
+    public function test_workshop_enrollments_of_a_course_reach_every_session_without_duplicating(): void
+    {
+        [$parent, $child] = $this->dividedCourse();
+
+        $both = User::factory()->create();
+        $parent->enrollments()->create(['user_id' => $both->id, 'enrolled_at' => now()]);
+        $child->enrollments()->create(['user_id' => $both->id, 'enrolled_at' => now()]);
+
+        $onlySecond = User::factory()->create();
+        $child->enrollments()->create(['user_id' => $onlySecond->id, 'enrolled_at' => now()]);
+
+        $users = $this->service->workshopEnrollments([$parent->id]);
+
+        $this->assertSame(
+            [$both->id, $onlySecond->id],
+            $users->pluck('id')->sort()->values()->all()
+        );
+        $this->assertCount(2, $users, 'Inscrito en dos sesiones sigue siendo una persona.');
+    }
+
+    public function test_instructs_course_is_true_from_any_session(): void
+    {
+        [$parent, $child] = $this->dividedCourse();
+        $other = $this->workshop('Curso ajeno');
+
+        $teacher = User::factory()->create();
+        $child->instructors()->attach($teacher->id);
+
+        $stranger = User::factory()->create();
+        $other->instructors()->attach($stranger->id);
+
+        $this->assertTrue($this->service->instructsCourse($teacher, $parent->id));
+        $this->assertTrue($this->service->instructsCourse($teacher, $child->id));
+        $this->assertFalse($this->service->instructsCourse($stranger, $parent->id));
+        $this->assertFalse($this->service->instructsCourse($teacher, $other->id));
+    }
+
+    public function test_course_labels_and_payload_drop_the_session_prefix(): void
+    {
+        [$parent, $child] = $this->dividedCourse();
+        $user = User::factory()->create();
+        $child->enrollments()->create(['user_id' => $user->id, 'enrolled_at' => now()]);
+        $parent->instructors()->attach($user->id);
+
+        $this->assertSame(['Geometría con eloquentía'], $this->service->workshopNames([$parent->id]));
+
+        $segment = ['type' => 'workshop_enrollment', 'workshop_ids' => [$parent->id], 'all_workshops' => false];
+
+        $this->assertSame('Inscritos: Geometría con eloquentía', $this->service->segmentLabel($segment));
+
+        $payload = $this->service->payloadFor($user, [$segment]);
+        $this->assertSame('Geometría con eloquentía', $payload['nombre_taller']);
+        $this->assertSame('Geometría con eloquentía', $payload['nombres_talleres']);
+        $this->assertStringNotContainsString('Sesión', $payload['grupos']);
+
+        // Ambos segmentos del mismo curso no repiten el nombre.
+        $both = $this->service->segmentLabel([
+            'type' => 'workshop_instructors',
+            'workshop_ids' => [$child->id],
+            'all_workshops' => false,
+        ]);
+        $this->assertSame('Instructores: Geometría con eloquentía', $both);
+    }
+
+    public function test_course_labels_keep_plain_workshop_names(): void
+    {
+        $workshop = $this->workshop('Taller de retrato digital');
+
+        $this->assertSame(
+            ['Taller de retrato digital'],
+            $this->service->workshopNames([$workshop->id])
+        );
+        $this->assertSame(
+            ['Taller de retrato digital'],
+            $this->service->workshopNames([], true)
+        );
     }
 }

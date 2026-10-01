@@ -9,7 +9,6 @@ use App\Models\NotificationRecipient;
 use App\Models\NotificationSend;
 use App\Models\Role;
 use App\Models\User;
-use App\Models\Workshop;
 use App\Services\NotificationAudienceService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -53,16 +52,11 @@ class NotificationController extends Controller
         $workshopId = (int) $request->query('workshop_id', 0);
         $workshopName = $workshopId > 0 ? $this->audience->workshopName($workshopId) : null;
 
-        $workshops = $canManageAll
-            ? Workshop::query()
-            : Workshop::query()->whereHas('instructors', fn ($q) => $q->whereKey($user->id));
-
         return Inertia::render('Notificaciones/Create', [
             'roles' => Role::query()->orderBy('name')->get(['id', 'name']),
             'conferenceKinds' => $this->audience->conferenceKinds(),
             'templates' => EmailTemplate::query()->orderBy('name')->get(['id', 'name', 'subject', 'body_html']),
-            'workshops' => $workshops->orderBy('day')->orderBy('start_time')
-                ->get(['id', 'name', 'day', 'start_time', 'parent_workshop_id']),
+            'courses' => $this->audience->workshopCourses($canManageAll ? null : $user),
             'canManageAll' => $canManageAll,
             'workshopId' => $workshopId > 0 && $workshopName !== null ? $workshopId : null,
             'workshopName' => $workshopName,
@@ -281,9 +275,6 @@ class NotificationController extends Controller
 
     private function isInstructorOf(User $user, int $workshopId): bool
     {
-        return Workshop::query()
-            ->whereKey($workshopId)
-            ->whereHas('instructors', fn ($q) => $q->whereKey($user->id))
-            ->exists();
+        return $this->audience->instructsCourse($user, $workshopId);
     }
 }

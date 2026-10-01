@@ -798,7 +798,7 @@ class NotificacionesTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_create_page_only_lists_own_workshops_for_instructors(): void
+    public function test_create_page_only_lists_own_courses_for_instructors(): void
     {
         $instructor = $this->userWith('workshops.enrollments.email');
         $own = $this->workshop();
@@ -810,12 +810,123 @@ class NotificacionesTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Notificaciones/Create')
                 ->where('canManageAll', false)
-                ->where('workshops', fn ($workshops) => collect($workshops)->pluck('id')->all() === [$own->id]));
+                ->where('courses', fn ($courses) => collect($courses)->pluck('id')->all() === [$own->id]));
 
         $this->actingAs($this->admin())
             ->get(route('correos.notificaciones.create'))
             ->assertInertia(fn ($page) => $page
                 ->where('canManageAll', true)
-                ->where('workshops', fn ($workshops) => collect($workshops)->pluck('id')->sort()->values()->all() === collect([$own->id, $other->id])->sort()->values()->all()));
+                ->where('courses', fn ($courses) => collect($courses)->pluck('id')->sort()->values()->all() === collect([$own->id, $other->id])->sort()->values()->all()));
+    }
+
+    public function test_create_page_groups_divided_workshops_into_one_course(): void
+    {
+        $this->actingAs($this->admin());
+
+        $parent = $this->workshop();
+        $parent->update(['name' => 'Sesión 1: Geometría con eloquentía', 'day' => '2026-10-05']);
+
+        $child = $this->workshop();
+        $child->update([
+            'name' => 'Sesión 2: Geometría con eloquentía',
+            'day' => '2026-10-06',
+            'parent_workshop_id' => $parent->id,
+        ]);
+
+        $standalone = $this->workshop();
+        $standalone->update(['name' => 'Fotografía móvil']);
+
+        $this->get(route('correos.notificaciones.create'))
+            ->assertInertia(fn ($page) => $page
+                ->component('Notificaciones/Create')
+                ->has('courses', 2)
+                ->where('courses', fn ($courses) => collect($courses)->pluck('name')->sort()->values()->all() === [
+                    'Fotografía móvil',
+                    'Geometría con eloquentía',
+                ])
+                ->where('courses.0', fn ($course) => $course['is_divided'] === true
+                    && $course['total_sessions'] === 2
+                    && $course['days'] === ['2026-10-05', '2026-10-06']
+                    && collect($course['workshop_ids'])->sort()->values()->all() === collect([$parent->id, $child->id])->sort()->values()->all())
+            );
+    }
+
+    public function test_instructor_of_a_single_session_can_email_the_whole_course(): void
+    {
+        Mail::fake();
+
+        $instructor = $this->userWith('workshops.enrollments.email');
+
+        $parent = $this->workshop();
+        $parent->update(['name' => 'Sesión 1: Geometría con eloquentía']);
+
+        $child = $this->workshop();
+        $child->update([
+            'name' => 'Sesión 2: Geometría con eloquentía',
+            'parent_workshop_id' => $parent->id,
+        ]);
+
+        // Solo imparte la segunda sesión.
+        $child->instructors()->attach($instructor->id);
+
+        $fromFirst = User::factory()->create();
+        $parent->enrollments()->create(['user_id' => $fromFirst->id, 'enrolled_at' => now()]);
+
+        $fromSecond = User::factory()->create();
+        $child->enrollments()->create(['user_id' => $fromSecond->id, 'enrolled_at' => now()]);
+
+        $both = User::factory()->create();
+        $parent->enrollments()->create(['user_id' => $both->id, 'enrolled_at' => now()]);
+        $child->enrollments()->create(['user_id' => $both->id, 'enrolled_at' => now()]);
+
+        $this->actingAs($instructor)
+            ->get(route('correos.notificaciones.create'))
+            ->assertInertia(fn ($page) => $page
+                ->has('courses', 1)
+                ->where('courses.0.id', $parent->id));
+
+        // Tres inscritos distintos más el propio instructor del curso.
+        $this->actingAs($instructor)
+            ->postJson(route('correos.notificaciones.preview'), [
+                'subject' => 'Geometría',
+                'body_html' => '<p>Hola</p>',
+                'segments' => [
+                    ['type' => 'workshop_enrollment', 'workshop_ids' => [$parent->id], 'all_workshops' => false],
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('count', 3);
+
+        $this->actingAs($instructor)
+            ->post(route('correos.notificaciones.store'), [
+                'subject' => 'Geometría',
+                'body_html' => '<p>Hola {{ grupos }}</p>',
+                'segments' => [
+                    ['type' => 'workshop_enrollment', 'workshop_ids' => [$child->id], 'all_workshops' => false],
+                    ['type' => 'workshop_instructors', 'workshop_ids' => [$parent->id], 'all_workshops' => false],
+                ],
+            ])
+            ->assertRedirect(route('correos.notificaciones.index'))
+            ->assertSessionHas('success');
+
+        $send = NotificationSend::firstOrFail();
+
+        $this->assertSame(4, $send->recipients()->count());
+        $this->assertSame(
+            1,
+            $send->recipients()->where('email', $both->email)->count(),
+            'Inscrito en ambas sesiones debe recibir un solo correo.'
+        );
+        $this->assertSame(
+            1,
+            $send->recipients()->where('email', $instructor->email)->count(),
+            'El instructor del curso también lo recibe, pero una sola vez.'
+        );
+        $this->assertStringNotContainsString(
+            'Sesión',
+            $send->recipients()->where('email', $both->email)->first()->payload['grupos']
+        );
+
+        Mail::assertSent(NotificationMailable::class, 4);
     }
 }

@@ -33,14 +33,14 @@ import {
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 import type {
     AudienceSegment,
-    AudienceWorkshop,
+    AudienceCourse,
 } from '@/types/notificaciones';
 
 const props = defineProps<{
     roles: { id: number; name: string }[];
     conferenceKinds: Record<string, string | null>;
     templates: { id: number; name: string; subject: string; body_html: string }[];
-    workshops: AudienceWorkshop[];
+    courses: AudienceCourse[];
     canManageAll: boolean;
     workshopId?: number | null;
     workshopName?: string | null;
@@ -310,7 +310,7 @@ const submit = () => {
                             v-model="form.segments"
                             :roles="roles"
                             :conference-kinds="conferenceKinds"
-                            :workshops="workshops"
+                            :courses="courses"
                             :can-manage-all="canManageAll"
                         />
 

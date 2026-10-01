@@ -8,6 +8,7 @@ use App\Models\ParticipationType;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Workshop;
+use App\Support\WorkshopGroups;
 use Illuminate\Support\Collection;
 
 class NotificationAudienceService
@@ -302,7 +303,7 @@ class NotificationAudienceService
     }
 
     /**
-     * Usuarios inscritos (status 'enrolled') en un taller no eliminado.
+     * Usuarios inscritos (status 'enrolled') en un curso o taller no eliminado.
      *
      * @return Collection<int, User>
      */
@@ -312,14 +313,22 @@ class NotificationAudienceService
     }
 
     /**
+     * Los cursos divididos se expanden a todas sus sesiones, de modo que elegir
+     * el curso alcanza a quien se inscribió o imparte en cualquiera de ellas,
+     * sin duplicar a la persona en la unión.
+     *
      * @param  array<int, int>  $workshopIds
      * @return Collection<int, User>
      */
     public function workshopEnrollments(array $workshopIds, bool $allWorkshops = false): Collection
     {
-        $workshopIds = $this->intList($workshopIds);
+        if (! $allWorkshops && $this->intList($workshopIds) === []) {
+            return collect();
+        }
 
-        if (! $allWorkshops && $workshopIds === []) {
+        $sessionIds = $allWorkshops ? null : $this->expandToSessions($workshopIds);
+
+        if ($sessionIds !== null && $sessionIds === []) {
             return collect();
         }
 
@@ -328,7 +337,7 @@ class NotificationAudienceService
             ->whereHas('enrolledWorkshops', fn ($q) => $q
                 ->where('workshop_enrollments.status', 'enrolled')
                 ->whereNull('workshops.deleted_at')
-                ->when(! $allWorkshops, fn ($q) => $q->whereIn('workshops.id', $workshopIds)))
+                ->when($sessionIds !== null, fn ($q) => $q->whereIn('workshops.id', $sessionIds)))
             ->get();
     }
 
@@ -338,9 +347,13 @@ class NotificationAudienceService
      */
     public function workshopInstructors(array $workshopIds, bool $allWorkshops = false): Collection
     {
-        $workshopIds = $this->intList($workshopIds);
+        if (! $allWorkshops && $this->intList($workshopIds) === []) {
+            return collect();
+        }
 
-        if (! $allWorkshops && $workshopIds === []) {
+        $sessionIds = $allWorkshops ? null : $this->expandToSessions($workshopIds);
+
+        if ($sessionIds !== null && $sessionIds === []) {
             return collect();
         }
 
@@ -348,8 +361,103 @@ class NotificationAudienceService
             ->where('is_active', true)
             ->whereHas('instructedWorkshops', fn ($q) => $q
                 ->whereNull('workshops.deleted_at')
-                ->when(! $allWorkshops, fn ($q) => $q->whereIn('workshops.id', $workshopIds)))
+                ->when($sessionIds !== null, fn ($q) => $q->whereIn('workshops.id', $sessionIds)))
             ->get();
+    }
+
+    /**
+     * Un curso (representante) o una de sus sesiones se expanden al conjunto de
+     * sesiones del grupo. Acepta cualquiera de los dos ids para que los
+     * segmentos guardados antes de agrupar sigan funcionando.
+     *
+     * @param  array<int, int>  $workshopIds
+     * @return array<int, int>
+     */
+    public function expandToSessions(array $workshopIds): array
+    {
+        $expanded = [];
+
+        foreach ($this->intList($workshopIds) as $workshopId) {
+            $workshop = Workshop::find($workshopId);
+
+            if ($workshop === null) {
+                // Id inexistente o eliminado: se conserva para que el filtro de
+                // deleted_at lo descarte.
+                $expanded[] = $workshopId;
+
+                continue;
+            }
+
+            $group = WorkshopGroups::for($workshop);
+
+            $expanded = array_merge(
+                $expanded,
+                $group === null ? [$workshop->id] : $group->sessions()->pluck('id')->all()
+            );
+        }
+
+        return array_values(array_unique($expanded));
+    }
+
+    /**
+     * True cuando el usuario imparte el curso al que pertenece el taller, sea
+     * el representante o cualquiera de sus sesiones.
+     */
+    public function instructsCourse(User $user, int $workshopId): bool
+    {
+        $sessionIds = $this->expandToSessions([$workshopId]);
+
+        if ($sessionIds === []) {
+            return false;
+        }
+
+        return Workshop::query()
+            ->whereIn('id', $sessionIds)
+            ->whereHas('instructors', fn ($q) => $q->whereKey($user->id))
+            ->exists();
+    }
+
+    /**
+     * Cursos para el selector de audiencia: un item por curso, no por sesión.
+     * Los cursos divididos usan el título sin el prefijo "Sesión N:" y exponen
+     * sus sesiones y fechas para la interfaz.
+     *
+     * @return array<int, array{id: int, name: string, day: ?string, days: array<int, string>, is_divided: bool, total_sessions: int, workshop_ids: array<int, int>}>
+     */
+    public function workshopCourses(?User $instructor = null): array
+    {
+        $instructedIds = $instructor === null
+            ? null
+            : $instructor->instructedWorkshops()->pluck('workshops.id')->all();
+
+        $courses = [];
+
+        foreach (Workshop::query()->orderBy('day')->orderBy('start_time')->get() as $workshop) {
+            $group = WorkshopGroups::for($workshop);
+            $courseId = $group?->groupId() ?? $workshop->id;
+
+            $sessionIds = $group === null
+                ? [$workshop->id]
+                : $group->sessions()->pluck('id')->all();
+
+            if ($instructedIds !== null && ! array_intersect($sessionIds, $instructedIds)) {
+                continue;
+            }
+
+            $courses[$courseId] ??= [
+                'id' => $courseId,
+                'name' => $group !== null && $group->isDivided() ? $group->baseTitle() : $workshop->name,
+                'day' => $workshop->day,
+                'days' => $group === null
+                    ? array_values(array_filter([$workshop->day]))
+                    : $group->sessions()->pluck('day')->filter()->unique()->sort()->values()->all(),
+                'is_divided' => $group !== null && $group->isDivided(),
+                'total_sessions' => count($sessionIds),
+                'workshop_ids' => $sessionIds,
+            ];
+        }
+
+        return array_values($courses);
     }
 
     public function workshopName(int $workshopId): ?string
@@ -358,7 +466,9 @@ class NotificationAudienceService
     }
 
     /**
-     * Nombres de los talleres indicados, para etiquetar la campaña.
+     * Títulos de los cursos indicados, para etiquetar la campaña y el payload.
+     * Un curso dividido se etiqueta una sola vez con su título base, no con
+     * "Sesión 1: ..., Sesión 2: ...".
      *
      * @param  array<int, int>  $workshopIds
      * @return array<int, string>
@@ -366,8 +476,10 @@ class NotificationAudienceService
     public function workshopNames(array $workshopIds, bool $allWorkshops = false): array
     {
         if ($allWorkshops) {
-            return Workshop::query()->orderBy('day')->orderBy('start_time')->pluck('name')
-                ->map(fn ($n) => (string) $n)->all();
+            return array_map(
+                fn (array $course) => (string) $course['name'],
+                $this->workshopCourses()
+            );
         }
 
         $workshopIds = $this->intList($workshopIds);
@@ -376,9 +488,23 @@ class NotificationAudienceService
             return [];
         }
 
-        return Workshop::withTrashed()->whereIn('id', $workshopIds)
-            ->orderBy('day')->orderBy('start_time')
-            ->pluck('name')->map(fn ($n) => (string) $n)->all();
+        $names = [];
+
+        foreach ($workshopIds as $workshopId) {
+            $workshop = Workshop::withTrashed()->find($workshopId);
+
+            if ($workshop === null) {
+                continue;
+            }
+
+            $group = WorkshopGroups::for($workshop);
+
+            $names[] = $group !== null && $group->isDivided()
+                ? $group->baseTitle()
+                : (string) $workshop->name;
+        }
+
+        return array_values(array_unique($names));
     }
 
     /**

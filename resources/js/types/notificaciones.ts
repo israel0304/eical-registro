@@ -17,12 +17,16 @@ export type AudienceSegment =
       }
     | { type: 'individual'; user_ids: number[] };
 
-export type AudienceWorkshop = {
+export type AudienceCourse = {
+    /** Id del taller que representa el curso. */
     id: number;
+    /** Título sin el prefijo "Sesión N:" cuando el curso está dividido. */
     name: string;
     day: string | null;
-    start_time: string | null;
-    parent_workshop_id: number | null;
+    days: string[];
+    is_divided: boolean;
+    total_sessions: number;
+    workshop_ids: number[];
 };
 
 export type AudienceUser = {

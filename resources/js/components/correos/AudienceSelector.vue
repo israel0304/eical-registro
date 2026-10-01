@@ -3,16 +3,16 @@ import { Search, Users, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { Checkbox } from '@/components/ui/checkbox';
 import type {
+    AudienceCourse,
     AudienceSegment,
     AudienceUser,
-    AudienceWorkshop,
 } from '@/types/notificaciones';
 
 const props = defineProps<{
     modelValue: AudienceSegment[];
     roles: { id: number; name: string }[];
     conferenceKinds: Record<string, string | null>;
-    workshops: AudienceWorkshop[];
+    courses: AudienceCourse[];
     canManageAll: boolean;
 }>();
 
@@ -103,12 +103,12 @@ const toggleKind = (kind: string, checked: boolean) => {
 
 // ── Talleres (inscritos e instructores) ─────────────────────────────────────
 
-const workshopsByDay = computed(() => {
-    const groups = new Map<string, AudienceWorkshop[]>();
+const coursesByDay = computed(() => {
+    const groups = new Map<string, AudienceCourse[]>();
 
-    for (const workshop of props.workshops) {
-        const key = workshop.day ?? 'Sin fecha';
-        groups.set(key, [...(groups.get(key) ?? []), workshop]);
+    for (const course of props.courses) {
+        const key = course.day ?? 'Sin fecha';
+        groups.set(key, [...(groups.get(key) ?? []), course]);
     }
 
     return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
@@ -119,22 +119,22 @@ const workshopSelection = (type: 'workshop_enrollment' | 'workshop_instructors')
     all: segmentOf(type)?.all_workshops ?? false,
 });
 
-const toggleWorkshop = (
+const toggleCourse = (
     type: 'workshop_enrollment' | 'workshop_instructors',
-    workshopId: number,
+    courseId: number,
     checked: boolean,
 ) => {
     const { ids, all } = workshopSelection(type);
     const nextIds = checked
-        ? [...ids, workshopId]
-        : ids.filter((id) => id !== workshopId);
+        ? [...ids, courseId]
+        : ids.filter((id) => id !== courseId);
 
     if (!nextIds.length && !all) return dropSegment(type);
 
     replaceSegment({ type, workshop_ids: nextIds, all_workshops: all });
 };
 
-const toggleAllWorkshops = (
+const toggleAllCourses = (
     type: 'workshop_enrollment' | 'workshop_instructors',
     checked: boolean,
 ) => {
@@ -154,6 +154,65 @@ const formatDay = (day: string) => {
         day: 'numeric',
         month: 'long',
     });
+};
+
+const monthNames = [
+    'enero',
+    'febrero',
+    'marzo',
+    'abril',
+    'mayo',
+    'junio',
+    'julio',
+    'agosto',
+    'septiembre',
+    'octubre',
+    'noviembre',
+    'diciembre',
+];
+
+/** "23 y 24 de septiembre de 2026" a partir de los días ISO del curso. */
+const courseDates = (course: AudienceCourse) => {
+    const days = [...new Set(course.days)].sort();
+
+    if (!days.length) return '';
+
+    const parse = (day: string) => {
+        const [year, month, date] = day.split('-').map(Number);
+        return { year, month, date };
+    };
+
+    if (days.length === 1) {
+        const { year, month, date } = parse(days[0]);
+        if (!year || !month) return '';
+        return `${date} de ${monthNames[month - 1]} de ${year}`;
+    }
+
+    const first = parse(days[0]);
+    const last = parse(days[days.length - 1]);
+
+    if (!first.year || !first.month || !last.year || !last.month) return '';
+
+    if (first.year === last.year && first.month === last.month) {
+        return `${first.date} y ${last.date} de ${monthNames[first.month - 1]} de ${first.year}`;
+    }
+
+    return `${formatDay(days[0])} y ${formatDay(days[days.length - 1])}`;
+};
+
+const courseHint = (course: AudienceCourse) => {
+    const parts: string[] = [];
+
+    if (course.total_sessions > 1) {
+        parts.push(
+            `${course.total_sessions} sesiones`,
+        );
+    }
+
+    const dates = courseDates(course);
+    if (dates) parts.push(dates);
+
+    return parts.join(' · ');
 };
 
 // ── Usuarios individuales ────────────────────────────────────────────────────
@@ -312,7 +371,7 @@ watch(selectedUserIds, (ids) => {
             </div>
         </div>
 
-        <!-- Talleres -->
+        <!-- Cursos / talleres -->
         <div
             v-for="row in [
                 { type: 'workshop_enrollment', label: 'Inscritos de' },
@@ -323,7 +382,7 @@ watch(selectedUserIds, (ids) => {
             <p
                 class="mb-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"
             >
-                {{ row.label }} un taller
+                {{ row.label }} un curso
             </p>
 
             <label
@@ -332,20 +391,22 @@ watch(selectedUserIds, (ids) => {
             >
                 <Checkbox
                     :model-value="workshopSelection(row.type).all"
-                    @update:model-value="toggleAllWorkshops(row.type, !!$event)"
+                    @update:model-value="toggleAllCourses(row.type, !!$event)"
                 />
-                Todos los talleres
+                Todos los cursos
             </label>
 
             <div
                 v-if="!workshopSelection(row.type).all"
                 class="mt-2 space-y-3"
             >
-                <div v-if="!workshops.length">
-                    <p class="text-xs text-gray-400">No hay talleres disponibles.</p>
+                <div v-if="!courses.length">
+                    <p class="text-xs text-gray-400">
+                        No hay cursos disponibles.
+                    </p>
                 </div>
 
-                <div v-for="[day, items] in workshopsByDay" :key="day">
+                <div v-for="[day, items] in coursesByDay" :key="day">
                     <p
                         class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400"
                     >
@@ -353,22 +414,31 @@ watch(selectedUserIds, (ids) => {
                     </p>
                     <div class="grid gap-1.5 sm:grid-cols-2">
                         <label
-                            v-for="workshop in items"
-                            :key="workshop.id"
-                            class="flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-900 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:text-white dark:hover:bg-zinc-800"
+                            v-for="course in items"
+                            :key="course.id"
+                            class="flex cursor-pointer items-start gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-900 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:text-white dark:hover:bg-zinc-800"
                         >
                             <Checkbox
+                                class="mt-0.5"
                                 :model-value="
                                     workshopSelection(row.type).ids.includes(
-                                        workshop.id,
+                                        course.id,
                                     )
                                 "
                                 @update:model-value="
-                                    toggleWorkshop(row.type, workshop.id, !!$event)
+                                    toggleCourse(row.type, course.id, !!$event)
                                 "
                             />
-                            <span class="truncate" :title="workshop.name">
-                                {{ workshop.name }}
+                            <span class="min-w-0">
+                                <span class="block" :title="course.name">
+                                    {{ course.name }}
+                                </span>
+                                <span
+                                    v-if="courseHint(course)"
+                                    class="block text-xs text-gray-400"
+                                >
+                                    {{ courseHint(course) }}
+                                </span>
                             </span>
                         </label>
                     </div>
