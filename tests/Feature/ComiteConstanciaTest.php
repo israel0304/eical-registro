@@ -35,7 +35,10 @@ class ComiteConstanciaTest extends TestCase
             Permission::whereIn('key', $permissions)->pluck('id')
         );
 
-        $user->roles()->syncWithoutDetaching([$role->id]);
+        // sync y no syncWithoutDetaching: el factory asigna un rol aleatorio
+        // (Administrator, Ponente, Asistente) y contaminaría a los usuarios de
+        // esta prueba con permisos de administrador.
+        $user->roles()->sync([$role->id]);
 
         return $user;
     }
