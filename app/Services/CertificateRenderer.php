@@ -160,7 +160,7 @@ class CertificateRenderer
                 ],
             );
 
-            return $this->finalize($certificate, $template, $metadata, overwriteMetadata: true);
+            return $this->finalize($certificate, $template, $metadata);
         }
 
         $metadata = $this->buildMetadata($user, $type, $workshop, null);
@@ -292,11 +292,11 @@ class CertificateRenderer
             ],
         );
 
-        return $this->finalize($certificate, $template, $metadata, true);
+        return $this->finalize($certificate, $template, $metadata);
     }
 
     /**
-     * Find or create an invitation letter certificate for the user's role.
+     * Find or create the invitation letter certificate for the user's role.
      * A letter is only issued when the role has an active invitation template.
      */
     public function issueCarta(User $user, Role $role): ?Certificate
@@ -497,20 +497,21 @@ class CertificateRenderer
         return self::ROLE_LABELS[$role->name] ?? $role->name;
     }
 
-    private function finalize(Certificate $certificate, ?CertificateTemplate $template, array $metadata, bool $overwriteMetadata = false): Certificate
+    /**
+     * La metadata se recalcula y sobrescribe en cada emisión: el PDF se
+     * regenera en cada descarga, así que congelar los valores no preservaba
+     * nada y dejaba constancias con el nombre, afiliación o título de la
+     * actividad desactualizados. Se conserva array_merge para no perder claves
+     * que una versión anterior guardara y que la plantilla aún use.
+     */
+    private function finalize(Certificate $certificate, ?CertificateTemplate $template, array $metadata): Certificate
     {
         if ($certificate->template_id === null && $template !== null) {
             $certificate->update(['template_id' => $template->id]);
         }
 
-        if ($overwriteMetadata || $certificate->metadata === null) {
+        if ($certificate->metadata !== $metadata) {
             $certificate->update(['metadata' => array_merge($certificate->metadata ?? [], $metadata)]);
-        } else {
-            $missing = array_diff_key($metadata, $certificate->metadata);
-
-            if ($missing !== []) {
-                $certificate->update(['metadata' => array_merge($certificate->metadata, $missing)]);
-            }
         }
 
         if ($certificate->folio === null) {
@@ -526,6 +527,126 @@ class CertificateRenderer
         }
 
         return $certificate;
+    }
+
+    /**
+     * Recalcula la metadata de una constancia ya emitida, usando el tipo de
+     * participación y el rol que quedaron registrados en ella, sin escribir
+     * nada. Sirve para reparar constancias que quedaron con datos anteriores a
+     * un cambio de nombre, afiliación o de título de actividad.
+     *
+     * Devuelve null cuando la constancia ya no puede reconstruirse (actividad
+     * eliminada o tipo de participación borrado), para que el comando la
+     * reporte en lugar de sobrescribirla con datos incompletos.
+     */
+    public function resolveMetadata(Certificate $certificate): ?array
+    {
+        $user = $certificate->relationLoaded('user')
+            ? $certificate->user
+            : $certificate->user()->first();
+
+        if ($user === null) {
+            return null;
+        }
+
+        $type = $certificate->participationType;
+        $role = $certificate->role;
+
+        return match ($certificate->event_type) {
+            'workshop', WorkshopGroups::GROUPED_EVENT_TYPE => $this->workshopMetadata($certificate, $user, $type),
+            'presentation' => $this->presentationMetadata($certificate, $user, $type),
+            'conference' => $certificate->event_id > 0
+                ? $this->conferenceMetadata($certificate, $user, $type)
+                : $this->typeMetadata($user, $type, $role, moderator: true),
+            'comite' => $type === null ? null : $this->buildComiteMetadata($user, $type),
+            'carta-presentation' => $this->cartaPresentationMetadata($certificate, $user, $role),
+            'carta-conference' => $this->cartaConferenceMetadata($certificate, $user, $role),
+            default => $this->typeMetadata($user, $type, $role),
+        };
+    }
+
+    private function workshopMetadata(Certificate $certificate, User $user, ?ParticipationType $type): ?array
+    {
+        if ($type === null) {
+            return null;
+        }
+
+        $workshop = Workshop::withTrashed()->find($certificate->event_id);
+
+        if ($workshop === null) {
+            return null;
+        }
+
+        $group = $certificate->event_type === WorkshopGroups::GROUPED_EVENT_TYPE
+            ? WorkshopGroups::for($workshop)
+            : null;
+
+        if ($certificate->event_type === WorkshopGroups::GROUPED_EVENT_TYPE && $group === null) {
+            return null;
+        }
+
+        return $this->buildMetadata($user, $type, $group?->representative() ?? $workshop, $group);
+    }
+
+    private function presentationMetadata(Certificate $certificate, User $user, ?ParticipationType $type): ?array
+    {
+        $presentation = Presentation::find($certificate->event_id);
+
+        if ($presentation === null || $type === null) {
+            return null;
+        }
+
+        return $this->buildMetadata($user, $type, $presentation);
+    }
+
+    private function conferenceMetadata(Certificate $certificate, User $user, ?ParticipationType $type): ?array
+    {
+        $conference = Conference::find($certificate->event_id);
+
+        if ($conference === null || $type === null) {
+            return null;
+        }
+
+        return $this->buildMetadata($user, $type, $conference);
+    }
+
+    /**
+     * Constancias sin actividad:moderador, asistencia al evento, tipos
+     * generados a mano y cartas genéricas por rol.
+     */
+    private function typeMetadata(User $user, ?ParticipationType $type, ?Role $role, bool $moderator = false): ?array
+    {
+        if ($moderator) {
+            return $type === null ? null : $this->buildModeradorMetadata($user, $type);
+        }
+
+        if ($role !== null) {
+            return $this->buildCartaMetadata($user, $role);
+        }
+
+        return $type === null ? null : $this->buildEventMetadata($user, $type);
+    }
+
+    private function cartaPresentationMetadata(Certificate $certificate, User $user, ?Role $role): ?array
+    {
+        $presentation = Presentation::find($certificate->event_id);
+
+        if ($presentation === null || $role === null) {
+            return null;
+        }
+
+        return $this->buildCartaMetadata($user, $role, $presentation);
+    }
+
+    private function cartaConferenceMetadata(Certificate $certificate, User $user, ?Role $role): ?array
+    {
+        $conference = Conference::find($certificate->event_id);
+
+        if ($conference === null || $role === null) {
+            return null;
+        }
+
+        return $this->buildCartaConferenceMetadata($user, $role, $conference);
     }
 
     /**
