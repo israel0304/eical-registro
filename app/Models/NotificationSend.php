@@ -8,7 +8,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class NotificationSend extends Model
 {
-    public const AUDIENCE_TYPES = ['all_users', 'role', 'speakers_by_kind', 'individual', 'workshop_enrollment'];
+    /**
+     * Campaña combinada: la audiencia es una lista de segmentos dentro de
+     * audience_value['segments']. Los demás tipos se conservan para leer el
+     * historial de campañas creadas antes de esta modalidad.
+     */
+    public const AUDIENCE_SEGMENTS = 'segments';
+
+    /**
+     * El orden importa: los índices 0..4 son usados por código existente para
+     * resolver audiencias de un solo tipo, por lo que 'segments' se agrega al
+     * final.
+     */
+    public const AUDIENCE_TYPES = ['all_users', 'role', 'speakers_by_kind', 'individual', 'workshop_enrollment', self::AUDIENCE_SEGMENTS];
 
     public const STATUS_PENDING = 'pending';
 

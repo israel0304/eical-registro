@@ -208,7 +208,7 @@ class NotificacionesTest extends TestCase
 
         $this->assertDatabaseHas('notification_sends', [
             'subject' => 'Bienvenida {{ nombre_completo }}',
-            'audience_type' => 'all_users',
+            'audience_type' => 'segments',
             'sent_by' => $sender->id,
             'recipient_count' => count($recipients) + 1,
             'status' => NotificationSend::STATUS_SENT,
@@ -320,7 +320,10 @@ class NotificacionesTest extends TestCase
             ->assertRedirect(route('correos.notificaciones.index'));
 
         $send = NotificationSend::firstOrFail();
-        $this->assertSame(['user_ids' => [$target->id]], $send->audience_value);
+        $this->assertSame(
+            ['segments' => [['type' => 'individual', 'user_ids' => [$target->id]]]],
+            $send->audience_value
+        );
         $this->assertSame(1, $send->recipients()->count());
         $this->assertSame($target->email, $send->recipients()->first()->email);
 
@@ -475,7 +478,7 @@ class NotificacionesTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertDatabaseHas('notification_sends', [
-            'audience_type' => 'workshop_enrollment',
+            'audience_type' => 'segments',
             'recipient_count' => 1,
         ]);
 
@@ -551,5 +554,268 @@ class NotificacionesTest extends TestCase
                 'body_html' => '<p>Cuerpo</p>',
             ])
             ->assertForbidden();
+    }
+
+    public function test_preview_combines_several_groups_and_deduplicates_people(): void
+    {
+        $this->conferenceType('magistral', 'Conferencista magistral');
+
+        $role = Role::firstOrCreate(['name' => 'Comité']);
+        $speaker = User::factory()->create();
+        $speaker->roles()->sync([$role->id]);
+        $conference = Conference::create([
+            'title' => 'Magistral combinada',
+            'kind' => 'magistral',
+            'day' => '2026-08-05',
+            'location' => 'Auditorio',
+            'start_time' => '09:00',
+            'end_time' => '10:30',
+            'created_by' => $speaker->id,
+        ]);
+        $conference->members()->attach($speaker->id, ['role' => 'speaker']);
+
+        $committeeOnly = User::factory()->create();
+        $committeeOnly->roles()->sync([$role->id]);
+        $loose = User::factory()->create();
+
+        $workshop = $this->workshop();
+        $enrolled = User::factory()->create();
+        $workshop->enrollments()->create(['user_id' => $enrolled->id, 'enrolled_at' => now()]);
+        $workshop->instructors()->attach($speaker->id);
+
+        $response = $this->actingAs($this->admin())
+            ->postJson(route('correos.notificaciones.preview'), [
+                'segments' => [
+                    ['type' => 'role', 'role_ids' => [$role->id]],
+                    ['type' => 'speakers_by_kind', 'kinds' => ['magistral']],
+                    ['type' => 'workshop_enrollment', 'workshop_ids' => [$workshop->id]],
+                    ['type' => 'workshop_instructors', 'workshop_ids' => [$workshop->id]],
+                    ['type' => 'individual', 'user_ids' => [$loose->id]],
+                ],
+            ])
+            ->assertOk();
+
+        // speaker está en rol + magistral + instructor: cuenta una sola vez.
+        $this->assertSame(4, $response->json('count'));
+
+        $emails = collect($response->json('sample'))->pluck('email');
+        $this->assertCount(4, $emails);
+        $this->assertCount(4, $emails->unique());
+
+        $speakerSample = collect($response->json('sample'))->firstWhere('email', $speaker->email);
+        $this->assertSame(['Roles: Comité', 'Speakers: Conferencista magistral', 'Instructores: Taller de prueba'], $speakerSample['groups']);
+        $this->assertSame('Conferencista magistral', $speakerSample['payload']['tipo_conferencia']);
+        $this->assertSame('Taller de prueba', $speakerSample['payload']['nombre_taller']);
+    }
+
+    public function test_store_with_several_groups_creates_one_recipient_per_person(): void
+    {
+        Mail::fake();
+
+        $role = Role::firstOrCreate(['name' => 'Comité']);
+        $overlap = User::factory()->create();
+        $overlap->roles()->sync([$role->id]);
+        $other = User::factory()->create();
+        $other->roles()->sync([$role->id]);
+
+        $workshop = $this->workshop();
+        $workshop->enrollments()->create(['user_id' => $overlap->id, 'enrolled_at' => now()]);
+
+        $this->actingAs($this->admin())
+            ->post(route('correos.notificaciones.store'), [
+                'segments' => [
+                    ['type' => 'role', 'role_ids' => [$role->id]],
+                    ['type' => 'workshop_enrollment', 'workshop_ids' => [$workshop->id]],
+                ],
+                'subject' => 'Aviso combinado',
+                'body_html' => '<p>Hola {{ grupos }}</p>',
+            ])
+            ->assertRedirect(route('correos.notificaciones.index'))
+            ->assertSessionHas('success');
+
+        $send = NotificationSend::firstOrFail();
+        $this->assertSame('segments', $send->audience_type);
+        $this->assertSame(2, $send->recipient_count);
+        $this->assertSame(2, $send->recipients()->count());
+        $this->assertSame(
+            1,
+            $send->recipients()->where('email', $overlap->email)->count(),
+            'Un usuario en dos grupos debe recibir un solo correo.'
+        );
+
+        $this->assertSame(
+            'Roles: Comité + Inscritos: Taller de prueba',
+            $send->recipients()->where('email', $overlap->email)->first()->payload['grupos']
+        );
+
+        Mail::assertSent(NotificationMailable::class, 2);
+    }
+
+    public function test_store_can_target_every_workshop_instructors(): void
+    {
+        Mail::fake();
+
+        $workshop = $this->workshop();
+        $instructor = User::factory()->create();
+        $workshop->instructors()->attach($instructor->id);
+
+        $this->actingAs($this->admin())
+            ->post(route('correos.notificaciones.store'), [
+                'segments' => [
+                    ['type' => 'workshop_instructors', 'all_workshops' => true],
+                ],
+                'subject' => 'A los instructores',
+                'body_html' => '<p>Hola {{ nombre_completo }}</p>',
+            ])
+            ->assertRedirect(route('correos.notificaciones.index'));
+
+        $recipient = NotificationSend::firstOrFail()->recipients()->first();
+        $this->assertSame($instructor->email, $recipient->email);
+        $this->assertSame('Taller de prueba', $recipient->payload['nombre_taller']);
+    }
+
+    public function test_store_ignores_segments_without_criteria(): void
+    {
+        $role = Role::firstOrCreate(['name' => 'Vacío']);
+        $member = User::factory()->create();
+        $member->roles()->sync([$role->id]);
+
+        $this->actingAs($this->admin())
+            ->post(route('correos.notificaciones.store'), [
+                'segments' => [
+                    ['type' => 'role', 'role_ids' => []],
+                    ['type' => 'speakers_by_kind', 'kinds' => []],
+                    ['type' => 'individual', 'user_ids' => []],
+                    ['type' => 'role', 'role_ids' => [$role->id]],
+                ],
+                'subject' => 'Solo los roles con gente',
+                'body_html' => '<p>Hola</p>',
+            ])
+            ->assertRedirect(route('correos.notificaciones.index'));
+
+        $send = NotificationSend::firstOrFail();
+        $this->assertSame([['type' => 'role', 'role_ids' => [$role->id]]], $send->audience_value['segments']);
+        $this->assertSame(1, $send->recipient_count);
+    }
+
+    public function test_store_rejects_when_no_segment_has_criteria(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('correos.notificaciones.store'), [
+                'segments' => [
+                    ['type' => 'role', 'role_ids' => []],
+                ],
+                'subject' => 'Sin audiencia',
+                'body_html' => '<p>Hola</p>',
+            ])
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('notification_sends', 0);
+        $this->assertDatabaseCount('notification_recipients', 0);
+    }
+
+    public function test_store_rejects_unknown_segment_type(): void
+    {
+        $this->actingAs($this->admin())
+            ->postJson(route('correos.notificaciones.store'), [
+                'segments' => [
+                    ['type' => 'inventado', 'role_ids' => [1]],
+                ],
+                'subject' => 'Asunto',
+                'body_html' => '<p>Hola</p>',
+            ])
+            ->assertJsonValidationErrors('segments.0.type');
+
+        $this->assertDatabaseCount('notification_sends', 0);
+    }
+
+    public function test_instructor_can_send_to_enrolled_and_instructors_of_own_workshops(): void
+    {
+        Mail::fake();
+
+        $instructor = $this->userWith('workshops.enrollments.email');
+        $own = $this->workshop();
+        $own->instructors()->attach($instructor->id);
+        $coInstructor = User::factory()->create();
+        $own->instructors()->attach($coInstructor->id);
+        $enrolled = User::factory()->create();
+        $own->enrollments()->create(['user_id' => $enrolled->id, 'enrolled_at' => now()]);
+
+        $this->actingAs($instructor)
+            ->post(route('correos.notificaciones.store'), [
+                'segments' => [
+                    ['type' => 'workshop_enrollment', 'workshop_ids' => [$own->id]],
+                    ['type' => 'workshop_instructors', 'workshop_ids' => [$own->id]],
+                ],
+                'subject' => 'Mi taller',
+                'body_html' => '<p>Hola</p>',
+            ])
+            ->assertRedirect(route('correos.notificaciones.index'))
+            ->assertSessionHas('success');
+
+        // Tres personas distintas: la inscrita y los dos instructores.
+        Mail::assertSent(NotificationMailable::class, 3);
+        Mail::assertSent(NotificationMailable::class, fn (NotificationMailable $mail) => $mail->hasBcc($enrolled->email));
+        Mail::assertSent(NotificationMailable::class, fn (NotificationMailable $mail) => $mail->hasBcc($coInstructor->email));
+    }
+
+    public function test_instructor_cannot_combine_own_workshop_with_other_audiences(): void
+    {
+        $instructor = $this->userWith('workshops.enrollments.email');
+        $own = $this->workshop();
+        $own->instructors()->attach($instructor->id);
+
+        $this->actingAs($instructor)
+            ->postJson(route('correos.notificaciones.preview'), [
+                'segments' => [
+                    ['type' => 'workshop_enrollment', 'workshop_ids' => [$own->id]],
+                    ['type' => 'all_users'],
+                ],
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($instructor)
+            ->postJson(route('correos.notificaciones.preview'), [
+                'segments' => [
+                    ['type' => 'workshop_enrollment', 'workshop_ids' => [$own->id]],
+                    ['type' => 'role', 'role_ids' => [Role::firstOrCreate(['name' => 'Comité'])->id]],
+                ],
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_instructor_cannot_use_all_workshops(): void
+    {
+        $instructor = $this->userWith('workshops.enrollments.email');
+        $this->workshop()->instructors()->attach($instructor->id);
+
+        $this->actingAs($instructor)
+            ->postJson(route('correos.notificaciones.preview'), [
+                'segments' => [
+                    ['type' => 'workshop_enrollment', 'all_workshops' => true],
+                ],
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_create_page_only_lists_own_workshops_for_instructors(): void
+    {
+        $instructor = $this->userWith('workshops.enrollments.email');
+        $own = $this->workshop();
+        $own->instructors()->attach($instructor->id);
+        $other = $this->workshop();
+
+        $this->actingAs($instructor)
+            ->get(route('correos.notificaciones.create'))
+            ->assertInertia(fn ($page) => $page
+                ->component('Notificaciones/Create')
+                ->where('canManageAll', false)
+                ->where('workshops', fn ($workshops) => collect($workshops)->pluck('id')->all() === [$own->id]));
+
+        $this->actingAs($this->admin())
+            ->get(route('correos.notificaciones.create'))
+            ->assertInertia(fn ($page) => $page
+                ->where('canManageAll', true)
+                ->where('workshops', fn ($workshops) => collect($workshops)->pluck('id')->sort()->values()->all() === collect([$own->id, $other->id])->sort()->values()->all()));
     }
 }

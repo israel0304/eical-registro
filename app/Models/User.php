@@ -157,6 +157,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsToMany(Workshop::class, 'workshop_moderator_user')->withTimestamps();
     }
 
+    public function instructedWorkshops(): BelongsToMany
+    {
+        return $this->belongsToMany(Workshop::class, 'workshop_instructor_user')->withTimestamps();
+    }
+
     public function moderatedPresentations(): BelongsToMany
     {
         return $this->belongsToMany(Presentation::class, 'presentation_moderators')->withTimestamps();

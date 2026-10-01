@@ -19,9 +19,9 @@ import {
     Send,
     Strikethrough,
     Users,
-    X,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
+import AudienceSelector from '@/components/correos/AudienceSelector.vue';
 import {
     Dialog,
     DialogContent,
@@ -31,50 +31,39 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
+import type {
+    AudienceSegment,
+    AudienceWorkshop,
+} from '@/types/notificaciones';
 
 const props = defineProps<{
     roles: { id: number; name: string }[];
     conferenceKinds: Record<string, string | null>;
     templates: { id: number; name: string; subject: string; body_html: string }[];
+    workshops: AudienceWorkshop[];
+    canManageAll: boolean;
     workshopId?: number | null;
     workshopName?: string | null;
 }>();
 
 const isWorkshopContext = computed(() => props.workshopId != null);
 
-const audienceOptions = [
-    {
-        value: 'all_users',
-        label: 'Todos los usuarios',
-        description: 'Todos los usuarios activos del sistema',
-    },
-    {
-        value: 'role',
-        label: 'Por rol',
-        description: 'Usuarios con un rol específico (incluye roles nuevos)',
-    },
-    {
-        value: 'speakers_by_kind',
-        label: 'Speakers por tipo de conferencia',
-        description: 'Todos los speakers asignados a conferencias de un tipo',
-    },
-    {
-        value: 'individual',
-        label: 'Usuarios individuales',
-        description: 'Selecciona uno o más usuarios específicos',
-    },
-];
-
 const form = useForm({
-    audience_type: isWorkshopContext.value ? 'workshop_enrollment' : 'all_users',
-    role_id: null as number | null,
-    kind: '',
-    user_ids: [] as number[],
-    workshop_id: isWorkshopContext.value ? props.workshopId : null,
+    segments: [] as AudienceSegment[],
     template_id: null as number | null,
     subject: '',
     body_html: '',
 });
+
+if (isWorkshopContext.value && props.workshopId) {
+    form.segments = [
+        {
+            type: 'workshop_enrollment',
+            workshop_ids: [props.workshopId],
+            all_workshops: false,
+        },
+    ];
+}
 
 const editor = useEditor({
     extensions: [
@@ -97,12 +86,12 @@ const variables = computed<Record<string, string>>(() => {
         correo: 'Correo',
         dni: 'DNI / RFC',
         rol: 'Rol asignado',
-        tipo_conferencia: 'Tipo de conferencia (speakers por tipo)',
+        tipo_conferencia: 'Primer tipo de conferencia del grupo',
+        tipos_conferencia: 'Tipos de conferencia (separados por coma)',
+        nombre_taller: 'Primer taller del grupo',
+        nombres_talleres: 'Talleres del grupo (separados por coma)',
+        grupos: 'Grupos a los que pertenece el destinatario',
     };
-
-    if (isWorkshopContext.value) {
-        base.nombre_taller = 'Taller';
-    }
 
     return base;
 });
@@ -148,21 +137,15 @@ const getCookie = (name: string) => {
 };
 
 const previewCount = ref(0);
-const previewSample = ref<{ name: string; email: string }[]>([]);
+const previewSample = ref<
+    { name: string; email: string; groups: string[] }[]
+>([]);
 const previewLoading = ref(false);
 const previewError = ref('');
 
 let previewTimer: ReturnType<typeof setTimeout> | null = null;
 
 const runPreview = () => {
-    const payload: Record<string, unknown> = {
-        audience_type: form.audience_type,
-        role_id: form.audience_type === 'role' ? form.role_id : null,
-        kind: form.audience_type === 'speakers_by_kind' ? form.kind : null,
-        user_ids: form.audience_type === 'individual' ? form.user_ids : [],
-        workshop_id: form.audience_type === 'workshop_enrollment' ? form.workshop_id : null,
-    };
-
     previewLoading.value = true;
     previewError.value = '';
     fetch('/admin/notificaciones/preview', {
@@ -172,7 +155,7 @@ const runPreview = () => {
             Accept: 'application/json',
             'X-XSRF-TOKEN': getCookie('XSRF-TOKEN'),
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ segments: form.segments }),
     })
         .then(async (response) => {
             if (response.status === 419) {
@@ -181,7 +164,10 @@ const runPreview = () => {
                 return;
             }
             if (!response.ok) {
-                previewError.value = 'No se pudo calcular la audiencia (código ' + response.status + ').';
+                previewError.value =
+                    'No se pudo calcular la audiencia (código ' +
+                    response.status +
+                    ').';
                 previewCount.value = 0;
                 previewSample.value = [];
                 return;
@@ -201,14 +187,7 @@ const runPreview = () => {
 };
 
 watch(
-    () => [
-        form.audience_type,
-        form.role_id,
-        form.kind,
-        form.user_ids.length,
-        form.user_ids,
-        form.workshop_id,
-    ],
+    () => form.segments,
     () => {
         if (previewTimer) clearTimeout(previewTimer);
         previewTimer = setTimeout(runPreview, 300);
@@ -216,12 +195,7 @@ watch(
     { deep: true, immediate: isWorkshopContext.value },
 );
 
-const audienceReady = computed(() => {
-    if (form.audience_type === 'role') return form.role_id != null;
-    if (form.audience_type === 'speakers_by_kind') return form.kind !== '';
-    if (form.audience_type === 'individual') return form.user_ids.length > 0;
-    return true;
-});
+const audienceReady = computed(() => form.segments.length > 0);
 
 const canSubmit = computed(
     () =>
@@ -249,59 +223,6 @@ const submit = () => {
     form.post('/admin/notificaciones', {
         preserveScroll: true,
     });
-};
-
-// ── Búsqueda de usuarios individuales ────────────────────────────────────────
-
-const userSearch = ref('');
-const searchResults = ref<{ id: number; first_name: string; last_name: string; email: string }[]>([]);
-const searching = ref(false);
-
-let searchTimer: ReturnType<typeof setTimeout> | null = null;
-
-const runUserSearch = () => {
-    const keyword = userSearch.value.trim();
-    if (keyword === '') {
-        searchResults.value = [];
-        return;
-    }
-    searching.value = true;
-    fetch(`/admin/notificaciones/users?search=${encodeURIComponent(keyword)}`, {
-        headers: { Accept: 'application/json' },
-    })
-        .then(async (response) => {
-            if (!response.ok) return;
-            searchResults.value = await response.json();
-        })
-        .catch(() => {
-            searchResults.value = [];
-        })
-        .finally(() => {
-            searching.value = false;
-        });
-};
-
-watch(userSearch, () => {
-    if (searchTimer) clearTimeout(searchTimer);
-    searchTimer = setTimeout(runUserSearch, 300);
-});
-
-const selectedUsers = computed(() =>
-    props !== null
-        ? form.user_ids
-        : [],
-);
-
-const addUser = (user: { id: number; first_name: string; last_name: string; email: string }) => {
-    if (!form.user_ids.includes(user.id)) {
-        form.user_ids = [...form.user_ids, user.id];
-        runPreview();
-    }
-};
-
-const removeUser = (userId: number) => {
-    form.user_ids = form.user_ids.filter((id) => id !== userId);
-    runPreview();
 };
 </script>
 
@@ -356,170 +277,42 @@ const removeUser = (userId: number) => {
                             class="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white"
                         >
                             <Users class="h-5 w-5 text-indigo-500" /> 1 ·
-                            {{ isWorkshopContext ? 'Audiencia' : 'Directores' }}
+                            {{ isWorkshopContext ? 'Audiencia' : 'Destinatarios' }}
                         </h2>
+
+                        <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+                            Combina los grupos que necesites en un solo envío.
+                            Si una persona está en más de un grupo, recibe un
+                            único correo.
+                        </p>
 
                         <div
                             v-if="isWorkshopContext"
                             class="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950/40"
                         >
-                            <p class="text-sm font-semibold text-indigo-900 dark:text-indigo-200">
+                            <p
+                                class="text-sm font-semibold text-indigo-900 dark:text-indigo-200"
+                            >
                                 Inscritos del taller: {{ workshopName }}
                             </p>
-                            <p class="mt-1 text-xs text-indigo-700 dark:text-indigo-300">
+                            <p
+                                class="mt-1 text-xs text-indigo-700 dark:text-indigo-300"
+                            >
                                 El correo se enviará a todos los participantes
                                 inscritos en este taller. Variable disponible:
-                                <code class="font-semibold">{{ variableToken('nombre_taller') }}</code>
+                                <code class="font-semibold">{{
+                                    variableToken('nombre_taller')
+                                }}</code>
                             </p>
                         </div>
 
-                        <div v-if="!isWorkshopContext" class="space-y-2">
-                            <label
-                                v-for="option in audienceOptions"
-                                :key="option.value"
-                                class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3 transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-zinc-700 dark:hover:border-indigo-700 dark:hover:bg-indigo-950/30"
-                                :class="{
-                                    'border-indigo-400 ring-1 ring-indigo-200 dark:border-indigo-600':
-                                        form.audience_type === option.value,
-                                }"
-                            >
-                                <input
-                                    v-model="form.audience_type"
-                                    type="radio"
-                                    :value="option.value"
-                                    class="mt-1 h-4 w-4 text-indigo-600"
-                                />
-                                <span>
-                                    <span
-                                        class="block text-sm font-medium text-gray-900 dark:text-white"
-                                    >
-                                        {{ option.label }}
-                                    </span>
-                                    <span
-                                        class="block text-xs text-gray-500 dark:text-gray-400"
-                                    >
-                                        {{ option.description }}
-                                    </span>
-                                </span>
-                            </label>
-                        </div>
-
-                        <div
-                            v-if="form.audience_type === 'role'"
-                            class="mt-4"
-                        >
-                            <label
-                                class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >
-                                Rol
-                            </label>
-                            <select
-                                v-model="form.role_id"
-                                class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-                            >
-                                <option :value="null">Selecciona un rol…</option>
-                                <option
-                                    v-for="role in roles"
-                                    :key="role.id"
-                                    :value="role.id"
-                                >
-                                    {{ role.name }}
-                                </option>
-                            </select>
-                        </div>
-
-                        <div
-                            v-if="form.audience_type === 'speakers_by_kind'"
-                            class="mt-4"
-                        >
-                            <label
-                                class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >
-                                Tipo de conferencia
-                            </label>
-                            <select
-                                v-model="form.kind"
-                                class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-                            >
-                                <option value="">Selecciona un tipo…</option>
-                                <option
-                                    v-for="(label, kind) in conferenceKinds"
-                                    :key="kind"
-                                    :value="kind"
-                                >
-                                    {{ label || kind }}
-                                </option>
-                            </select>
-                        </div>
-
-                        <div v-if="form.audience_type === 'individual'" class="mt-4">
-                            <label
-                                class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >
-                                Buscar usuarios
-                            </label>
-                            <div class="relative">
-                                <Search
-                                    class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
-                                />
-                                <input
-                                    v-model="userSearch"
-                                    type="text"
-                                    placeholder="Buscar por nombre, correo o DNI…"
-                                    class="w-full rounded-md border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-                                />
-                            </div>
-
-                            <div
-                                v-if="searchResults.length"
-                                class="mt-2 overflow-hidden rounded-lg border border-gray-200 dark:border-zinc-700"
-                            >
-                                <button
-                                    v-for="user in searchResults"
-                                    :key="user.id"
-                                    type="button"
-                                    @click="addUser(user)"
-                                    class="flex w-full items-center justify-between gap-2 border-b border-gray-100 px-3 py-2 text-left text-sm last:border-0 hover:bg-gray-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
-                                >
-                                    <span>
-                                        <span class="block font-medium text-gray-900 dark:text-white">
-                                            {{ user.first_name }} {{ user.last_name }}
-                                        </span>
-                                        <span class="block text-xs text-gray-500 dark:text-gray-400">
-                                            {{ user.email }}
-                                        </span>
-                                    </span>
-                                    <span class="text-xs text-indigo-500">Agregar</span>
-                                </button>
-                            </div>
-
-                            <div
-                                v-if="searching"
-                                class="mt-2 text-xs text-gray-400"
-                            >
-                                Buscando…
-                            </div>
-
-                            <div
-                                v-if="selectedUsers.length"
-                                class="mt-3 flex flex-wrap gap-2"
-                            >
-                                <span
-                                    v-for="id of selectedUsers"
-                                    :key="id"
-                                    class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300"
-                                >
-                                    ID #{{ id }}
-                                    <button
-                                        type="button"
-                                        @click="removeUser(id)"
-                                        class="text-gray-400 hover:text-red-500"
-                                    >
-                                        <X class="h-3.5 w-3.5" />
-                                    </button>
-                                </span>
-                            </div>
-                        </div>
+                        <AudienceSelector
+                            v-model="form.segments"
+                            :roles="roles"
+                            :conference-kinds="conferenceKinds"
+                            :workshops="workshops"
+                            :can-manage-all="canManageAll"
+                        />
 
                         <div class="mt-4 flex flex-wrap items-center gap-3">
                             <button
@@ -557,13 +350,22 @@ const removeUser = (userId: number) => {
 
                         <div
                             v-if="previewSample.length"
-                            class="mt-3 space-y-1 rounded-lg bg-gray-50 p-3 text-xs text-gray-500 dark:bg-zinc-800/60 dark:text-gray-400"
+                            class="mt-3 space-y-2 rounded-lg bg-gray-50 p-3 text-xs text-gray-500 dark:bg-zinc-800/60 dark:text-gray-400"
                         >
+                            <p class="font-medium text-gray-600 dark:text-gray-300">
+                                Muestra de destinatarios:
+                            </p>
                             <div
                                 v-for="(item, index) in previewSample"
                                 :key="index"
                             >
                                 · {{ item.name }} &lt;{{ item.email }}&gt;
+                                <span
+                                    v-if="item.groups?.length"
+                                    class="text-gray-400"
+                                >
+                                    — {{ item.groups.join(' · ') }}
+                                </span>
                             </div>
                         </div>
                     </section>

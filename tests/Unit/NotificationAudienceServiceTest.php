@@ -316,4 +316,256 @@ class NotificationAudienceServiceTest extends TestCase
         $this->assertSame('magistral', array_key_first($kinds));
         $this->assertSame('Conferencista magistral', $kinds['magistral']);
     }
+
+    private function workshop(string $name): Workshop
+    {
+        return Workshop::create([
+            'name' => $name,
+            'description' => 'Descripción',
+            'capacity' => 10,
+            'location' => 'Aula 1',
+            'day' => now()->addDays(5)->format('Y-m-d'),
+            'start_time' => '09:00',
+            'end_time' => '11:00',
+            'qr_time_restricted' => false,
+            'created_by' => User::factory()->create()->id,
+        ]);
+    }
+
+    public function test_normalize_segments_casts_and_drops_empty_ones(): void
+    {
+        $segments = $this->service->normalizeSegments([
+            ['type' => 'role', 'role_ids' => ['3', 3, 0, -1]],
+            ['type' => 'workshop_enrollment', 'workshop_ids' => ['5'], 'all_workshops' => 1],
+            ['type' => 'individual', 'user_ids' => []],
+            ['type' => 'inventado', 'role_ids' => [1]],
+            'no es un array',
+        ]);
+
+        $this->assertSame([
+            ['type' => 'role', 'role_ids' => [3]],
+            ['type' => 'workshop_enrollment', 'workshop_ids' => [5], 'all_workshops' => true],
+        ], $segments);
+    }
+
+    public function test_normalize_segments_accepts_nothing_useful(): void
+    {
+        $this->assertSame([], $this->service->normalizeSegments(null));
+        $this->assertSame([], $this->service->normalizeSegments([]));
+    }
+
+    public function test_resolve_segments_unions_groups_without_duplicating_people(): void
+    {
+        $role = $this->role('Comité');
+        $speaker = User::factory()->create();
+        $speaker->roles()->sync([$role->id]);
+        $committee = User::factory()->create();
+        $committee->roles()->sync([$role->id]);
+
+        ParticipationType::updateOrCreate(['key' => 'conferencia_magistral'], [
+            'label' => 'Conferencista magistral',
+            'event_kind' => 'conference',
+            'kind' => 'magistral',
+            'role' => 'speaker',
+            'is_active' => true,
+        ]);
+        $conference = $this->conference($speaker, 'magistral');
+        $conference->members()->attach($speaker->id, ['role' => 'speaker']);
+
+        $users = $this->service->resolveSegments([
+            ['type' => 'role', 'role_ids' => [$role->id]],
+            ['type' => 'speakers_by_kind', 'kinds' => ['magistral']],
+        ]);
+
+        $this->assertSame(
+            [$speaker->id, $committee->id],
+            $users->pluck('id')->sort()->values()->all()
+        );
+        $this->assertCount(2, $users);
+    }
+
+    public function test_resolve_segments_detailed_records_every_matching_group(): void
+    {
+        $role = $this->role('Comité');
+        $user = User::factory()->create();
+        $user->roles()->sync([$role->id]);
+        $other = User::factory()->create();
+
+        $resolved = $this->service->resolveSegmentsDetailed([
+            ['type' => 'role', 'role_ids' => [$role->id]],
+            ['type' => 'individual', 'user_ids' => [$user->id, $other->id]],
+        ]);
+
+        $this->assertCount(2, $resolved['users']);
+        $this->assertCount(2, $resolved['matches'][$user->id]);
+        $this->assertCount(1, $resolved['matches'][$other->id]);
+        $this->assertSame('role', $resolved['matches'][$user->id][0]['type']);
+        $this->assertSame('individual', $resolved['matches'][$user->id][1]['type']);
+    }
+
+    public function test_resolve_segments_ignores_segments_without_criteria(): void
+    {
+        $this->assertTrue($this->service->resolveSegments([
+            ['type' => 'role', 'role_ids' => []],
+            ['type' => 'individual', 'user_ids' => []],
+        ])->isEmpty());
+    }
+
+    public function test_workshop_instructors_returns_only_teachers_of_the_workshops(): void
+    {
+        $workshop = $this->workshop('Taller con instructor');
+        $other = $this->workshop('Otro taller');
+
+        $instructor = User::factory()->create();
+        $workshop->instructors()->attach($instructor->id);
+        $moderator = User::factory()->create();
+        $workshop->moderators()->attach($moderator->id);
+        $outsider = User::factory()->create();
+        $other->instructors()->attach($outsider->id);
+        $inactive = User::factory()->create(['is_active' => false]);
+        $workshop->instructors()->attach($inactive->id);
+        $enrolled = User::factory()->create();
+        $workshop->enrollments()->create(['user_id' => $enrolled->id, 'enrolled_at' => now()]);
+
+        $this->assertSame(
+            [$instructor->id],
+            $this->service->workshopInstructors([$workshop->id])->pluck('id')->all()
+        );
+
+        $all = $this->service->workshopInstructors([], true);
+        $this->assertSame(
+            [$instructor->id, $outsider->id],
+            $all->pluck('id')->sort()->values()->all()
+        );
+    }
+
+    public function test_workshop_enrollments_respects_the_workshop_list(): void
+    {
+        $first = $this->workshop('Taller A');
+        $second = $this->workshop('Taller B');
+
+        $both = User::factory()->create();
+        $onlyFirst = User::factory()->create();
+        $first->enrollments()->create(['user_id' => $both->id, 'enrolled_at' => now()]);
+        $first->enrollments()->create(['user_id' => $onlyFirst->id, 'enrolled_at' => now()]);
+        $second->enrollments()->create(['user_id' => $both->id, 'enrolled_at' => now()]);
+
+        $this->assertSame(
+            [$both->id, $onlyFirst->id],
+            $this->service->workshopEnrollments([$first->id])->pluck('id')->sort()->values()->all()
+        );
+
+        $this->assertSame(
+            [$both->id, $onlyFirst->id],
+            $this->service->workshopEnrollments([], true)->pluck('id')->sort()->values()->all()
+        );
+    }
+
+    public function test_workshop_enrollments_skip_soft_deleted_workshops(): void
+    {
+        $workshop = $this->workshop('Taller eliminado');
+        $user = User::factory()->create();
+        $workshop->enrollments()->create(['user_id' => $user->id, 'enrolled_at' => now()]);
+
+        $this->assertCount(1, $this->service->workshopEnrollments([$workshop->id]));
+
+        $workshop->delete();
+
+        $this->assertTrue($this->service->workshopEnrollments([$workshop->id])->isEmpty());
+        $this->assertTrue($this->service->workshopEnrollments([], true)->isEmpty());
+    }
+
+    public function test_payload_for_keeps_legacy_fields_and_adds_plurals(): void
+    {
+        ParticipationType::updateOrCreate(['key' => 'conferencia_especial'], [
+            'label' => 'Conferencista especial',
+            'event_kind' => 'conference',
+            'kind' => 'especial',
+            'role' => 'speaker',
+            'is_active' => true,
+        ]);
+
+        $workshop = $this->workshop('Taller de algebra');
+        $user = User::factory()->create(['first_name' => 'Ana', 'last_name' => 'Díaz']);
+
+        $payload = $this->service->payloadFor($user, [
+            ['type' => 'speakers_by_kind', 'kinds' => ['especial']],
+            ['type' => 'workshop_enrollment', 'workshop_ids' => [$workshop->id]],
+        ]);
+
+        $this->assertSame('Ana', $payload['nombre']);
+        $this->assertSame('Conferencista especial', $payload['tipo_conferencia']);
+        $this->assertSame('Taller de algebra', $payload['nombre_taller']);
+        $this->assertSame('Conferencista especial', $payload['tipos_conferencia']);
+        $this->assertSame('Taller de algebra', $payload['nombres_talleres']);
+        $this->assertSame(
+            'Speakers: Conferencista especial + Inscritos: Taller de algebra',
+            $payload['grupos']
+        );
+    }
+
+    public function test_payload_for_without_workshop_or_kind_leaves_fields_empty(): void
+    {
+        $user = User::factory()->create();
+
+        $payload = $this->service->payloadFor($user, [['type' => 'all_users']]);
+
+        $this->assertSame('', $payload['tipo_conferencia']);
+        $this->assertSame('', $payload['nombre_taller']);
+        $this->assertSame('Todos los usuarios', $payload['grupos']);
+    }
+
+    public function test_label_for_summarizes_combined_audiences(): void
+    {
+        $role = $this->role('Comité');
+        $sender = User::factory()->create();
+        $workshop = $this->workshop('Taller resumible');
+
+        $single = NotificationSend::create([
+            'subject' => 'Uno',
+            'body_html' => '<p>x</p>',
+            'audience_type' => NotificationSend::AUDIENCE_SEGMENTS,
+            'audience_value' => [
+                'segments' => [
+                    ['type' => 'workshop_instructors', 'all_workshops' => true],
+                ],
+            ],
+            'sent_by' => $sender->id,
+            'recipient_count' => 4,
+            'status' => NotificationSend::STATUS_SENT,
+        ]);
+
+        $combined = NotificationSend::create([
+            'subject' => 'Varios',
+            'body_html' => '<p>x</p>',
+            'audience_type' => NotificationSend::AUDIENCE_SEGMENTS,
+            'audience_value' => [
+                'segments' => [
+                    ['type' => 'role', 'role_ids' => [$role->id]],
+                    ['type' => 'workshop_instructors', 'workshop_ids' => [$workshop->id]],
+                    ['type' => 'individual', 'user_ids' => [1, 2, 3]],
+                ],
+            ],
+            'sent_by' => $sender->id,
+            'recipient_count' => 6,
+            'status' => NotificationSend::STATUS_SENT,
+        ]);
+
+        $empty = NotificationSend::create([
+            'subject' => 'Vacío',
+            'body_html' => '<p>x</p>',
+            'audience_type' => NotificationSend::AUDIENCE_SEGMENTS,
+            'audience_value' => ['segments' => []],
+            'sent_by' => $sender->id,
+            'recipient_count' => 0,
+            'status' => NotificationSend::STATUS_SENT,
+        ]);
+
+        $this->assertSame('Instructores: todos los talleres', $this->service->labelFor($single));
+        $this->assertSame(
+            '3 grupos: Roles: Comité + Instructores: Taller resumible + Usuarios sueltos: 3',
+            $this->service->labelFor($combined)
+        );
+        $this->assertSame('Sin audiencia', $this->service->labelFor($empty));
+    }
 }
