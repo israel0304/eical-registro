@@ -50,7 +50,7 @@ class AsignacionesTest extends TestCase
             'description' => 'Descripción del taller.',
             'capacity' => 15,
             'location' => 'Auditorio A',
-            'day' => '2026-10-05',
+            'day' => now()->addDays(30)->toDateString(),
             'start_time' => '10:00',
             'end_time' => '13:00',
             'created_by' => $creator->id,
