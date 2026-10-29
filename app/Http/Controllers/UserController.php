@@ -50,7 +50,7 @@ class UserController extends Controller
             ->where('manual_generable', true)
             ->where('is_active', true)
             ->orderBy('label')
-            ->get(['id', 'key', 'label']);
+            ->get(['id', 'key', 'label', 'event_kind', 'role', 'kind']);
 
         return Inertia::render('Users/Index', [
             'users' => $users,

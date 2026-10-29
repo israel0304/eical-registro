@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
+use App\Models\Conference;
+use App\Models\ModeradorConstancia;
 use App\Models\ParticipationType;
 use App\Models\Permission;
 use App\Models\Role;
@@ -41,6 +43,38 @@ class ConstanciaAdminGenerateTest extends TestCase
             'is_active' => true,
             'manual_generable' => true,
         ]);
+    }
+
+    private function manualTypeFor(
+        string $key,
+        string $label,
+        string $eventKind,
+        ?string $role,
+        ?string $kind = null,
+    ): ParticipationType {
+        return ParticipationType::create([
+            'key' => $key,
+            'label' => $label,
+            'event_kind' => $eventKind,
+            'kind' => $kind,
+            'role' => $role,
+            'is_active' => true,
+            'manual_generable' => true,
+        ]);
+    }
+
+    private function conference(array $attributes = []): Conference
+    {
+        return Conference::create(array_merge([
+            'title' => 'Conferencia de prueba',
+            'kind' => 'magistral',
+            'description' => 'test',
+            'location' => 'Auditorio',
+            'day' => '2026-10-06',
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+            'created_by' => $this->admin()->id,
+        ], $attributes));
     }
 
     private function instructorType(bool $active = true): ParticipationType
@@ -272,6 +306,174 @@ class ConstanciaAdminGenerateTest extends TestCase
         $this->actingAs($user)
             ->get("/admin/constancias/tipos/{$type->id}/usuario/{$user->id}/generar")
             ->assertForbidden();
+
+        $this->assertDatabaseCount('certificates', 0);
+    }
+
+    public function test_options_endpoint_lists_eligible_workshops(): void
+    {
+        $admin = $this->admin();
+        $instructor = $this->instructor();
+        $type = $this->manualTypeFor('taller_instructor_manual', 'Instructor manual', 'workshop', 'instructor');
+        $workshop = $this->workshop();
+        $workshop->instructors()->attach($instructor->id, [
+            'activated' => true,
+            'activated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->getJson("/admin/constancias/tipos/{$type->id}/usuario/{$instructor->id}/opciones")
+            ->assertOk()
+            ->assertJsonPath('consolidated', false)
+            ->assertJsonPath('eligible', true)
+            ->assertJsonPath('options.0.id', $workshop->id)
+            ->assertJsonPath('options.0.label', 'Taller de instructor')
+            ->assertJsonPath('options.0.event_type', 'workshop');
+    }
+
+    public function test_options_endpoint_rejects_non_manual_type(): void
+    {
+        $admin = $this->admin();
+        $user = $this->participant();
+        $type = $this->instructorType();
+
+        $this->actingAs($admin)
+            ->getJson("/admin/constancias/tipos/{$type->id}/usuario/{$user->id}/opciones")
+            ->assertNotFound();
+    }
+
+    public function test_admin_generates_workshop_certificate_with_selected_event(): void
+    {
+        $admin = $this->admin();
+        $instructor = $this->instructor();
+        $type = $this->manualTypeFor('taller_instructor_manual', 'Instructor manual', 'workshop', 'instructor');
+        $this->certificateTemplate($type);
+        $workshop = $this->workshop();
+        $workshop->instructors()->attach($instructor->id, [
+            'activated' => true,
+            'activated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get("/admin/constancias/tipos/{$type->id}/usuario/{$instructor->id}/generar?workshop_id={$workshop->id}")
+            ->assertOk()
+            ->assertSee('Taller de instructor', false);
+
+        $certificate = Certificate::query()->where('user_id', $instructor->id)->firstOrFail();
+
+        $this->assertSame($workshop->id, $certificate->event_id);
+        $this->assertSame('workshop', $certificate->event_type);
+        $this->assertSame('Taller de instructor', $certificate->metadata['evento']);
+        $this->assertSame('Aula 1', $certificate->metadata['location']);
+        $this->assertNotSame('', $certificate->metadata['fecha_evento']);
+        $this->assertSame('4', $certificate->metadata['horas_totales']);
+    }
+
+    public function test_admin_requires_selection_when_multiple_workshops(): void
+    {
+        $admin = $this->admin();
+        $instructor = $this->instructor();
+        $type = $this->manualTypeFor('taller_instructor_manual', 'Instructor manual', 'workshop', 'instructor');
+        $first = $this->workshop();
+        $second = Workshop::create([
+            'name' => 'Segundo taller',
+            'description' => 'test',
+            'capacity' => 10,
+            'location' => 'Aula 2',
+            'day' => '2026-10-07',
+            'start_time' => '09:00',
+            'end_time' => '11:00',
+            'created_by' => $admin->id,
+        ]);
+
+        foreach ([$first, $second] as $workshop) {
+            $workshop->instructors()->attach($instructor->id, [
+                'activated' => true,
+                'activated_at' => now(),
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get("/admin/constancias/tipos/{$type->id}/usuario/{$instructor->id}/generar")
+            ->assertRedirect()
+            ->assertSessionHasErrors('error');
+
+        $this->assertDatabaseCount('certificates', 0);
+    }
+
+    public function test_admin_generates_conference_speaker_certificate(): void
+    {
+        $admin = $this->admin();
+        $speaker = $this->participant();
+        $type = $this->manualTypeFor('conferencia_magistral_manual', 'Conferencista manual', 'conference', 'speaker', 'magistral');
+        $this->certificateTemplate($type);
+        $conference = $this->conference();
+        $conference->members()->attach($speaker->id, [
+            'role' => 'speaker',
+            'activated' => true,
+            'activated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get("/admin/constancias/tipos/{$type->id}/usuario/{$speaker->id}/generar?conference_id={$conference->id}")
+            ->assertOk()
+            ->assertSee('Conferencia de prueba', false);
+
+        $certificate = Certificate::query()->where('user_id', $speaker->id)->firstOrFail();
+
+        $this->assertSame($conference->id, $certificate->event_id);
+        $this->assertSame('conference', $certificate->event_type);
+        $this->assertSame('Conferencia de prueba', $certificate->metadata['evento']);
+        $this->assertSame('Auditorio', $certificate->metadata['location']);
+        $this->assertNotSame('', $certificate->metadata['fecha_evento']);
+    }
+
+    public function test_admin_generates_moderator_certificate_without_selector(): void
+    {
+        $admin = $this->admin();
+        $moderator = $this->participant();
+        $type = $this->manualTypeFor('moderador_manual', 'Moderador manual', 'conference', 'moderator');
+        $this->certificateTemplate($type);
+        $conference = $this->conference();
+        $conference->members()->attach($moderator->id, [
+            'role' => 'moderator',
+            'activated' => true,
+            'activated_at' => now(),
+        ]);
+        ModeradorConstancia::create([
+            'user_id' => $moderator->id,
+            'activated' => true,
+            'activated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->getJson("/admin/constancias/tipos/{$type->id}/usuario/{$moderator->id}/opciones")
+            ->assertOk()
+            ->assertJsonPath('consolidated', true)
+            ->assertJsonPath('eligible', true);
+
+        $this->actingAs($admin)
+            ->get("/admin/constancias/tipos/{$type->id}/usuario/{$moderator->id}/generar")
+            ->assertOk();
+
+        $this->assertDatabaseHas('certificates', [
+            'user_id' => $moderator->id,
+            'participation_type_id' => $type->id,
+            'event_type' => 'conference',
+            'event_id' => 0,
+        ]);
+    }
+
+    public function test_admin_cannot_generate_workshop_certificate_without_eligibility(): void
+    {
+        $admin = $this->admin();
+        $user = $this->participant();
+        $type = $this->manualTypeFor('taller_instructor_manual', 'Instructor manual', 'workshop', 'instructor');
+
+        $this->actingAs($admin)
+            ->get("/admin/constancias/tipos/{$type->id}/usuario/{$user->id}/generar")
+            ->assertRedirect()
+            ->assertSessionHasErrors('error');
 
         $this->assertDatabaseCount('certificates', 0);
     }

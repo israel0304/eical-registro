@@ -10,6 +10,7 @@ import {
     UserRound,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import { Switch } from '@/components/ui/switch';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 
 const props = defineProps<{
@@ -266,16 +267,18 @@ const deleteAttendance = (attendance: any) => {
                                     emitir la constancia del evento.
                                 </p>
                             </div>
-                            <label
-                                class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
-                            >
-                                <input
+                            <div class="flex items-center justify-between gap-3">
+                                <label
+                                    for="evento_registro_abierto"
+                                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                    Registro de cuentas abierto
+                                </label>
+                                <Switch
+                                    id="evento_registro_abierto"
                                     v-model="form.evento_registro_abierto"
-                                    type="checkbox"
-                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 />
-                                Registro de cuentas abierto
-                            </label>
+                            </div>
                             <p
                                 class="text-xs text-gray-400 dark:text-gray-500"
                             >
@@ -283,28 +286,30 @@ const deleteAttendance = (attendance: any) => {
                                 nuevas en el evento. Los usuarios existentes no
                                 se ven afectados.
                             </p>
-                            <label
-                                class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
-                            >
-                                <input
+                            <div class="flex items-center justify-between gap-3">
+                                <label
+                                    for="evento_checkin_enabled"
+                                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                    Check-in habilitado
+                                </label>
+                                <Switch
+                                    id="evento_checkin_enabled"
                                     v-model="form.evento_checkin_enabled"
-                                    type="checkbox"
-                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 />
-                                Check-in habilitado
-                            </label>
-                            <label
-                                class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
-                            >
-                                <input
-                                    v-model="
-                                        form.evento_checkin_time_restricted
-                                    "
-                                    type="checkbox"
-                                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            </div>
+                            <div class="flex items-center justify-between gap-3">
+                                <label
+                                    for="evento_checkin_time_restricted"
+                                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                    Restricción horaria
+                                </label>
+                                <Switch
+                                    id="evento_checkin_time_restricted"
+                                    v-model="form.evento_checkin_time_restricted"
                                 />
-                                Restricción horaria
-                            </label>
+                            </div>
                             <div>
                                 <label
                                     class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"

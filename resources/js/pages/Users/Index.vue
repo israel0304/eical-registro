@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm, router } from '@inertiajs/vue3';
+import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import {
     DownloadCloud,
     UploadCloud,
@@ -13,7 +13,7 @@ import {
     FileDown,
     X,
 } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import {
     Dialog,
     DialogClose,
@@ -60,6 +60,9 @@ const props = defineProps<{
     filters: any;
     manualConstanciaTypes?: any[];
 }>();
+
+const page = usePage();
+const pageError = computed(() => (page.props as any).errors?.error ?? null);
 
 // Filtros Reactivos
 const formFilters = useForm({
@@ -240,11 +243,107 @@ const confirmForceDelete = (user: any) => {
 };
 
 const constanciaUser = ref<any>(null);
+const constanciaOptions = ref<any>(null);
+const constanciaOptionsLoading = ref(false);
+const constanciaOptionsError = ref<string | null>(null);
+const constanciaSelectedType = ref<any>(null);
+const constanciaOptionList = computed(
+    () => constanciaOptions.value?.options ?? [],
+);
+
+const resetConstanciaOptions = () => {
+    constanciaOptions.value = null;
+    constanciaOptionsError.value = null;
+    constanciaSelectedType.value = null;
+};
+
 const openConstanciaModal = (user: any) => {
     constanciaUser.value = user;
+    resetConstanciaOptions();
 };
-const constanciaUrl = (type: any) =>
-    `/admin/constancias/tipos/${type.id}/usuario/${constanciaUser.value.id}/generar`;
+
+const closeConstanciaModal = () => {
+    constanciaUser.value = null;
+    resetConstanciaOptions();
+};
+
+const isActivityType = (type: any) =>
+    type?.event_kind === 'workshop' || type?.event_kind === 'conference';
+
+const constanciaUrl = (type: any, eventId?: number) => {
+    const base = `/admin/constancias/tipos/${type.id}/usuario/${constanciaUser.value.id}/generar`;
+
+    if (!eventId) {
+        return base;
+    }
+
+    const parameter =
+        type.event_kind === 'conference' ? 'conference_id' : 'workshop_id';
+
+    return `${base}?${parameter}=${eventId}`;
+};
+
+const selectManualType = async (type: any) => {
+    if (!isActivityType(type)) {
+        window.location.href = constanciaUrl(type);
+        return;
+    }
+
+    constanciaSelectedType.value = type;
+    constanciaOptions.value = null;
+    constanciaOptionsError.value = null;
+    constanciaOptionsLoading.value = true;
+
+    try {
+        const response = await fetch(
+            `/admin/constancias/tipos/${type.id}/usuario/${constanciaUser.value.id}/opciones`,
+            { headers: { Accept: 'application/json' } },
+        );
+
+        if (!response.ok) {
+            throw new Error('request failed');
+        }
+
+        const data = await response.json();
+
+        if (data.consolidated) {
+            if (!data.eligible) {
+                constanciaOptionsError.value =
+                    'El usuario no cumple los requisitos para este tipo de constancia.';
+                return;
+            }
+
+            window.location.href = constanciaUrl(type);
+            return;
+        }
+
+        if (!data.eligible || !data.options?.length) {
+            constanciaOptionsError.value =
+                'El usuario no cumple los requisitos para este tipo de constancia.';
+            return;
+        }
+
+        if (data.options.length === 1) {
+            window.location.href = constanciaUrl(type, data.options[0].id);
+            return;
+        }
+
+        constanciaOptions.value = data;
+    } catch {
+        constanciaOptionsError.value =
+            'No fue posible consultar las actividades del usuario.';
+    } finally {
+        constanciaOptionsLoading.value = false;
+    }
+};
+
+const openConstanciaOption = (type: any, option: any) => {
+    window.location.href = constanciaUrl(type, option.id);
+};
+
+const backToConstanciaTypes = () => {
+    resetConstanciaOptions();
+};
 
 // Carga CSV Múltiple
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -270,6 +369,13 @@ const handleFileUpload = (event: Event) => {
         <Head title="Administrador de usuarios" />
 
         <div class="mx-auto min-h-screen w-full max-w-7xl space-y-6 px-8 py-8">
+            <div
+                v-if="pageError"
+                class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+            >
+                {{ pageError }}
+            </div>
+
             <h1
                 class="mb-8 text-3xl font-normal tracking-tight text-gray-900 dark:text-white"
             >
@@ -1088,14 +1194,14 @@ const handleFileUpload = (event: Event) => {
             >
                 <div
                     class="fixed inset-0 bg-black/50 transition-opacity"
-                    @click="constanciaUser = null"
+                    @click="closeConstanciaModal"
                 ></div>
 
                 <div
                     class="relative z-10 inline-block transform overflow-hidden rounded-3xl border bg-white p-8 text-left shadow-2xl transition-all sm:w-full sm:max-w-md dark:border-zinc-800 dark:bg-zinc-900"
                 >
                     <button
-                        @click="constanciaUser = null"
+                        @click="closeConstanciaModal"
                         class="absolute top-5 right-5 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-white"
                     >
                         <X class="h-5 w-5" />
@@ -1122,32 +1228,89 @@ const handleFileUpload = (event: Event) => {
                     </p>
 
                     <div class="mt-6 space-y-2">
-                        <a
-                            v-for="type in manualConstanciaTypes"
-                            :key="type.id"
-                            :href="constanciaUrl(type)"
-                            class="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-zinc-700 dark:text-gray-300 dark:hover:border-indigo-700 dark:hover:bg-indigo-900/20"
-                        >
-                            <span>{{ type.label }}</span>
-                            <span class="text-xs text-gray-400">{{
-                                type.key
-                            }}</span>
-                        </a>
+                        <template v-if="!constanciaSelectedType">
+                            <button
+                                v-for="type in manualConstanciaTypes"
+                                :key="type.id"
+                                type="button"
+                                :disabled="constanciaOptionsLoading"
+                                @click="selectManualType(type)"
+                                class="flex w-full items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50 disabled:opacity-50 dark:border-zinc-700 dark:text-gray-300 dark:hover:border-indigo-700 dark:hover:bg-indigo-900/20"
+                            >
+                                <span>{{ type.label }}</span>
+                                <span class="text-xs text-gray-400">{{
+                                    type.key
+                                }}</span>
+                            </button>
 
-                        <p
-                            v-if="!manualConstanciaTypes?.length"
-                            class="rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-500 dark:border-zinc-700 dark:text-gray-400"
-                        >
-                            No hay tipos marcados como "Generable manualmente".
-                            Créalos en Constancias → Tipos.
-                        </p>
+                            <p
+                                v-if="!manualConstanciaTypes?.length"
+                                class="rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-500 dark:border-zinc-700 dark:text-gray-400"
+                            >
+                                No hay tipos marcados como "Generable
+                                manualmente". Créalos en Constancias → Tipos.
+                            </p>
+                        </template>
+
+                        <template v-else>
+                            <p
+                                class="text-center text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                            >
+                                {{ constanciaSelectedType.label }}
+                            </p>
+
+                            <p
+                                v-if="constanciaOptionsLoading"
+                                class="rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-500 dark:border-zinc-700 dark:text-gray-400"
+                            >
+                                Buscando actividades...
+                            </p>
+
+                            <p
+                                v-else-if="constanciaOptionsError"
+                                class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
+                            >
+                                {{ constanciaOptionsError }}
+                            </p>
+
+                            <template v-else>
+                                <button
+                                    v-for="option in constanciaOptionList"
+                                    :key="option.id"
+                                    type="button"
+                                    @click="
+                                        openConstanciaOption(
+                                            constanciaSelectedType,
+                                            option,
+                                        )
+                                    "
+                                    class="flex w-full flex-col items-start gap-0.5 rounded-lg border border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-zinc-700 dark:text-gray-300 dark:hover:border-indigo-700 dark:hover:bg-indigo-900/20"
+                                >
+                                    <span>{{ option.label }}</span>
+                                    <span
+                                        v-if="option.subtitle"
+                                        class="text-xs font-normal text-gray-400"
+                                    >
+                                        {{ option.subtitle }}
+                                    </span>
+                                </button>
+                            </template>
+
+                            <button
+                                type="button"
+                                class="mt-2 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                                @click="backToConstanciaTypes"
+                            >
+                                Volver
+                            </button>
+                        </template>
                     </div>
 
                     <div class="mt-6 flex justify-center">
                         <button
                             type="button"
                             class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-6 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
-                            @click="constanciaUser = null"
+                            @click="closeConstanciaModal"
                         >
                             Cerrar
                         </button>

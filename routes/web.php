@@ -426,6 +426,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('constancias/moderador/constancia', [ConstanciaController::class, 'downloadModerador'])->middleware('can:constancias.download')->name('constancias.moderador.download');
 
     // Generación manual de constancias de tipos marcados como "manuales" (ej. staff)
+    Route::get('admin/constancias/tipos/{type}/usuario/{user}/opciones', [ConstanciaController::class, 'manualOptions'])->middleware('can:constancias.download')->name('constancias.tipos.options');
     Route::get('admin/constancias/tipos/{type}/usuario/{user}/generar', [ConstanciaController::class, 'adminGenerate'])->middleware('can:constancias.download')->name('constancias.tipos.admin-generate');
 
     // Gafete

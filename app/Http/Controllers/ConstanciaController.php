@@ -14,7 +14,9 @@ use App\Models\Workshop;
 use App\Services\CertificateRenderer;
 use App\Services\ModeratorAssignments;
 use App\Support\EventSettings;
+use App\Support\ManualCertificateOptions;
 use App\Support\WorkshopGroups;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -614,16 +616,123 @@ class ConstanciaController extends Controller
         return $this->respondWithHtml($certificate);
     }
 
-    public function adminGenerate(ParticipationType $type, User $user)
+    public function manualOptions(ParticipationType $type, User $user)
     {
         abort_unless(request()->user()->can('constancias.download'), 403);
+
+        if (! $type->manual_generable || ! $type->is_active) {
+            abort(404);
+        }
+
+        return response()->json(ManualCertificateOptions::for($user, $type));
+    }
+
+    public function adminGenerate(Request $request, ParticipationType $type, User $user)
+    {
+        abort_unless($request->user()->can('constancias.download'), 403);
 
         if (! $type->manual_generable) {
             return back()->withErrors(['error' => 'Este tipo de constancia no está marcado como generable manualmente.']);
         }
 
-        $certificate = $this->renderer->issueType($user, $type, $type->event_kind, 0);
+        if ($type->event_kind === 'workshop') {
+            return $this->adminGenerateWorkshop($request, $user, $type);
+        }
 
+        if ($type->event_kind === 'conference') {
+            return $this->adminGenerateConference($request, $user, $type);
+        }
+
+        return $this->respondWithManualCertificate(
+            $this->renderer->issueType($user, $type, $type->event_kind, 0)
+        );
+    }
+
+    private function adminGenerateWorkshop(Request $request, User $user, ParticipationType $type)
+    {
+        $options = ManualCertificateOptions::for($user, $type)['options'];
+
+        if ($options === []) {
+            return back()->withErrors(['error' => 'El usuario no cumple los requisitos para ninguna constancia de taller.']);
+        }
+
+        $option = $this->resolveManualOption($options, $request->integer('workshop_id'), 'taller');
+
+        if ($option instanceof RedirectResponse) {
+            return $option;
+        }
+
+        $workshop = Workshop::find($option['id']);
+
+        if ($workshop === null) {
+            return back()->withErrors(['error' => 'No se encontró el taller seleccionado.']);
+        }
+
+        return $this->respondWithManualCertificate(
+            $this->renderer->issueWorkshopForType($user, $type, $workshop)
+        );
+    }
+
+    private function adminGenerateConference(Request $request, User $user, ParticipationType $type)
+    {
+        if ($type->role === 'moderator') {
+            if (! ManualCertificateOptions::moderatorEligible($user)) {
+                return back()->withErrors(['error' => 'El usuario no cumple los requisitos para la constancia de moderador.']);
+            }
+
+            return $this->respondWithManualCertificate(
+                $this->renderer->issueModeradorForType($user, $type)
+            );
+        }
+
+        $options = ManualCertificateOptions::for($user, $type)['options'];
+
+        if ($options === []) {
+            return back()->withErrors(['error' => 'El usuario no cumple los requisitos para ninguna constancia de conferencia.']);
+        }
+
+        $option = $this->resolveManualOption($options, $request->integer('conference_id'), 'conferencia');
+
+        if ($option instanceof RedirectResponse) {
+            return $option;
+        }
+
+        $conference = Conference::find($option['id']);
+
+        if ($conference === null) {
+            return back()->withErrors(['error' => 'No se encontró la conferencia seleccionada.']);
+        }
+
+        return $this->respondWithManualCertificate(
+            $this->renderer->issueConferenceForType($user, $type, $conference)
+        );
+    }
+
+    /**
+     * @param  array<int, array{id: int, label: string, subtitle: string, event_type: string}>  $options
+     * @return array{id: int, label: string, subtitle: string, event_type: string}|RedirectResponse
+     */
+    private function resolveManualOption(array $options, int $selectedId, string $label)
+    {
+        if ($selectedId > 0) {
+            foreach ($options as $option) {
+                if ($option['id'] === $selectedId) {
+                    return $option;
+                }
+            }
+
+            return back()->withErrors(['error' => "La {$label} seleccionada no está disponible para este usuario."]);
+        }
+
+        if (count($options) === 1) {
+            return $options[0];
+        }
+
+        return back()->withErrors(['error' => "Selecciona la {$label} para generar la constancia."]);
+    }
+
+    private function respondWithManualCertificate(?Certificate $certificate)
+    {
         if ($certificate === null) {
             return back()->withErrors(['error' => 'No fue posible generar la constancia.']);
         }

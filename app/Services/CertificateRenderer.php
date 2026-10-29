@@ -214,7 +214,16 @@ class CertificateRenderer
             ->where('is_active', true)
             ->first();
 
-        if ($type === null) {
+        return $type === null ? null : $this->issueModeradorForType($user, $type);
+    }
+
+    /**
+     * Find or create the single moderator certificate using an explicit
+     * participation type, used by the manual generation from the users page.
+     */
+    public function issueModeradorForType(User $user, ParticipationType $type): ?Certificate
+    {
+        if (! $type->is_active) {
             return null;
         }
 
@@ -227,6 +236,50 @@ class CertificateRenderer
                 'participation_type_id' => $type->id,
                 'event_type' => 'conference',
                 'event_id' => 0,
+            ],
+            [
+                'template_id' => $template?->id,
+                'metadata' => $metadata,
+            ],
+        );
+
+        return $this->finalize($certificate, $template, $metadata);
+    }
+
+    /**
+     * Find or create a workshop certificate forcing the given participation
+     * type, used by the manual generation from the users page.
+     */
+    public function issueWorkshopForType(User $user, ParticipationType $type, Workshop $workshop): ?Certificate
+    {
+        if (! $type->is_active) {
+            return null;
+        }
+
+        $template = $this->defaultTemplateFor($type, 'certificate');
+
+        return $this->issueWorkshop($user, $type, $template, $workshop);
+    }
+
+    /**
+     * Find or create a conference certificate forcing the given participation
+     * type, used by the manual generation from the users page.
+     */
+    public function issueConferenceForType(User $user, ParticipationType $type, Conference $conference): ?Certificate
+    {
+        if (! $type->is_active) {
+            return null;
+        }
+
+        $template = $this->defaultTemplateFor($type, 'certificate');
+        $metadata = $this->buildMetadata($user, $type, $conference);
+
+        $certificate = Certificate::query()->firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'participation_type_id' => $type->id,
+                'event_type' => 'conference',
+                'event_id' => $conference->id,
             ],
             [
                 'template_id' => $template?->id,
