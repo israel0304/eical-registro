@@ -9,6 +9,7 @@ import {
     Trash2,
     QrCode,
     Send,
+    Timer,
     Check,
     X,
     Calendar,
@@ -333,6 +334,81 @@ const downloadConstancia = (userId: number) => {
     window.open(
         '/admin/constancias/' + props.workshop.id + '/' + userId + '/download',
         '_blank',
+    );
+};
+
+const hoursDialogOpen = ref(false);
+const hoursEnrollment = ref<any>(null);
+const hoursValue = ref('');
+const hoursError = ref('');
+const hoursSaving = ref(false);
+const hoursHasOverride = computed(
+    () =>
+        hoursEnrollment.value?.hours_override !== null &&
+        hoursEnrollment.value?.hours_override !== undefined,
+);
+const hoursRealValue = computed(
+    () => hoursEnrollment.value?.real_hours ?? '',
+);
+
+const openHoursDialog = (enrollment: any) => {
+    hoursEnrollment.value = enrollment;
+    hoursValue.value = hoursHasOverride.value
+        ? String(enrollment.hours_override).replace('.', ',')
+        : '';
+    hoursError.value = '';
+    hoursDialogOpen.value = true;
+};
+
+const closeHoursDialog = () => {
+    hoursDialogOpen.value = false;
+    hoursError.value = '';
+    hoursEnrollment.value = null;
+};
+
+const saveHours = (clear = false) => {
+    if (!hoursEnrollment.value || hoursSaving.value) return;
+
+    const raw = clear ? null : hoursValue.value.trim();
+    let hours: number | null = null;
+
+    if (raw !== null && raw !== '') {
+        const parsed = Number(raw.replace(',', '.'));
+
+        if (!Number.isFinite(parsed) || parsed < 0 || parsed > 999.99) {
+            hoursError.value = 'Ingresa un número entre 0 y 999.99.';
+            return;
+        }
+
+        hours = parsed;
+    }
+
+    hoursSaving.value = true;
+    hoursError.value = '';
+
+    router.patch(
+        '/admin/constancias/' +
+            props.workshop.id +
+            '/' +
+            hoursEnrollment.value.user.id +
+            '/horas',
+        { hours },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                hoursDialogOpen.value = false;
+            },
+            onError: (errors) => {
+                hoursError.value =
+                    (errors.hours as string) ||
+                    (errors.error as string) ||
+                    'No fue posible guardar las horas.';
+            },
+            onFinish: () => {
+                hoursSaving.value = false;
+            },
+        },
     );
 };
 
@@ -927,6 +1003,47 @@ watch(
                                         <button
                                             v-if="
                                                 activeTab === 'enrolled' &&
+                                                can('constancias.download') &&
+                                                enrollment.has_attendance
+                                            "
+                                            @click="
+                                                openHoursDialog(enrollment)
+                                            "
+                                            class="relative rounded border border-gray-300 bg-white p-1.5 text-gray-600 shadow-sm transition-colors hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:text-indigo-400"
+                                            :class="
+                                                enrollment.hours_override !==
+                                                    null &&
+                                                enrollment.hours_override !==
+                                                    undefined
+                                                    ? 'text-amber-600 dark:text-amber-400'
+                                                    : ''
+                                            "
+                                            :title="
+                                                'Horas de la constancia: ' +
+                                                enrollment.hours +
+                                                ' h' +
+                                                (enrollment.hours_override !==
+                                                    null &&
+                                                enrollment.hours_override !==
+                                                    undefined
+                                                    ? ' (ajustadas)'
+                                                    : '')
+                                            "
+                                        >
+                                            <Timer class="h-4 w-4" />
+                                            <span
+                                                v-if="
+                                                    enrollment.hours_override !==
+                                                        null &&
+                                                    enrollment.hours_override !==
+                                                        undefined
+                                                "
+                                                class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-500"
+                                            ></span>
+                                        </button>
+                                        <button
+                                            v-if="
+                                                activeTab === 'enrolled' &&
                                                 can('constancias.download')
                                             "
                                             @click="
@@ -1248,6 +1365,86 @@ watch(
                 >
                     Entendido
                 </button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="hoursDialogOpen">
+        <DialogContent class="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Horas de la constancia</DialogTitle>
+                <DialogDescription>
+                    {{ hoursEnrollment?.user?.first_name }}
+                    {{ hoursEnrollment?.user?.last_name }}
+                    · {{ workshop.name }} · {{ formatDate(workshop.day) }}
+                    · {{ workshop.start_time }}–{{ workshop.end_time }}
+                </DialogDescription>
+            </DialogHeader>
+
+            <div class="space-y-2">
+                <label
+                    for="certificate-hours"
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                    Horas a acreditar
+                </label>
+                <div class="flex items-center gap-2">
+                    <input
+                        id="certificate-hours"
+                        v-model="hoursValue"
+                        type="text"
+                        inputmode="decimal"
+                        :placeholder="String(hoursRealValue)"
+                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    />
+                    <span class="text-sm text-gray-500 dark:text-gray-400"
+                        >h</span
+                    >
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Valor real del taller: {{ hoursRealValue }} h. Déjalo vacío
+                    para usar el valor real.
+                </p>
+                <p
+                    v-if="hoursError"
+                    class="text-xs text-red-600 dark:text-red-400"
+                >
+                    {{ hoursError }}
+                </p>
+            </div>
+
+            <DialogFooter
+                :class="hoursHasOverride ? 'sm:justify-between' : ''"
+            >
+                <button
+                    v-if="hoursHasOverride"
+                    type="button"
+                    :disabled="hoursSaving"
+                    @click="saveHours(true)"
+                    class="inline-flex items-center justify-center rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-50 disabled:opacity-50 dark:border-amber-800 dark:bg-zinc-800 dark:text-amber-400"
+                >
+                    Quitar ajuste
+                </button>
+                <div
+                    class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+                >
+                    <button
+                        type="button"
+                        :disabled="hoursSaving"
+                        @click="closeHoursDialog"
+                        class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-300"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="button"
+                        :disabled="hoursSaving"
+                        @click="saveHours()"
+                        class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                        {{ hoursSaving ? 'Guardando…' : 'Guardar' }}
+                    </button>
+                </div>
             </DialogFooter>
         </DialogContent>
     </Dialog>

@@ -410,6 +410,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('constancias/{id}/download', [ConstanciaController::class, 'download'])->middleware('can:constancias.download')->name('constancias.download');
     Route::get('constancias/{certificate}/pdf', [ConstanciaController::class, 'downloadPdf'])->middleware('can:constancias.download')->name('constancias.pdf');
     Route::get('admin/constancias/{workshopId}/{userId}/download', [ConstanciaController::class, 'adminDownload'])->name('constancias.admin.download');
+    Route::patch('admin/constancias/{workshop}/{user}/horas', [ConstanciaController::class, 'updateHours'])->name('constancias.admin.hours');
 
     // Constancias de ponencia
     Route::get('constancias/ponencia/{presentation}/download', [ConstanciaController::class, 'downloadPonencia'])->middleware('can:constancias.download')->name('constancias.ponencia.download');

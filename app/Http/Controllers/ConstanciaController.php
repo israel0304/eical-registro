@@ -470,6 +470,46 @@ class ConstanciaController extends Controller
         return $this->respondWithHtml($certificate);
     }
 
+    public function updateHours(Request $request, Workshop $workshop, User $user)
+    {
+        $currentUser = $request->user();
+
+        $isAssignedModerator = $workshop->moderators()->where('users.id', $currentUser->id)->exists();
+
+        abort_unless($currentUser->canScoped('constancias.download', 'constancias.view', $isAssignedModerator), 403);
+
+        $validated = $request->validate([
+            'hours' => 'present|nullable|numeric|min:0|max:999.99',
+        ]);
+
+        $group = WorkshopGroups::for($workshop);
+
+        if ($group !== null && $group->isDivided() && $group->hasFullAttendance($user)) {
+            $workshop = $group->representative();
+        }
+
+        $hasAttendance = $workshop->attendances()->where('user_id', $user->id)->exists();
+
+        if (! $hasAttendance) {
+            return back()->withErrors(['error' => 'El usuario no tiene asistencia verificada en este taller.']);
+        }
+
+        $hours = $validated['hours'] === null ? null : (float) $validated['hours'];
+
+        $certificate = $this->renderer->setWorkshopHoursOverride($user, $workshop, $hours);
+
+        if ($certificate === null) {
+            return back()->withErrors(['error' => 'No fue posible actualizar las horas de la constancia.']);
+        }
+
+        return back()->with(
+            'success',
+            $hours === null
+                ? 'Se restauraron las horas reales del taller.'
+                : 'Horas de la constancia actualizadas.',
+        );
+    }
+
     public function downloadPonencia(Request $request, Presentation $presentation)
     {
         $user = $request->user();
@@ -790,6 +830,7 @@ class ConstanciaController extends Controller
                 }
 
                 $representative = $group->representative();
+                $certificate = $certificates->get(WorkshopGroups::GROUPED_EVENT_TYPE.'-'.$group->groupId());
 
                 $entries[] = [
                     'id' => $group->groupId(),
@@ -805,8 +846,10 @@ class ConstanciaController extends Controller
                         'location' => $session->location,
                     ])->values()->all(),
                     'session_count' => $sessions->count(),
-                    'horas_totales' => $group->totalHours(),
-                    'folio' => $certificates->get(WorkshopGroups::GROUPED_EVENT_TYPE.'-'.$group->groupId())?->folio,
+                    'horas_totales' => $certificate?->hours_override !== null
+                        ? WorkshopGroups::formatHours((float) $certificate->hours_override)
+                        : $group->totalHours(),
+                    'folio' => $certificate?->folio,
                     'activated' => true,
                 ];
 
@@ -815,7 +858,12 @@ class ConstanciaController extends Controller
 
             $consumed[] = $workshop->id;
 
-            $workshop->folio = $certificates->get('workshop-'.$workshop->id)?->folio;
+            $certificate = $certificates->get('workshop-'.$workshop->id);
+
+            $workshop->folio = $certificate?->folio;
+            $workshop->horas_totales = $certificate?->hours_override !== null
+                ? WorkshopGroups::formatHours((float) $certificate->hours_override)
+                : WorkshopGroups::formatHours(WorkshopGroups::duration($workshop));
             $workshop->activated = (bool) $workshop->instructors->first()?->pivot->activated;
 
             $entries[] = $workshop;

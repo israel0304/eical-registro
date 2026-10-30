@@ -262,6 +262,24 @@ class CertificateRenderer
     }
 
     /**
+     * Set (or clear) the manual hours for a user's workshop certificate. The
+     * certificate is re-issued right away so the stored metadata reflects the
+     * new value.
+     */
+    public function setWorkshopHoursOverride(User $user, Workshop $workshop, ?float $hours): ?Certificate
+    {
+        $certificate = $this->issue($user, 'workshop', $workshop);
+
+        if ($certificate === null) {
+            return null;
+        }
+
+        $certificate->update(['hours_override' => $hours]);
+
+        return $this->issue($user, 'workshop', $workshop);
+    }
+
+    /**
      * Find or create a conference certificate forcing the given participation
      * type, used by the manual generation from the users page.
      */
@@ -559,6 +577,8 @@ class CertificateRenderer
      */
     private function finalize(Certificate $certificate, ?CertificateTemplate $template, array $metadata): Certificate
     {
+        $metadata = $this->withHoursOverride($certificate, $metadata);
+
         if ($certificate->template_id === null && $template !== null) {
             $certificate->update(['template_id' => $template->id]);
         }
@@ -605,7 +625,7 @@ class CertificateRenderer
         $type = $certificate->participationType;
         $role = $certificate->role;
 
-        return match ($certificate->event_type) {
+        $metadata = match ($certificate->event_type) {
             'workshop', WorkshopGroups::GROUPED_EVENT_TYPE => $this->workshopMetadata($certificate, $user, $type),
             'presentation' => $this->presentationMetadata($certificate, $user, $type),
             'conference' => $certificate->event_id > 0
@@ -616,6 +636,24 @@ class CertificateRenderer
             'carta-conference' => $this->cartaConferenceMetadata($certificate, $user, $role),
             default => $this->typeMetadata($user, $type, $role),
         };
+
+        return $metadata === null ? null : $this->withHoursOverride($certificate, $metadata);
+    }
+
+    /**
+     * Replace the computed workshop hours with the manual override, when the
+     * certificate has one. The override lives in its own column so it survives
+     * metadata refreshes and PDF re-renders.
+     */
+    private function withHoursOverride(Certificate $certificate, array $metadata): array
+    {
+        if ($certificate->hours_override === null) {
+            return $metadata;
+        }
+
+        $metadata['horas_totales'] = WorkshopGroups::formatHours((float) $certificate->hours_override);
+
+        return $metadata;
     }
 
     private function workshopMetadata(Certificate $certificate, User $user, ?ParticipationType $type): ?array

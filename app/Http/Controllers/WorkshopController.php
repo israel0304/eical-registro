@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\Certificate;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Support\EventSettings;
+use App\Support\WorkshopGroups;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -173,10 +175,35 @@ class WorkshopController extends Controller
             ->pluck('user_id')
             ->all();
 
+        $group = WorkshopGroups::for($workshop);
+        $isDivided = $group !== null && $group->isDivided();
+
+        $certificates = Certificate::query()
+            ->whereIn('user_id', $workshop->enrollments->pluck('user_id'))
+            ->whereIn('event_type', ['workshop', WorkshopGroups::GROUPED_EVENT_TYPE])
+            ->get()
+            ->keyBy(fn (Certificate $certificate) => $certificate->user_id.'-'.$certificate->event_type.'-'.$certificate->event_id);
+
         $workshop->setRelation(
             'enrollments',
-            $workshop->enrollments->map(function ($enrollment) use ($attendedUserIds) {
+            $workshop->enrollments->map(function ($enrollment) use ($attendedUserIds, $certificates, $group, $isDivided, $workshop) {
                 $enrollment->has_attendance = in_array($enrollment->user_id, $attendedUserIds, true);
+
+                $consolidated = $isDivided && $group->hasFullAttendance($enrollment->user);
+
+                $targetType = $consolidated ? WorkshopGroups::GROUPED_EVENT_TYPE : 'workshop';
+                $targetId = $consolidated ? $group->groupId() : $workshop->id;
+                $certificate = $certificates->get($enrollment->user_id.'-'.$targetType.'-'.$targetId);
+
+                $realHours = $consolidated
+                    ? $group->totalHours()
+                    : WorkshopGroups::formatHours(WorkshopGroups::duration($workshop));
+
+                $override = $certificate?->hours_override;
+
+                $enrollment->hours_override = $override === null ? null : (float) $override;
+                $enrollment->hours = $override === null ? $realHours : WorkshopGroups::formatHours((float) $override);
+                $enrollment->real_hours = $realHours;
 
                 return $enrollment;
             })

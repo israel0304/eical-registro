@@ -20,11 +20,13 @@ class Certificate extends Model
         'event_id',
         'event_type',
         'metadata',
+        'hours_override',
         'downloaded_at',
     ];
 
     protected $casts = [
         'metadata' => 'array',
+        'hours_override' => 'float',
         'downloaded_at' => 'datetime',
     ];
 
