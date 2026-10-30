@@ -67,6 +67,12 @@
             <div class="row-label">Actividad</div>
             <div class="row-value">{{ $eventName }}</div>
         </div>
+        @if (filled($metadata['horas_totales'] ?? null))
+            <div class="row">
+                <div class="row-label">Duración</div>
+                <div class="row-value">{{ $metadata['horas_totales'] }} h</div>
+            </div>
+        @endif
         <div class="row">
             <div class="row-label">Fecha del evento</div>
             <div class="row-value">{{ $eventDate }}</div>
